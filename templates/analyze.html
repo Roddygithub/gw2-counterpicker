@@ -3,7 +3,43 @@
 {% block title %}Quick Analysis - GW2 CounterPicker{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="fileUploader()">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="{
+    mode: 'file',
+    selectedFile: null,
+    isDragging: false,
+    
+    handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+            this.selectedFile = file;
+        }
+    },
+    
+    handleDrop(event) {
+        this.isDragging = false;
+        const file = event.dataTransfer.files[0];
+        if (file) {
+            this.selectedFile = file;
+            const input = document.getElementById('evtc-file');
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            input.files = dataTransfer.files;
+        }
+    },
+    
+    clearFile() {
+        this.selectedFile = null;
+        const input = document.getElementById('evtc-file');
+        if (input) input.value = '';
+    },
+    
+    formatFileSize(bytes) {
+        if (!bytes) return '';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+}">
     <!-- Header -->
     <div class="text-center mb-12">
         <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
@@ -44,11 +80,13 @@
               hx-target="#result-container" 
               hx-swap="innerHTML"
               hx-encoding="multipart/form-data"
-              hx-indicator="#loading-file"
-              @submit="handleFileSubmit($event)">
+              hx-indicator="#loading-file">
             
             <!-- Drag & Drop Zone -->
-            <div class="relative">
+            <div class="relative"
+                 @dragover.prevent="isDragging = true"
+                 @dragleave.prevent="isDragging = false"
+                 @drop.prevent="handleDrop($event)">
                 <input type="file" 
                        id="evtc-file" 
                        name="file" 
@@ -56,11 +94,8 @@
                        @change="handleFileSelect($event)"
                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                 
-                <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all"
-                     :class="isDragging ? 'border-gw2-purple bg-gw2-purple/10' : (selectedFile ? 'border-green-500 bg-green-500/10' : 'border-gray-600 hover:border-gw2-purple/50')"
-                     @dragover.prevent="isDragging = true"
-                     @dragleave.prevent="isDragging = false"
-                     @drop.prevent="handleDrop($event)">
+                <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all pointer-events-none"
+                     :class="isDragging ? 'border-gw2-purple bg-gw2-purple/10' : (selectedFile ? 'border-green-500 bg-green-500/10' : 'border-gray-600')">
                     
                     <!-- No file selected -->
                     <div x-show="!selectedFile">
