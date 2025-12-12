@@ -169,6 +169,55 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
+// File uploader Alpine.js component
+function fileUploader() {
+    return {
+        mode: 'file',
+        selectedFile: null,
+        isDragging: false,
+        
+        handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.selectedFile = file;
+            }
+        },
+        
+        handleDrop(event) {
+            this.isDragging = false;
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                this.selectedFile = file;
+                // Update the file input
+                const input = document.getElementById('evtc-file');
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                input.files = dataTransfer.files;
+            }
+        },
+        
+        clearFile() {
+            this.selectedFile = null;
+            const input = document.getElementById('evtc-file');
+            if (input) input.value = '';
+        },
+        
+        formatFileSize(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+        
+        handleFileSubmit(event) {
+            if (!this.selectedFile) {
+                event.preventDefault();
+                return false;
+            }
+        }
+    };
+}
+
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔮 GW2 CounterPicker initialized');

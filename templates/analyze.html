@@ -3,7 +3,7 @@
 {% block title %}Quick Analysis - GW2 CounterPicker{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="fileUploader()">
     <!-- Header -->
     <div class="text-center mb-12">
         <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
@@ -12,12 +12,116 @@
             </span>
         </h1>
         <p class="text-xl text-gray-400">
-            Colle un lien dps.report → Counter parfait en 3 secondes
+            Glisse ton fichier .evtc/.zevtc ou colle un lien dps.report
         </p>
     </div>
     
-    <!-- Input Form -->
-    <div class="glow-card rounded-2xl p-6 md:p-8 mb-8">
+    <!-- Tab Selector -->
+    <div class="flex justify-center mb-8">
+        <div class="inline-flex rounded-xl bg-gw2-darker p-1 border border-gw2-purple/30">
+            <button @click="mode = 'file'" 
+                    :class="mode === 'file' ? 'bg-gw2-purple text-white' : 'text-gray-400 hover:text-white'"
+                    class="px-6 py-3 rounded-lg font-display font-bold transition-all flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                Fichier .evtc
+            </button>
+            <button @click="mode = 'url'" 
+                    :class="mode === 'url' ? 'bg-gw2-purple text-white' : 'text-gray-400 hover:text-white'"
+                    class="px-6 py-3 rounded-lg font-display font-bold transition-all flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+                Lien dps.report
+            </button>
+        </div>
+    </div>
+    
+    <!-- File Upload Mode -->
+    <div x-show="mode === 'file'" x-transition class="glow-card rounded-2xl p-6 md:p-8 mb-8">
+        <form id="file-form" hx-post="/api/analyze/evtc" 
+              hx-target="#result-container" 
+              hx-swap="innerHTML"
+              hx-encoding="multipart/form-data"
+              hx-indicator="#loading-file"
+              @submit="handleFileSubmit($event)">
+            
+            <!-- Drag & Drop Zone -->
+            <div class="relative">
+                <input type="file" 
+                       id="evtc-file" 
+                       name="file" 
+                       accept=".evtc,.zevtc,.zip"
+                       @change="handleFileSelect($event)"
+                       class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                
+                <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all"
+                     :class="isDragging ? 'border-gw2-purple bg-gw2-purple/10' : (selectedFile ? 'border-green-500 bg-green-500/10' : 'border-gray-600 hover:border-gw2-purple/50')"
+                     @dragover.prevent="isDragging = true"
+                     @dragleave.prevent="isDragging = false"
+                     @drop.prevent="handleDrop($event)">
+                    
+                    <!-- No file selected -->
+                    <div x-show="!selectedFile">
+                        <div class="w-16 h-16 rounded-full bg-gw2-purple/20 flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                        </div>
+                        <p class="text-lg font-display font-bold text-white mb-2">
+                            Glisse ton fichier ici
+                        </p>
+                        <p class="text-gray-400 text-sm">
+                            ou clique pour sélectionner un fichier .evtc, .zevtc ou .zip
+                        </p>
+                    </div>
+                    
+                    <!-- File selected -->
+                    <div x-show="selectedFile" class="flex items-center justify-center gap-4">
+                        <div class="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="text-left">
+                            <p class="font-display font-bold text-white" x-text="selectedFile?.name"></p>
+                            <p class="text-sm text-gray-400" x-text="formatFileSize(selectedFile?.size)"></p>
+                        </div>
+                        <button type="button" @click.stop="clearFile()" class="ml-4 p-2 rounded-lg hover:bg-red-500/20 text-red-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" 
+                    :disabled="!selectedFile"
+                    :class="selectedFile ? 'bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple hover:scale-[1.02]' : 'bg-gray-700 cursor-not-allowed'"
+                    class="w-full mt-6 py-4 rounded-xl font-display font-bold text-lg transition-all flex items-center justify-center gap-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                Analyser le fichier
+                
+                <span id="loading-file" class="htmx-indicator">
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+            </button>
+        </form>
+        
+        <p class="mt-4 text-center text-sm text-gray-500">
+            📁 Formats supportés: .evtc, .zevtc, .zip
+        </p>
+    </div>
+    
+    <!-- URL Mode -->
+    <div x-show="mode === 'url'" x-transition class="glow-card rounded-2xl p-6 md:p-8 mb-8">
         <form hx-post="/api/analyze/url" 
               hx-target="#result-container" 
               hx-swap="innerHTML"
@@ -53,7 +157,6 @@
                 </svg>
                 Analyser
                 
-                <!-- Loading indicator -->
                 <span id="loading-indicator" class="htmx-indicator">
                     <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
