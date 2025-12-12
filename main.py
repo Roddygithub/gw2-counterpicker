@@ -168,10 +168,15 @@ async def analyze_single_evtc(
                             # Extract player data from Elite Insights JSON
                             players_data = extract_players_from_ei_json(log_data)
                             
+                            # Build enemy composition for counter generation
+                            enemy_composition = build_composition_from_enemies(players_data['enemies'])
+                            counter = counter_engine.generate_counter(enemy_composition)
+                            
                             return templates.TemplateResponse("partials/dps_report_result.html", {
                                 "request": request,
                                 "data": log_data,
                                 "players": players_data,
+                                "counter": counter,
                                 "permalink": result.get('permalink', ''),
                                 "filename": file.filename,
                                 "timestamp": datetime.now().strftime("%H:%M:%S")
@@ -206,6 +211,51 @@ async def analyze_single_evtc(
     except Exception as e:
         print(f"[EVTC] Critical error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
+
+
+def build_composition_from_enemies(enemies: list) -> "CompositionAnalysis":
+    """Build a CompositionAnalysis from enemy player data for counter generation"""
+    from mock_parser import CompositionAnalysis, PlayerBuild
+    
+    builds = []
+    spec_counts = {}
+    role_distribution = {}
+    
+    for enemy in enemies:
+        # Extract profession from name (e.g., "Tempest pl-4073" -> "Tempest")
+        name = enemy.get('name', 'Unknown')
+        profession = enemy.get('profession', 'Unknown')
+        
+        # Try to get spec from name if profession is Unknown
+        if profession == 'Unknown' and ' ' in name:
+            profession = name.split(' ')[0]
+        
+        build = PlayerBuild(
+            player_name=name,
+            account_name="",
+            profession=profession,
+            elite_spec=profession,
+            role="Unknown",
+            weapons=[],
+            is_commander=False,
+            damage_dealt=0,
+            healing_done=0,
+            deaths=0,
+            kills=0
+        )
+        builds.append(build)
+        
+        # Count specs
+        spec_counts[profession] = spec_counts.get(profession, 0) + 1
+    
+    return CompositionAnalysis(
+        builds=builds,
+        spec_counts=spec_counts,
+        role_distribution=role_distribution,
+        total_players=len(enemies),
+        confidence=0.7,
+        source="dps.report WvW"
+    )
 
 
 def extract_players_from_ei_json(data: dict) -> dict:

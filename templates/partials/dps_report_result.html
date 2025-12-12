@@ -134,6 +134,59 @@
     </div>
     {% endif %}
     
+    <!-- Counter Composition Suggestion -->
+    {% if counter %}
+    <div class="glow-card rounded-2xl p-6 border-2 border-gw2-purple/50">
+        <h3 class="font-display text-xl font-bold text-gw2-purple mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+            </svg>
+            🎯 Composition Counter Recommandée
+        </h3>
+        
+        <p class="text-gray-400 mb-4">
+            Basée sur l'analyse de {{ players.enemies|length }} ennemis détectés
+        </p>
+        
+        <!-- Recommended Builds -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+            {% for build in counter.recommended_builds[:9] %}
+            <div class="bg-gw2-darker rounded-xl p-3 border border-gw2-purple/20 hover:border-gw2-purple/50 transition-all">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="font-display font-bold text-white">{{ build.elite_spec }}</span>
+                    <span class="px-2 py-0.5 rounded text-xs bg-gw2-purple/20 text-gw2-purple">
+                        {{ build.role }}
+                    </span>
+                </div>
+                <div class="text-xs text-gray-400">{{ build.reason }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Strategy -->
+        {% if counter.strategy %}
+        <div class="bg-gw2-darker rounded-xl p-4 mb-4">
+            <h4 class="font-display font-bold text-cyber-cyan mb-2">📋 Stratégie</h4>
+            <p class="text-gray-300 text-sm">{{ counter.strategy }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Key Targets -->
+        {% if counter.key_targets %}
+        <div class="bg-gw2-darker rounded-xl p-4">
+            <h4 class="font-display font-bold text-red-400 mb-2">🎯 Cibles Prioritaires</h4>
+            <div class="flex flex-wrap gap-2">
+                {% for target in counter.key_targets %}
+                <span class="px-3 py-1 rounded-full text-sm bg-red-500/20 text-red-300 border border-red-500/30">
+                    {{ target }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
     <!-- Link to full report -->
     <div class="text-center">
         <a href="{{ permalink }}" target="_blank" 
