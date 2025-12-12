@@ -83,17 +83,19 @@
               hx-indicator="#loading-file">
             
             <!-- Drag & Drop Zone -->
-            <label for="evtc-file" class="block relative cursor-pointer"
+            <div class="block relative cursor-pointer"
                  @dragover.prevent="isDragging = true"
                  @dragenter.prevent="isDragging = true"
                  @dragleave.prevent="isDragging = false"
-                 @drop.prevent="handleDrop($event)">
+                 @drop.prevent="handleDrop($event)"
+                 @click="$refs.fileInput.click()">
                 <input type="file" 
+                       x-ref="fileInput"
                        id="evtc-file" 
                        name="file" 
                        accept=".evtc,.zevtc,.zip"
                        @change="handleFileSelect($event)"
-                       class="sr-only">
+                       class="hidden">
                 
                 <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all"
                      :class="isDragging ? 'border-gw2-purple bg-gw2-purple/10' : (selectedFile ? 'border-green-500 bg-green-500/10' : 'border-gray-600')">
@@ -131,7 +133,7 @@
                         </button>
                     </div>
                 </div>
-            </label>
+            </div>
             
             <button type="submit" 
                     :disabled="!selectedFile"
