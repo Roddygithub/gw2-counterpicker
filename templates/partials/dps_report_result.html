@@ -1,0 +1,130 @@
+<!-- Real dps.report Analysis Result -->
+<div class="space-y-6 animate-slide-up">
+    <!-- Success Header -->
+    <div class="glow-card rounded-2xl p-6 border-2 border-green-500/50">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <h2 class="font-display text-2xl font-bold text-white flex items-center gap-2">
+                    🎯 Analyse Réelle via dps.report
+                    <span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+                        ✓ Données Réelles
+                    </span>
+                </h2>
+                <p class="text-gray-400">
+                    {{ filename }} • Analysé à {{ timestamp }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Fight Info -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-xl font-display font-bold text-gw2-purple">{{ players.fight_name }}</div>
+                <div class="text-xs text-gray-400">Combat</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-xl font-display font-bold text-cyber-pink">{{ players.allies|length }}</div>
+                <div class="text-xs text-gray-400">Alliés</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-xl font-display font-bold text-red-400">{{ players.enemies|length }}</div>
+                <div class="text-xs text-gray-400">Ennemis détectés</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <a href="{{ permalink }}" target="_blank" class="text-xl font-display font-bold text-cyber-cyan hover:underline">
+                    Voir sur dps.report →
+                </a>
+                <div class="text-xs text-gray-400">Lien complet</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Allied Players -->
+    {% if players.allies %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            🛡️ Ton Escouade ({{ players.allies|length }} joueurs)
+        </h3>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">Joueur</th>
+                        <th class="pb-2">Classe</th>
+                        <th class="pb-2">Groupe</th>
+                        <th class="pb-2 text-right">Dégâts</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for player in players.allies %}
+                    <tr class="hover:bg-gw2-darker/50">
+                        <td class="py-2">
+                            <div class="flex items-center gap-2">
+                                {% if player.is_commander %}
+                                <span class="text-yellow-400">👑</span>
+                                {% endif %}
+                                <span class="font-medium text-white">{{ player.name }}</span>
+                                <span class="text-xs text-gray-500">{{ player.account }}</span>
+                            </div>
+                        </td>
+                        <td class="py-2">
+                            <span class="px-2 py-1 rounded text-xs bg-gw2-purple/20 text-gw2-purple">
+                                {{ player.profession }}
+                            </span>
+                        </td>
+                        <td class="py-2 text-gray-400">{{ player.group }}</td>
+                        <td class="py-2 text-right font-mono text-orange-400">
+                            {{ "{:,}".format(player.damage) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Enemy Players (if WvW) -->
+    {% if players.enemies %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            ⚔️ Ennemis Détectés ({{ players.enemies|length }})
+        </h3>
+        
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for enemy in players.enemies %}
+            <div class="bg-gw2-darker rounded-xl p-3 border border-red-500/20">
+                <div class="font-medium text-white">{{ enemy.name }}</div>
+                <div class="text-sm text-gray-400">Dégâts subis: {{ "{:,}".format(enemy.damage_taken) }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Link to full report -->
+    <div class="text-center">
+        <a href="{{ permalink }}" target="_blank" 
+           class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple transition-all font-display font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+            Voir le rapport complet sur dps.report
+        </a>
+        <p class="mt-2 text-sm text-gray-500">
+            Analyse complète avec graphiques, rotations et statistiques détaillées
+        </p>
+    </div>
+</div>

@@ -118,7 +118,7 @@ async def analyze_single_evtc(
     file: UploadFile = File(...)
 ):
     """
-    Analyze a single .evtc file with REAL parsing
+    Analyze a single .evtc file using dps.report API for reliable parsing
     Returns exact player builds with high confidence
     """
     if not file.filename:
@@ -134,22 +134,59 @@ async def analyze_single_evtc(
         data = await file.read()
         print(f"[EVTC] Received file: {file.filename}, size: {len(data)} bytes")
         
-        # Try REAL parser first
+        # Upload to dps.report API for reliable parsing
         try:
-            parsed_log = real_parser.parse_evtc_bytes(data, file.filename)
-            print(f"[EVTC] Real parser success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
+            import aiohttp
             
-            # Build response with exact player data
-            return templates.TemplateResponse("partials/evtc_result.html", {
-                "request": request,
-                "log": parsed_log,
-                "filename": file.filename,
-                "timestamp": datetime.now().strftime("%H:%M:%S")
-            })
-        except Exception as parse_error:
-            print(f"[EVTC] Real parser failed: {parse_error}")
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                # Upload to dps.report
+                files = {'file': (file.filename, data)}
+                response = await client.post(
+                    'https://dps.report/uploadContent',
+                    params={'json': '1', 'detailedwvw': 'true'},
+                    files=files
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    print(f"[EVTC] dps.report upload success: {result.get('permalink', 'no link')}")
+                    
+                    # Get the JSON data from dps.report
+                    if 'permalink' in result:
+                        # Fetch the detailed JSON
+                        json_url = result['permalink'].replace('https://dps.report/', 'https://dps.report/getJson?permalink=')
+                        json_response = await client.get(json_url)
+                        
+                        if json_response.status_code == 200:
+                            log_data = json_response.json()
+                            
+                            # Extract player data from Elite Insights JSON
+                            players_data = extract_players_from_ei_json(log_data)
+                            
+                            return templates.TemplateResponse("partials/dps_report_result.html", {
+                                "request": request,
+                                "data": log_data,
+                                "players": players_data,
+                                "permalink": result.get('permalink', ''),
+                                "filename": file.filename,
+                                "timestamp": datetime.now().strftime("%H:%M:%S")
+                            })
+                    
+                    # Fallback if we can't get JSON
+                    return templates.TemplateResponse("partials/dps_report_link.html", {
+                        "request": request,
+                        "permalink": result.get('permalink', ''),
+                        "filename": file.filename,
+                        "timestamp": datetime.now().strftime("%H:%M:%S")
+                    })
+                else:
+                    print(f"[EVTC] dps.report upload failed: {response.status_code}")
+                    raise Exception(f"dps.report returned {response.status_code}")
+                    
+        except Exception as api_error:
+            print(f"[EVTC] dps.report API failed: {api_error}")
             
-            # Fallback: use mock parser to generate sample analysis
+            # Fallback: use mock parser
             analysis = mock_parser.parse_dps_report_url(f"file://{file.filename}")
             counter = counter_engine.generate_counter(analysis.enemy_composition)
             
@@ -158,12 +195,39 @@ async def analyze_single_evtc(
                 "analysis": analysis,
                 "counter": counter,
                 "timestamp": datetime.now().strftime("%H:%M:%S"),
-                "parse_warning": f"Real parsing failed, showing simulated data. Error: {str(parse_error)[:100]}"
+                "parse_warning": f"API upload failed, showing simulated data. Error: {str(api_error)[:100]}"
             })
         
     except Exception as e:
         print(f"[EVTC] Critical error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
+
+
+def extract_players_from_ei_json(data: dict) -> list:
+    """Extract player information from Elite Insights JSON"""
+    players = []
+    
+    for player in data.get('players', []):
+        players.append({
+            'name': player.get('name', 'Unknown'),
+            'account': player.get('account', ''),
+            'profession': player.get('profession', 'Unknown'),
+            'group': player.get('group', 0),
+            'damage': player.get('dpsAll', [{}])[0].get('damage', 0) if player.get('dpsAll') else 0,
+            'is_commander': player.get('hasCommanderTag', False),
+        })
+    
+    # Get targets (enemies in WvW)
+    enemies = []
+    for target in data.get('targets', []):
+        if target.get('enemyPlayer', False):
+            enemies.append({
+                'name': target.get('name', 'Unknown'),
+                'profession': 'Unknown',  # Targets don't have profession in standard EI output
+                'damage_taken': target.get('totalDamageTaken', [0])[0] if target.get('totalDamageTaken') else 0,
+            })
+    
+    return {'allies': players, 'enemies': enemies, 'fight_name': data.get('fightName', 'Unknown')}
 
 
 @app.post("/api/analyze/files")
