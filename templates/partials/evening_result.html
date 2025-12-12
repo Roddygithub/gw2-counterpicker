@@ -1,0 +1,265 @@
+<!-- Evening Analysis Result - HTMX Partial -->
+<div class="space-y-6 animate-slide-up">
+    <!-- Success Header -->
+    <div class="glow-card rounded-2xl p-6 border-2 border-gw2-purple/50">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <h2 class="font-display text-2xl font-bold text-white">
+                    🔮 Night Intelligence Report
+                </h2>
+                <p class="text-gray-400">
+                    {{ file_count }} fichiers analysés • Session {{ report.session_id[:8] }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="flex flex-wrap gap-3">
+            <a href="/api/report/{{ report.session_id }}/pdf" 
+               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple transition-all text-sm font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Télécharger PDF
+            </a>
+            <button onclick="navigator.clipboard.writeText(window.location.origin + '/api/share/{{ report.session_id }}')"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gw2-purple/50 hover:border-gw2-purple hover:bg-gw2-purple/10 transition-all text-sm font-medium text-gray-300">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+                </svg>
+                Partager le lien
+            </button>
+        </div>
+    </div>
+    
+    <!-- Key Insights -->
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-white mb-4 flex items-center gap-2">
+            💡 Insights Clés
+        </h3>
+        <div class="grid md:grid-cols-2 gap-3">
+            {% for insight in report.key_insights %}
+            <div class="bg-gw2-darker rounded-xl p-4 text-sm text-gray-300">
+                {{ insight }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glow-card rounded-xl p-4 text-center">
+            <div class="text-3xl font-display font-bold text-gw2-purple">{{ report.total_fights }}</div>
+            <div class="text-xs text-gray-400 mt-1">Combats</div>
+        </div>
+        <div class="glow-card rounded-xl p-4 text-center">
+            <div class="text-3xl font-display font-bold text-cyber-pink">{{ report.total_duration_minutes }}</div>
+            <div class="text-xs text-gray-400 mt-1">Minutes</div>
+        </div>
+        <div class="glow-card rounded-xl p-4 text-center">
+            <div class="text-3xl font-display font-bold text-cyber-cyan">{{ report.average_composition.total_players }}</div>
+            <div class="text-xs text-gray-400 mt-1">Joueurs moyens</div>
+        </div>
+        <div class="glow-card rounded-xl p-4 text-center">
+            <div class="text-3xl font-display font-bold text-green-400">{{ report.average_composition.spec_counts|length }}</div>
+            <div class="text-xs text-gray-400 mt-1">Specs vues</div>
+        </div>
+    </div>
+    
+    <!-- Enemy Server & Composition -->
+    <div class="grid md:grid-cols-2 gap-6">
+        <!-- Enemy Info -->
+        <div class="glow-card rounded-2xl p-6">
+            <h3 class="font-display text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
+                </svg>
+                Serveur Ennemi
+            </h3>
+            <div class="bg-gw2-darker rounded-xl p-4 mb-4">
+                <div class="text-2xl font-display font-bold text-white">{{ report.enemy_server }}</div>
+                {% if report.enemy_alliance %}
+                <div class="text-sm text-gray-400 mt-1">{{ report.enemy_alliance }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-xl p-4 border border-red-500/20">
+                <div class="text-sm text-gray-400 mb-1">Type de composition</div>
+                <div class="font-display font-bold text-white">{{ report.average_composition.estimated_squad_type }}</div>
+            </div>
+        </div>
+        
+        <!-- Top Specs -->
+        <div class="glow-card rounded-2xl p-6">
+            <h3 class="font-display text-xl font-bold text-white mb-4">⚔️ Top Specs Ennemis</h3>
+            <div class="space-y-3">
+                {% for spec, count in report.average_composition.dominant_specs %}
+                <div class="flex items-center gap-3">
+                    <div class="w-20 text-sm font-medium text-gray-300">{{ spec }}</div>
+                    <div class="flex-1 h-4 bg-gw2-darker rounded-full overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-red-500 to-orange-500"
+                             style="width: {{ (count / report.average_composition.total_players * 100)|int }}%"></div>
+                    </div>
+                    <div class="w-8 text-right text-sm font-bold text-white">{{ count }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hourly Evolution -->
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-white mb-4 flex items-center gap-2">
+            📈 Évolution Horaire
+        </h3>
+        <div class="grid md:grid-cols-4 gap-4">
+            {% for hour_data in report.hourly_evolution %}
+            <div class="bg-gw2-darker rounded-xl p-4">
+                <div class="font-display font-bold text-gw2-purple text-lg mb-2">{{ hour_data.hour }}</div>
+                <div class="space-y-1 text-xs">
+                    {% for spec, count in hour_data.spec_counts.items() %}
+                    {% if loop.index <= 3 %}
+                    <div class="flex justify-between text-gray-400">
+                        <span>{{ spec }}</span>
+                        <span class="font-bold text-white">{{ count }}</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% if hour_data.notable_changes %}
+                <div class="mt-2 pt-2 border-t border-gw2-purple/20 text-xs text-yellow-400">
+                    {{ hour_data.notable_changes[0] }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Top 10 Players -->
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
+            🎯 Top 10 Menaces
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-sm text-gray-400 border-b border-gw2-purple/20">
+                        <th class="pb-3 font-medium">#</th>
+                        <th class="pb-3 font-medium">Joueur</th>
+                        <th class="pb-3 font-medium">Spec</th>
+                        <th class="pb-3 font-medium text-center">Vus</th>
+                        <th class="pb-3 font-medium text-right">Avg DMG</th>
+                        <th class="pb-3 font-medium text-center">Menace</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for player in report.top_players %}
+                    <tr class="border-b border-gw2-purple/10 hover:bg-gw2-purple/5">
+                        <td class="py-3 font-display font-bold text-gw2-purple">#{{ player.rank }}</td>
+                        <td class="py-3">
+                            <div class="font-medium text-white">{{ player.player_name }}</div>
+                            {% if player.account_name %}
+                            <div class="text-xs text-gray-500">{{ player.account_name }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 text-gray-300">{{ player.elite_spec }}</td>
+                        <td class="py-3 text-center text-gray-400">{{ player.times_seen }}x</td>
+                        <td class="py-3 text-right font-mono text-cyan-400">{{ "{:,}".format(player.avg_damage) }}</td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if player.threat_level == 'Extreme' %}
+                                    bg-red-500/20 text-red-400
+                                {% elif player.threat_level == 'High' %}
+                                    bg-orange-500/20 text-orange-400
+                                {% elif player.threat_level == 'Medium' %}
+                                    bg-yellow-500/20 text-yellow-400
+                                {% else %}
+                                    bg-gray-500/20 text-gray-400
+                                {% endif %}
+                            ">
+                                {{ player.threat_level }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Heatmap -->
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-orange-400 mb-4 flex items-center gap-2">
+            🗺️ Zones Contestées
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {% for zone in report.heatmap_zones %}
+            <div class="bg-gw2-darker rounded-xl p-4 border-l-4 transition-all hover:scale-105"
+                 style="border-color: rgba(249, 115, 22, {{ zone.intensity }});">
+                <div class="font-medium text-white text-sm mb-1">{{ zone.zone_name }}</div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-gray-400">{{ zone.fight_count }} fights</span>
+                    <span class="text-orange-400 font-bold">{{ zone.total_kills }} kills</span>
+                </div>
+                <div class="mt-2 h-1.5 bg-gw2-darker rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-yellow-500 to-red-500"
+                         style="width: {{ (zone.intensity * 100)|int }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Counter Recommendations -->
+    <div class="glow-card rounded-2xl p-6 border-2 border-green-500/30">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="font-display text-xl font-bold text-green-400 flex items-center gap-2">
+                🛡️ Counter pour Demain Soir
+            </h3>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">Confiance:</span>
+                <span class="font-display font-bold text-green-400">{{ "%.0f"|format(counter.confidence_score) }}%</span>
+            </div>
+        </div>
+        
+        <!-- Recommended Builds Grid -->
+        <div class="grid md:grid-cols-3 gap-4 mb-6">
+            {% for build in counter.recommended_builds[:6] %}
+            <div class="bg-gw2-darker rounded-xl p-4 border border-green-500/20 hover:border-green-500/40 transition-all">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">
+                            {% if build.priority == 5 %}⭐⭐⭐{% elif build.priority == 4 %}⭐⭐{% else %}⭐{% endif %}
+                        </span>
+                        <h4 class="font-display font-bold text-white">{{ build.elite_spec }}</h4>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400">{{ build.role }}</span>
+                </div>
+                <p class="text-xs text-gray-400">{{ build.reason }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Strategy -->
+        <div class="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl p-4 border border-green-500/20">
+            <h4 class="font-display font-bold text-green-400 mb-3">📋 Stratégie Recommandée</h4>
+            <ul class="space-y-2">
+                {% for note in counter.strategy_notes %}
+                <li class="text-sm text-gray-300">{{ note }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="text-center text-sm text-gray-500">
+        Rapport généré le {{ report.created_at.strftime('%d/%m/%Y à %H:%M') }} • 
+        <span class="text-gw2-purple">GW2 CounterPicker</span>
+    </div>
+</div>

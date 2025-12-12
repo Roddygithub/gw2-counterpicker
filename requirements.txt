@@ -1,0 +1,27 @@
+# GW2 CounterPicker - Requirements
+# The most powerful WvW intelligence tool ever created
+
+# Core Framework
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Templating
+jinja2
+
+# HTTP Client (for dps.report API)
+httpx
+aiofiles
+
+# Data Processing
+pydantic
+python-dateutil
+
+# PDF Generation  
+reportlab
+
+# Future: Real EVTC parsing
+# python-evtc
+
+# Utilities
+python-dotenv

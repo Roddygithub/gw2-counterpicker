@@ -1,0 +1,189 @@
+<!-- Quick Analysis Result - HTMX Partial -->
+<div class="space-y-6 animate-slide-up">
+    <!-- Analysis Header -->
+    <div class="glow-card rounded-2xl p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div>
+                <h2 class="font-display text-2xl font-bold text-white mb-1">
+                    Analyse Complète
+                </h2>
+                <p class="text-sm text-gray-400">
+                    {{ analysis.map_name }} • {{ analysis.timestamp.strftime('%H:%M') }} • {{ analysis.fight_duration }}s
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1 rounded-full text-sm font-medium
+                    {% if analysis.outcome == 'Victory' %}
+                        bg-green-500/20 text-green-400 border border-green-500/30
+                    {% elif analysis.outcome == 'Defeat' %}
+                        bg-red-500/20 text-red-400 border border-red-500/30
+                    {% else %}
+                        bg-yellow-500/20 text-yellow-400 border border-yellow-500/30
+                    {% endif %}
+                ">
+                    {{ analysis.outcome }}
+                </span>
+                <span class="text-sm text-gray-400">
+                    {{ analysis.our_kills }} kills / {{ analysis.our_deaths }} deaths
+                </span>
+            </div>
+        </div>
+        
+        <!-- Fight Summary -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gw2-darker rounded-xl p-4 text-center">
+                <div class="text-2xl font-display font-bold text-gw2-purple">{{ analysis.enemy_composition.total_players }}</div>
+                <div class="text-xs text-gray-400">Ennemis détectés</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-4 text-center">
+                <div class="text-2xl font-display font-bold text-cyber-pink">{{ analysis.enemy_composition.spec_counts|length }}</div>
+                <div class="text-xs text-gray-400">Specs différentes</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-4 text-center">
+                <div class="text-2xl font-display font-bold text-cyber-cyan">{{ "%.0f"|format(analysis.enemy_composition.support_ratio * 100) }}%</div>
+                <div class="text-xs text-gray-400">Supports</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-4 text-center">
+                <div class="text-2xl font-display font-bold text-green-400">{{ "%.0f"|format(analysis.enemy_composition.frontline_ratio * 100) }}%</div>
+                <div class="text-xs text-gray-400">Frontline</div>
+            </div>
+        </div>
+        
+        <!-- Enemy Composition Type -->
+        <div class="bg-gradient-to-r from-gw2-purple/20 to-cyber-pink/20 rounded-xl p-4 border border-gw2-purple/30">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gw2-purple/30 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-400">Type de composition détecté</div>
+                    <div class="font-display font-bold text-white">{{ analysis.enemy_composition.estimated_squad_type }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enemy Composition Details -->
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Composition Ennemie
+        </h3>
+        
+        <!-- Spec Distribution -->
+        <div class="space-y-3">
+            {% for spec, count in analysis.enemy_composition.dominant_specs %}
+            <div class="flex items-center gap-4">
+                <div class="w-24 text-sm font-medium text-gray-300">{{ spec }}</div>
+                <div class="flex-1 h-6 bg-gw2-darker rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-gw2-purple to-cyber-pink flex items-center justify-end pr-2"
+                         style="width: {{ (count / analysis.enemy_composition.total_players * 100)|int }}%">
+                        <span class="text-xs font-bold text-white">{{ count }}</span>
+                    </div>
+                </div>
+                <div class="w-12 text-right text-sm text-gray-400">
+                    {{ "%.0f"|format(count / analysis.enemy_composition.total_players * 100) }}%
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Role Distribution -->
+        <div class="mt-6 pt-6 border-t border-gw2-purple/20">
+            <h4 class="text-sm font-medium text-gray-400 mb-3">Distribution par rôle</h4>
+            <div class="flex flex-wrap gap-2">
+                {% for role, count in analysis.enemy_composition.role_distribution.items() %}
+                <span class="px-3 py-1 rounded-lg text-sm bg-gw2-darker border border-gw2-purple/30">
+                    <span class="text-gray-400">{{ role }}:</span>
+                    <span class="font-bold text-white">{{ count }}</span>
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Counter Recommendations -->
+    <div class="glow-card rounded-2xl p-6 border-2 border-green-500/30">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="font-display text-xl font-bold text-green-400 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                </svg>
+                🎯 Counter Recommandé
+            </h3>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">Confiance:</span>
+                <span class="font-display font-bold text-green-400">{{ "%.0f"|format(counter.confidence_score) }}%</span>
+            </div>
+        </div>
+        
+        <!-- Top Priority Builds -->
+        <div class="grid md:grid-cols-2 gap-4 mb-6">
+            {% for build in counter.recommended_builds[:4] %}
+            <div class="bg-gw2-darker rounded-xl p-4 border border-green-500/20 hover:border-green-500/40 transition-all">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">
+                            {% if build.priority == 5 %}⭐⭐⭐{% elif build.priority == 4 %}⭐⭐{% else %}⭐{% endif %}
+                        </span>
+                        <h4 class="font-display font-bold text-white">{{ build.elite_spec }}</h4>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded bg-gw2-purple/20 text-gw2-purple">{{ build.role }}</span>
+                </div>
+                <p class="text-sm text-gray-400">{{ build.reason }}</p>
+                {% if build.build_url %}
+                <a href="{{ build.build_url }}" target="_blank" 
+                   class="inline-flex items-center gap-1 mt-2 text-xs text-green-400 hover:text-green-300">
+                    Voir le build →
+                </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Strategy Notes -->
+        <div class="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl p-4 border border-green-500/20">
+            <h4 class="font-display font-bold text-green-400 mb-3">📋 Stratégie</h4>
+            <ul class="space-y-2">
+                {% for note in counter.strategy_notes %}
+                <li class="text-sm text-gray-300">{{ note }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <!-- Key Targets & Avoid -->
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+            <div class="bg-gw2-darker rounded-xl p-4">
+                <h4 class="text-sm font-bold text-red-400 mb-2">🎯 Cibles Prioritaires</h4>
+                <ul class="space-y-1">
+                    {% for target in counter.key_targets %}
+                    <li class="text-sm text-gray-400 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                        {{ target }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-4">
+                <h4 class="text-sm font-bold text-yellow-400 mb-2">⚠️ À Éviter</h4>
+                <ul class="space-y-1">
+                    {% for avoid in counter.avoid_list %}
+                    <li class="text-sm text-gray-400 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                        {{ avoid }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Timestamp -->
+    <div class="text-center text-sm text-gray-500">
+        Analyse générée à {{ timestamp }}
+    </div>
+</div>

@@ -1,0 +1,122 @@
+/* GW2 CounterPicker - Custom Styles */
+
+/* Elite Spec Colors */
+.spec-guardian { --spec-color: #72C1D9; }
+.spec-warrior { --spec-color: #FFD166; }
+.spec-revenant { --spec-color: #D16E5A; }
+.spec-engineer { --spec-color: #D09C59; }
+.spec-ranger { --spec-color: #8CDC82; }
+.spec-thief { --spec-color: #C08F95; }
+.spec-elementalist { --spec-color: #F68A87; }
+.spec-mesmer { --spec-color: #B679D5; }
+.spec-necromancer { --spec-color: #52A76F; }
+
+/* Threat level badges */
+.threat-extreme {
+    background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+    animation: pulse 2s infinite;
+}
+
+.threat-high {
+    background: linear-gradient(135deg, #EA580C 0%, #C2410C 100%);
+}
+
+.threat-medium {
+    background: linear-gradient(135deg, #CA8A04 0%, #A16207 100%);
+}
+
+.threat-low {
+    background: linear-gradient(135deg, #4B5563 0%, #374151 100%);
+}
+
+/* Priority stars animation */
+.priority-star {
+    animation: twinkle 1.5s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+/* Heatmap intensity */
+.heatmap-zone {
+    transition: all 0.3s ease;
+}
+
+.heatmap-zone:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+}
+
+/* Card hover effects */
+.build-card {
+    transition: all 0.3s ease;
+}
+
+.build-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.2);
+}
+
+/* Loading skeleton */
+.skeleton {
+    background: linear-gradient(90deg, #1F2937 25%, #374151 50%, #1F2937 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Role badges */
+.role-frontline { background-color: rgba(239, 68, 68, 0.2); color: #F87171; }
+.role-backline { background-color: rgba(59, 130, 246, 0.2); color: #60A5FA; }
+.role-support { background-color: rgba(16, 185, 129, 0.2); color: #34D399; }
+.role-roamer { background-color: rgba(245, 158, 11, 0.2); color: #FBBF24; }
+
+/* Fight outcome */
+.outcome-victory {
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.outcome-defeat {
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+/* Chart container */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Mobile responsive tweaks */
+@media (max-width: 768px) {
+    .font-display {
+        letter-spacing: -0.02em;
+    }
+    
+    .glow-card {
+        padding: 1rem;
+    }
+}
+
+/* Print styles for PDF */
+@media print {
+    .nebula-bg, .stars {
+        display: none;
+    }
+    
+    body {
+        background: white;
+        color: black;
+    }
+    
+    .glow-card {
+        border: 1px solid #ccc;
+        box-shadow: none;
+    }
+}

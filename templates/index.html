@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}GW2 CounterPicker - The Ultimate WvW Intelligence Tool{% endblock %}
+
+{% block content %}
+<div class="relative">
+    <!-- Hero Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
+        <div class="text-center">
+            <!-- Animated Badge -->
+            <div class="inline-flex items-center px-4 py-2 rounded-full bg-gw2-purple/20 border border-gw2-purple/30 mb-8 animate-fade-in">
+                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse mr-2"></span>
+                <span class="text-sm font-medium text-gw2-purple">Live Intelligence System</span>
+            </div>
+            
+            <!-- Main Title -->
+            <h1 class="font-display text-5xl md:text-7xl lg:text-8xl font-black mb-6 animate-slide-up">
+                <span class="bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                    GW2 CounterPicker
+                </span>
+            </h1>
+            
+            <!-- Tagline -->
+            <p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-4 animate-slide-up" style="animation-delay: 0.1s;">
+                Le seul outil capable de lire dans l'âme de ton adversaire.
+            </p>
+            <p class="text-lg md:text-xl text-gw2-purple font-medium mb-12 animate-slide-up" style="animation-delay: 0.15s;">
+                Et dans celle de tout son serveur.
+            </p>
+            
+            <!-- CTA Buttons -->
+            <div class="flex flex-col sm:flex-row justify-center gap-4 animate-slide-up" style="animation-delay: 0.2s;">
+                <a href="/analyze" 
+                   class="group relative px-8 py-4 rounded-xl font-display font-bold text-lg overflow-hidden transition-all hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-r from-gw2-purple to-cyber-pink"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-cyber-pink to-gw2-purple opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <span class="relative flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Quick Analysis
+                    </span>
+                </a>
+                
+                <a href="/evening" 
+                   class="group px-8 py-4 rounded-xl font-display font-bold text-lg border-2 border-gw2-purple/50 hover:border-gw2-purple hover:bg-gw2-purple/10 transition-all hover:scale-105">
+                    <span class="flex items-center justify-center gap-2 bg-gradient-to-r from-gw2-purple to-cyber-cyan bg-clip-text text-transparent">
+                        <svg class="w-5 h-5 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        Soirée Complète
+                    </span>
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Features Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Feature 1: Quick Analysis -->
+            <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.3s;">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center mb-4">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">⚡ 3 Secondes</h3>
+                <p class="text-gray-400">
+                    Colle un lien dps.report → Composition ennemie + Counter parfait instantanément.
+                </p>
+            </div>
+            
+            <!-- Feature 2: Evening Analysis -->
+            <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.35s;">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyber-pink to-cyber-cyan flex items-center justify-center mb-4">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">📊 Soirée Complète</h3>
+                <p class="text-gray-400">
+                    Drag & drop jusqu'à 100 fichiers .evtc → Analyse complète de 4h de WvW.
+                </p>
+            </div>
+            
+            <!-- Feature 3: Intelligence Report -->
+            <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.4s;">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyber-cyan to-gw2-blue flex items-center justify-center mb-4">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">📄 PDF Report</h3>
+                <p class="text-gray-400">
+                    Exporte un "Night Intelligence Report" à partager avec ta guilde.
+                </p>
+            </div>
+            
+            <!-- Feature 4: Heatmaps -->
+            <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.45s;">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mb-4">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">🗺️ Heatmaps</h3>
+                <p class="text-gray-400">
+                    Visualise les zones les plus contestées et adapte ta stratégie.
+                </p>
+            </div>
+            
+            <!-- Feature 5: Top Players -->
+            <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.5s;">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center mb-4">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                    </svg>
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">🎯 Top Threats</h3>
+                <p class="text-gray-400">
+                    Identifie les 10 joueurs les plus dangereux et leurs builds exacts.
+                </p>
+            </div>
+            
+            <!-- Feature 6: Meta Tracking -->
+            <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.55s;">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mb-4">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">📈 Meta 2025</h3>
+                <p class="text-gray-400">
+                    Suis l'évolution du meta WvW en temps réel. Tier lists actualisées.
+                </p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- How it Works -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-center mb-12">
+            <span class="bg-gradient-to-r from-gw2-purple to-cyber-cyan bg-clip-text text-transparent">
+                Comment ça marche
+            </span>
+        </h2>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Step 1 -->
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center mx-auto mb-4 text-2xl font-display font-bold">
+                    1
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">Upload</h3>
+                <p class="text-gray-400">
+                    Colle un lien dps.report ou drag & drop tes fichiers .evtc
+                </p>
+            </div>
+            
+            <!-- Step 2 -->
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-cyber-pink to-cyber-cyan flex items-center justify-center mx-auto mb-4 text-2xl font-display font-bold">
+                    2
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">Analyse</h3>
+                <p class="text-gray-400">
+                    L'IA analyse la composition ennemie et identifie les patterns
+                </p>
+            </div>
+            
+            <!-- Step 3 -->
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-cyber-cyan to-gw2-blue flex items-center justify-center mx-auto mb-4 text-2xl font-display font-bold">
+                    3
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">Domine</h3>
+                <p class="text-gray-400">
+                    Reçois le counter parfait et écrase l'adversaire
+                </p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="glow-card rounded-3xl p-8 md:p-12">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div>
+                    <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-gw2-purple to-cyber-pink bg-clip-text text-transparent">
+                        27
+                    </div>
+                    <div class="text-gray-400 mt-2">Elite Specs</div>
+                </div>
+                <div>
+                    <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                        100+
+                    </div>
+                    <div class="text-gray-400 mt-2">Counter Strategies</div>
+                </div>
+                <div>
+                    <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-cyber-cyan to-gw2-blue bg-clip-text text-transparent">
+                        3s
+                    </div>
+                    <div class="text-gray-400 mt-2">Analysis Time</div>
+                </div>
+                <div>
+                    <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-gw2-blue to-gw2-purple bg-clip-text text-transparent">
+                        15
+                    </div>
+                    <div class="text-gray-400 mt-2">Years of Pain</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Final CTA -->
+    <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <h2 class="font-display text-3xl md:text-4xl font-bold mb-6">
+            <span class="bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                Prêt à changer la guerre ?
+            </span>
+        </h2>
+        <p class="text-xl text-gray-400 mb-8">
+            Demain matin, les commandants EU découvriront que tout a changé.
+        </p>
+        <a href="/analyze" 
+           class="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-display font-bold text-lg bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple transition-all hover:scale-105 animate-glow">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            Commencer Maintenant
+        </a>
+    </section>
+</div>
+{% endblock %}

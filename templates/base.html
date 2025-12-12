@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GW2 CounterPicker{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'gw2-gold': '#FFD700',
+                        'gw2-purple': '#8B5CF6',
+                        'gw2-blue': '#3B82F6',
+                        'gw2-dark': '#0F0A1F',
+                        'gw2-darker': '#080510',
+                        'nebula-purple': '#4C1D95',
+                        'nebula-blue': '#1E3A8A',
+                        'cyber-pink': '#EC4899',
+                        'cyber-cyan': '#22D3EE',
+                    },
+                    fontFamily: {
+                        'display': ['Orbitron', 'sans-serif'],
+                        'body': ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)' },
+                            '100%': { boxShadow: '0 0 40px rgba(139, 92, 246, 0.6)' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #080510 0%, #0F0A1F 25%, #1a0a2e 50%, #0F0A1F 75%, #080510 100%);
+            min-height: 100vh;
+        }
+        
+        .font-display {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        /* Nebula background effect */
+        .nebula-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .nebula-bg::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 40%, rgba(236, 72, 153, 0.08) 0%, transparent 40%),
+                radial-gradient(ellipse at 60% 60%, rgba(34, 211, 238, 0.08) 0%, transparent 40%);
+            animation: nebula-rotate 60s linear infinite;
+        }
+        
+        @keyframes nebula-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Stars effect */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1px 1px at 230px 80px, white, transparent),
+                radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.7), transparent),
+                radial-gradient(1px 1px at 370px 50px, white, transparent),
+                radial-gradient(2px 2px at 450px 180px, rgba(255,255,255,0.5), transparent);
+            background-size: 500px 200px;
+            animation: stars-move 100s linear infinite;
+        }
+        
+        @keyframes stars-move {
+            0% { background-position: 0 0; }
+            100% { background-position: 500px 200px; }
+        }
+        
+        /* Glowing card effect */
+        .glow-card {
+            background: rgba(15, 10, 31, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .glow-card:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #0F0A1F;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #8B5CF6 0%, #6366F1 100%);
+            border-radius: 4px;
+        }
+        
+        /* HTMX loading indicator */
+        .htmx-indicator {
+            display: none;
+        }
+        
+        .htmx-request .htmx-indicator {
+            display: inline-flex;
+        }
+        
+        .htmx-request.htmx-indicator {
+            display: inline-flex;
+        }
+        
+        /* Drag and drop zone */
+        .drop-zone {
+            border: 2px dashed rgba(139, 92, 246, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone.drag-over {
+            border-color: #8B5CF6;
+            background: rgba(139, 92, 246, 0.1);
+            transform: scale(1.02);
+        }
+        
+        /* Progress bar animation */
+        .progress-bar {
+            background: linear-gradient(90deg, #8B5CF6 0%, #EC4899 50%, #22D3EE 100%);
+            background-size: 200% 100%;
+            animation: progress-shine 2s linear infinite;
+        }
+        
+        @keyframes progress-shine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Spec icon styling */
+        .spec-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            background: rgba(139, 92, 246, 0.2);
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.5rem 1rem;
+            background: rgba(15, 10, 31, 0.95);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 0.5rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            font-size: 0.875rem;
+            z-index: 50;
+        }
+        
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+    </style>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="text-gray-100 antialiased">
+    <!-- Background effects -->
+    <div class="nebula-bg"></div>
+    <div class="stars"></div>
+    
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-gw2-darker/80 backdrop-blur-lg border-b border-gw2-purple/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <a href="/" class="flex items-center space-x-3 group">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-display font-bold text-xl bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                        CounterPicker
+                    </span>
+                </a>
+                
+                <!-- Navigation Links -->
+                <div class="hidden md:flex items-center space-x-1">
+                    <a href="/" class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gw2-purple/20 transition-all font-medium">
+                        Home
+                    </a>
+                    <a href="/analyze" class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gw2-purple/20 transition-all font-medium">
+                        Quick Analysis
+                    </a>
+                    <a href="/evening" class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gw2-purple/20 transition-all font-medium">
+                        Soirée Complète
+                    </a>
+                    <a href="/meta" class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gw2-purple/20 transition-all font-medium">
+                        Meta 2025
+                    </a>
+                </div>
+                
+                <!-- Mobile menu button -->
+                <button class="md:hidden p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gw2-purple/20" 
+                        @click="mobileMenu = !mobileMenu" 
+                        x-data="{ mobileMenu: false }">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="pt-20 pb-12 min-h-screen">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="border-t border-gw2-purple/20 bg-gw2-darker/50 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="text-center md:text-left">
+                    <p class="text-gray-400 text-sm">
+                        Made with <span class="text-cyber-pink">rage</span>, <span class="text-gw2-purple">love</span> and <span class="text-cyber-cyan">15 years of WvW pain</span>.
+                    </p>
+                    <p class="text-gray-500 text-xs mt-1">
+                        © 2025 GW2 CounterPicker. Not affiliated with ArenaNet or NCSOFT.
+                    </p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="https://github.com" target="_blank" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"></path>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

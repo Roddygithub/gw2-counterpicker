@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Meta 2025 - GW2 CounterPicker{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
+            <span class="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+                📈 Meta WvW 2025
+            </span>
+        </h1>
+        <p class="text-xl text-gray-400">
+            Tier list actualisée des builds les plus joués en EU
+        </p>
+        <p class="text-sm text-gray-500 mt-2">
+            Dernière mise à jour: {{ meta_data.last_updated }}
+        </p>
+    </div>
+    
+    <!-- Tier Lists -->
+    <div class="space-y-8">
+        <!-- Tier S -->
+        <div class="glow-card rounded-2xl p-6">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center font-display font-black text-xl text-gw2-darker">
+                    S
+                </div>
+                <div>
+                    <h2 class="font-display text-xl font-bold text-white">Tier S - Must Have</h2>
+                    <p class="text-sm text-gray-400">Builds essentiels dans toute composition</p>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-4">
+                {% for build in meta_data.tier_s %}
+                <div class="bg-gw2-darker rounded-xl p-4 border border-yellow-500/30 hover:border-yellow-500/60 transition-all">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex items-center justify-center">
+                            <span class="text-2xl">⭐</span>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-white">{{ build.spec }}</h3>
+                            <p class="text-xs text-gray-400">{{ build.role }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Usage:</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 rounded-full bg-gw2-darker overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-yellow-400 to-orange-500" style="width: {{ build.usage }}%"></div>
+                            </div>
+                            <span class="text-sm font-bold text-yellow-400">{{ build.usage }}%</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Tier A -->
+        <div class="glow-card rounded-2xl p-6">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center font-display font-black text-xl">
+                    A
+                </div>
+                <div>
+                    <h2 class="font-display text-xl font-bold text-white">Tier A - Très Fort</h2>
+                    <p class="text-sm text-gray-400">Builds très efficaces, souvent vus</p>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-4">
+                {% for build in meta_data.tier_a %}
+                <div class="bg-gw2-darker rounded-xl p-4 border border-gw2-purple/30 hover:border-gw2-purple/60 transition-all">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gw2-purple/20 to-cyber-pink/20 flex items-center justify-center">
+                            <span class="text-2xl">💪</span>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-white">{{ build.spec }}</h3>
+                            <p class="text-xs text-gray-400">{{ build.role }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Usage:</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 rounded-full bg-gw2-darker overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-gw2-purple to-cyber-pink" style="width: {{ build.usage }}%"></div>
+                            </div>
+                            <span class="text-sm font-bold text-gw2-purple">{{ build.usage }}%</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Tier B -->
+        <div class="glow-card rounded-2xl p-6">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center font-display font-black text-xl">
+                    B
+                </div>
+                <div>
+                    <h2 class="font-display text-xl font-bold text-white">Tier B - Viable</h2>
+                    <p class="text-sm text-gray-400">Builds solides dans le bon contexte</p>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-4 gap-4">
+                {% for build in meta_data.tier_b %}
+                <div class="bg-gw2-darker rounded-xl p-4 border border-cyan-500/30 hover:border-cyan-500/60 transition-all">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400/20 to-blue-500/20 flex items-center justify-center">
+                            <span class="text-xl">⚔️</span>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-white text-sm">{{ build.spec }}</h3>
+                            <p class="text-xs text-gray-400">{{ build.role }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-16 h-2 rounded-full bg-gw2-darker overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-cyan-400 to-blue-500" style="width: {{ build.usage }}%"></div>
+                            </div>
+                            <span class="text-xs font-bold text-cyan-400">{{ build.usage }}%</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Tier C -->
+        <div class="glow-card rounded-2xl p-6">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center font-display font-black text-xl">
+                    C
+                </div>
+                <div>
+                    <h2 class="font-display text-xl font-bold text-white">Tier C - Niche</h2>
+                    <p class="text-sm text-gray-400">Builds de niche, situationnels</p>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-4">
+                {% for build in meta_data.tier_c %}
+                <div class="bg-gw2-darker rounded-xl p-4 border border-gray-500/30 hover:border-gray-500/60 transition-all">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-500/20 to-gray-600/20 flex items-center justify-center">
+                            <span class="text-xl">🎯</span>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-white">{{ build.spec }}</h3>
+                            <p class="text-xs text-gray-400">{{ build.role }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Usage:</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 rounded-full bg-gw2-darker overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-gray-500 to-gray-600" style="width: {{ build.usage }}%"></div>
+                            </div>
+                            <span class="text-sm font-bold text-gray-400">{{ build.usage }}%</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Meta Shifts -->
+    <div class="grid md:grid-cols-2 gap-6 mt-8">
+        <!-- Rising -->
+        <div class="glow-card rounded-2xl p-6">
+            <h3 class="font-display text-xl font-bold text-green-400 mb-6 flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+                En Hausse 📈
+            </h3>
+            
+            <div class="space-y-4">
+                {% for build in meta_data.rising %}
+                <div class="flex items-center justify-between bg-gw2-darker rounded-xl p-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🔥</span>
+                        <div>
+                            <h4 class="font-display font-bold text-white">{{ build.spec }}</h4>
+                            <p class="text-xs text-gray-400">{{ build.reason }}</p>
+                        </div>
+                    </div>
+                    <span class="font-display font-bold text-green-400">{{ build.change }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Falling -->
+        <div class="glow-card rounded-2xl p-6">
+            <h3 class="font-display text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                </svg>
+                En Baisse 📉
+            </h3>
+            
+            <div class="space-y-4">
+                {% for build in meta_data.falling %}
+                <div class="flex items-center justify-between bg-gw2-darker rounded-xl p-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">❄️</span>
+                        <div>
+                            <h4 class="font-display font-bold text-white">{{ build.spec }}</h4>
+                            <p class="text-xs text-gray-400">{{ build.reason }}</p>
+                        </div>
+                    </div>
+                    <span class="font-display font-bold text-red-400">{{ build.change }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Disclaimer -->
+    <div class="mt-8 text-center">
+        <p class="text-sm text-gray-500">
+            Données basées sur l'analyse de milliers de combats WvW EU. Le meta peut varier selon le serveur et le matchup.
+        </p>
+    </div>
+</div>
+{% endblock %}

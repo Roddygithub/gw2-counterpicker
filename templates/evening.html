@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Soirée Complète - GW2 CounterPicker{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="fileUploader()">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
+            <span class="bg-gradient-to-r from-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                📊 Soirée Complète
+            </span>
+        </h1>
+        <p class="text-xl text-gray-400">
+            Analyse complète de ta soirée WvW - jusqu'à 100 fichiers .evtc
+        </p>
+    </div>
+    
+    <!-- Upload Zone -->
+    <div class="glow-card rounded-2xl p-6 md:p-8 mb-8">
+        <form id="evening-form"
+              hx-post="/api/analyze/files"
+              hx-target="#result-container"
+              hx-swap="innerHTML"
+              hx-indicator="#upload-indicator"
+              hx-encoding="multipart/form-data"
+              @submit="handleSubmit">
+            
+            <!-- Drop Zone -->
+            <div class="drop-zone rounded-xl p-12 text-center cursor-pointer transition-all"
+                 :class="{ 'drag-over': isDragging }"
+                 @dragover.prevent="isDragging = true"
+                 @dragleave.prevent="isDragging = false"
+                 @drop.prevent="handleDrop($event)"
+                 @click="$refs.fileInput.click()">
+                
+                <input type="file" 
+                       name="files"
+                       x-ref="fileInput"
+                       @change="handleFileSelect($event)"
+                       multiple
+                       accept=".evtc,.zip,.zevtc"
+                       class="hidden">
+                
+                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-gw2-purple/30 to-cyber-pink/30 flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-10 h-10 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                </div>
+                
+                <h3 class="font-display text-xl font-bold text-white mb-2">
+                    Drag & Drop tes fichiers
+                </h3>
+                <p class="text-gray-400 mb-4">
+                    ou clique pour sélectionner
+                </p>
+                <p class="text-sm text-gray-500">
+                    Formats supportés: .evtc, .zip, .zevtc (max 100 fichiers)
+                </p>
+            </div>
+            
+            <!-- File List -->
+            <div x-show="files.length > 0" class="mt-6" x-cloak>
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="font-display font-bold text-white">
+                        Fichiers sélectionnés (<span x-text="files.length"></span>)
+                    </h4>
+                    <button type="button" 
+                            @click="clearFiles()"
+                            class="text-sm text-red-400 hover:text-red-300 transition-colors">
+                        Tout supprimer
+                    </button>
+                </div>
+                
+                <div class="max-h-60 overflow-y-auto space-y-2 pr-2">
+                    <template x-for="(file, index) in files" :key="index">
+                        <div class="flex items-center justify-between bg-gw2-darker rounded-lg px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <span class="text-sm text-gray-300 truncate max-w-xs" x-text="file.name"></span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="text-xs text-gray-500" x-text="formatSize(file.size)"></span>
+                                <button type="button" 
+                                        @click="removeFile(index)"
+                                        class="text-gray-500 hover:text-red-400 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- Total size -->
+                <div class="mt-4 flex items-center justify-between text-sm">
+                    <span class="text-gray-500">Taille totale:</span>
+                    <span class="text-gw2-purple font-medium" x-text="formatSize(totalSize)"></span>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button type="submit" 
+                    :disabled="files.length === 0"
+                    class="w-full mt-6 py-4 rounded-xl font-display font-bold text-lg transition-all flex items-center justify-center gap-3"
+                    :class="files.length > 0 ? 'bg-gradient-to-r from-cyber-pink to-cyber-cyan hover:from-cyber-cyan hover:to-cyber-pink hover:scale-[1.02]' : 'bg-gray-700 cursor-not-allowed opacity-50'">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Analyser la Soirée
+                
+                <!-- Loading indicator -->
+                <span id="upload-indicator" class="htmx-indicator">
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+            </button>
+        </form>
+    </div>
+    
+    <!-- Result Container -->
+    <div id="result-container">
+        <!-- Results will be injected here by HTMX -->
+        
+        <!-- Features Preview -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="glow-card rounded-xl p-6">
+                <h4 class="font-display font-bold text-gw2-purple mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    Ce que tu vas obtenir
+                </h4>
+                <ul class="space-y-3 text-sm text-gray-400">
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400">✓</span>
+                        Composition moyenne du serveur adverse
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400">✓</span>
+                        Évolution horaire des builds (20h → 00h)
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400">✓</span>
+                        Heatmap des zones les plus fightées
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400">✓</span>
+                        Top 10 joueurs + leurs builds exacts
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400">✓</span>
+                        Build le plus joué par classe
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400">✓</span>
+                        Counter parfait pour demain soir
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="glow-card rounded-xl p-6">
+                <h4 class="font-display font-bold text-cyber-cyan mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Bonus: Night Intelligence Report
+                </h4>
+                <p class="text-sm text-gray-400 mb-4">
+                    Génère un PDF professionnel à partager avec ta guilde :
+                </p>
+                <ul class="space-y-2 text-sm text-gray-400">
+                    <li class="flex items-start gap-2">
+                        <span class="text-cyber-cyan">→</span>
+                        Résumé exécutif de la soirée
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-cyber-cyan">→</span>
+                        Graphiques et statistiques
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-cyber-cyan">→</span>
+                        Stratégies recommandées
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-cyber-cyan">→</span>
+                        Liste des menaces prioritaires
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function fileUploader() {
+    return {
+        files: [],
+        isDragging: false,
+        
+        get totalSize() {
+            return this.files.reduce((acc, file) => acc + file.size, 0);
+        },
+        
+        handleDrop(event) {
+            this.isDragging = false;
+            const droppedFiles = Array.from(event.dataTransfer.files);
+            this.addFiles(droppedFiles);
+        },
+        
+        handleFileSelect(event) {
+            const selectedFiles = Array.from(event.target.files);
+            this.addFiles(selectedFiles);
+        },
+        
+        addFiles(newFiles) {
+            // Filter valid extensions
+            const validExtensions = ['.evtc', '.zip', '.zevtc'];
+            const validFiles = newFiles.filter(file => {
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                return validExtensions.includes(ext);
+            });
+            
+            // Add files up to 100 max
+            const remainingSlots = 100 - this.files.length;
+            const filesToAdd = validFiles.slice(0, remainingSlots);
+            
+            this.files = [...this.files, ...filesToAdd];
+            
+            // Update the file input for HTMX
+            this.updateFileInput();
+        },
+        
+        removeFile(index) {
+            this.files.splice(index, 1);
+            this.updateFileInput();
+        },
+        
+        clearFiles() {
+            this.files = [];
+            this.updateFileInput();
+        },
+        
+        updateFileInput() {
+            // Create a new DataTransfer to update the input
+            const dt = new DataTransfer();
+            this.files.forEach(file => dt.items.add(file));
+            this.$refs.fileInput.files = dt.files;
+        },
+        
+        formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+        
+        handleSubmit(event) {
+            if (this.files.length === 0) {
+                event.preventDefault();
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
