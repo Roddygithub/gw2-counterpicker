@@ -485,10 +485,23 @@ class EVTCParser:
     
     def parse_bytes(self, data: bytes, filename: str = "") -> ParsedLog:
         """Parse EVTC from bytes"""
-        if filename.endswith('.zip') or filename.endswith('.zevtc'):
+        if filename.lower().endswith('.zip'):
             return self._parse_zip_bytes(data)
+        elif filename.lower().endswith('.zevtc'):
+            # .zevtc files are zlib compressed, not zip
+            return self._parse_zevtc_bytes(data)
         else:
-            return self._parse_stream(io.BytesIO(data))
+            # Check if data starts with EVTC header or is compressed
+            if data[:4] == b'EVTC':
+                return self._parse_stream(io.BytesIO(data))
+            else:
+                # Try zlib decompression
+                try:
+                    import zlib
+                    decompressed = zlib.decompress(data)
+                    return self._parse_stream(io.BytesIO(decompressed))
+                except:
+                    return self._parse_stream(io.BytesIO(data))
     
     def _parse_zip(self, filepath: str) -> ParsedLog:
         """Parse a zipped EVTC file"""
@@ -519,6 +532,28 @@ class EVTCParser:
                     return self._parse_stream(io.BytesIO(f.read()))
         
         raise ValueError("No EVTC file found in archive")
+    
+    def _parse_zevtc_bytes(self, data: bytes) -> ParsedLog:
+        """Parse a .zevtc file (zlib compressed EVTC or ZIP)"""
+        import zlib
+        
+        # Check for ZIP signature (PK)
+        if data[:2] == b'PK':
+            return self._parse_zip_bytes(data)
+        
+        # Check for raw EVTC
+        if data[:4] == b'EVTC':
+            return self._parse_stream(io.BytesIO(data))
+        
+        # Try zlib decompression
+        try:
+            decompressed = zlib.decompress(data)
+            return self._parse_stream(io.BytesIO(decompressed))
+        except zlib.error:
+            pass
+        
+        # Last resort: try as raw stream
+        raise ValueError(f"Unable to parse .zevtc file. Unknown format (starts with: {data[:4]})")
     
     def _parse_stream(self, stream: BinaryIO) -> ParsedLog:
         """Parse EVTC from a binary stream"""

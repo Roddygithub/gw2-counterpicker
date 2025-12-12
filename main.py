@@ -132,20 +132,38 @@ async def analyze_single_evtc(
     try:
         # Read file data
         data = await file.read()
+        print(f"[EVTC] Received file: {file.filename}, size: {len(data)} bytes")
         
-        # Parse with REAL parser
-        parsed_log = real_parser.parse_evtc_bytes(data, file.filename)
-        
-        # Build response with exact player data
-        return templates.TemplateResponse("partials/evtc_result.html", {
-            "request": request,
-            "log": parsed_log,
-            "filename": file.filename,
-            "timestamp": datetime.now().strftime("%H:%M:%S")
-        })
+        # Try REAL parser first
+        try:
+            parsed_log = real_parser.parse_evtc_bytes(data, file.filename)
+            print(f"[EVTC] Real parser success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
+            
+            # Build response with exact player data
+            return templates.TemplateResponse("partials/evtc_result.html", {
+                "request": request,
+                "log": parsed_log,
+                "filename": file.filename,
+                "timestamp": datetime.now().strftime("%H:%M:%S")
+            })
+        except Exception as parse_error:
+            print(f"[EVTC] Real parser failed: {parse_error}")
+            
+            # Fallback: use mock parser to generate sample analysis
+            analysis = mock_parser.parse_dps_report_url(f"file://{file.filename}")
+            counter = counter_engine.generate_counter(analysis.enemy_composition)
+            
+            return templates.TemplateResponse("partials/analysis_result.html", {
+                "request": request,
+                "analysis": analysis,
+                "counter": counter,
+                "timestamp": datetime.now().strftime("%H:%M:%S"),
+                "parse_warning": f"Real parsing failed, showing simulated data. Error: {str(parse_error)[:100]}"
+            })
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse EVTC: {str(e)}")
+        print(f"[EVTC] Critical error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
 
 
 @app.post("/api/analyze/files")
