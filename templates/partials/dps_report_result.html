@@ -143,6 +143,9 @@
                         <th class="pb-2">Classe</th>
                         <th class="pb-2">Groupe</th>
                         <th class="pb-2 text-right">Dégâts</th>
+                        <th class="pb-2 text-right">Cleanses</th>
+                        <th class="pb-2 text-right">C/s</th>
+                        <th class="pb-2 text-right">Strips</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -169,6 +172,15 @@
                         <td class="py-2 text-gray-400">{{ player.group }}</td>
                         <td class="py-2 text-right font-mono text-orange-400">
                             {{ "{:,}".format(player.damage) }}
+                        </td>
+                        <td class="py-2 text-right font-mono text-cyan-400">
+                            {{ player.cleanses|default(0) }}
+                        </td>
+                        <td class="py-2 text-right font-mono text-cyan-300">
+                            {{ player.cleanses_per_sec|default(0) }}
+                        </td>
+                        <td class="py-2 text-right font-mono text-purple-400">
+                            {{ player.boon_strips|default(0) }}
                         </td>
                     </tr>
                     {% endfor %}

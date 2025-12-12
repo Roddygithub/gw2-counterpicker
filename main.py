@@ -280,11 +280,44 @@ def extract_players_from_ei_json(data: dict) -> dict:
             return safe_number(value[0])
         return 0
 
+    # Get fight duration for per-second calculations
+    duration_ms = data.get('duration', '0')
+    if isinstance(duration_ms, str):
+        # Parse duration string like "2m 30s 500ms"
+        import re
+        duration_sec = 0
+        m = re.search(r'(\d+)m', duration_ms)
+        if m:
+            duration_sec += int(m.group(1)) * 60
+        s = re.search(r'(\d+)s', duration_ms)
+        if s:
+            duration_sec += int(s.group(1))
+        ms = re.search(r'(\d+)ms', duration_ms)
+        if ms:
+            duration_sec += int(ms.group(1)) / 1000
+    else:
+        duration_sec = float(duration_ms) / 1000 if duration_ms > 1000 else float(duration_ms)
+    
+    if duration_sec <= 0:
+        duration_sec = 1  # Avoid division by zero
+
     players = []
 
     for player in data.get('players', []):
         dps_entries = player.get('dpsAll', [])
         damage_value = safe_number(dps_entries)
+        
+        # Extract support stats (cleanses, resurrects, boon strips)
+        support_data = player.get('support', [{}])
+        support = support_data[0] if support_data else {}
+        condi_cleanse = support.get('condiCleanse', 0)
+        condi_cleanse_self = support.get('condiCleanseSelf', 0)
+        resurrects = support.get('resurrects', 0)
+        boon_strips = support.get('boonStrips', 0)
+        
+        # Calculate per-second values
+        cleanses_per_sec = round(condi_cleanse / duration_sec, 2) if duration_sec > 0 else 0
+        
         players.append({
             'name': player.get('name', 'Unknown'),
             'account': player.get('account', ''),
@@ -292,6 +325,11 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'group': player.get('group', 0),
             'damage': int(damage_value),
             'is_commander': player.get('hasCommanderTag', False),
+            'cleanses': condi_cleanse,
+            'cleanses_self': condi_cleanse_self,
+            'cleanses_per_sec': cleanses_per_sec,
+            'resurrects': resurrects,
+            'boon_strips': boon_strips,
         })
 
     # Get targets (enemies in WvW)
