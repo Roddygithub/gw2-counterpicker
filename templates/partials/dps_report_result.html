@@ -5,6 +5,8 @@
 .prof-dragonhunter { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
 .prof-firebrand { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
 .prof-willbender { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
+.prof-luminary { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
+.prof-troubadour { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
 
 .prof-warrior { color: #FFD166; background-color: rgba(255, 209, 102, 0.15); }
 .prof-berserker { color: #FFD166; background-color: rgba(255, 209, 102, 0.15); }
@@ -30,6 +32,7 @@
 .prof-tempest { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
 .prof-weaver { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
 .prof-catalyst { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
+.prof-evoker { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
 
 .prof-mesmer { color: #B679D5; background-color: rgba(182, 121, 213, 0.15); }
 .prof-chronomancer { color: #B679D5; background-color: rgba(182, 121, 213, 0.15); }
@@ -48,13 +51,19 @@
 
 /* JW specs */
 .prof-paragon { color: #D16E5A; background-color: rgba(209, 110, 90, 0.15); }
-.prof-luminary { color: #B679D5; background-color: rgba(182, 121, 213, 0.15); }
-.prof-troubadour { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
 .prof-ritualist { color: #52A76F; background-color: rgba(82, 167, 111, 0.15); }
 .prof-conduit { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
 .prof-amalgam { color: #D09C59; background-color: rgba(208, 156, 89, 0.15); }
 
 .prof-unknown { color: #888888; background-color: rgba(136, 136, 136, 0.15); }
+
+.sort-controls button {
+    font-weight: 600;
+}
+.sort-controls button.active {
+    border-color: #ffffff;
+    color: #ffffff;
+}
 </style>
 <div class="space-y-6 animate-slide-up">
     <!-- Success Header -->
@@ -104,6 +113,21 @@
     <!-- Allied Players -->
     {% if players.allies %}
     <div class="glow-card rounded-2xl p-6">
+        <div class="flex flex-wrap gap-2 justify-end mb-4 text-xs text-gray-300">
+            <span class="uppercase tracking-wide text-gray-500 mr-auto">Tri</span>
+            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+                    data-sort-target="allies-table" data-sort-mode="default">
+                Par défaut
+            </button>
+            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+                    data-sort-target="allies-table" data-sort-mode="profession">
+                Par classe
+            </button>
+            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+                    data-sort-target="allies-table" data-sort-mode="group">
+                Par sous-groupe
+            </button>
+        </div>
         <h3 class="font-display text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -112,7 +136,7 @@
         </h3>
         
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm sortable-table" id="allies-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2">Joueur</th>
@@ -123,7 +147,11 @@
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for player in players.allies %}
-                    <tr class="hover:bg-gw2-darker/50">
+                    <tr class="hover:bg-gw2-darker/50"
+                        data-profession="{{ player.profession|lower }}"
+                        data-group="{{ player.group }}"
+                        data-damage="{{ player.damage }}"
+                        data-original-order="{{ loop.index0 }}">
                         <td class="py-2">
                             <div class="flex items-center gap-2">
                                 {% if player.is_commander %}
@@ -153,6 +181,21 @@
     <!-- Enemy Players (if WvW) -->
     {% if players.enemies %}
     <div class="glow-card rounded-2xl p-6">
+        <div class="flex flex-wrap gap-2 justify-end mb-4 text-xs text-gray-300">
+            <span class="uppercase tracking-wide text-gray-500 mr-auto">Tri</span>
+            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+                    data-sort-target="enemies-table" data-sort-mode="default">
+                Par défaut
+            </button>
+            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+                    data-sort-target="enemies-table" data-sort-mode="profession">
+                Par classe
+            </button>
+            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+                    data-sort-target="enemies-table" data-sort-mode="damage">
+                Par dégâts subis
+            </button>
+        </div>
         <h3 class="font-display text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -161,7 +204,7 @@
         </h3>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm sortable-table" id="enemies-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2">Joueur</th>
@@ -171,7 +214,11 @@
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for enemy in players.enemies %}
-                    <tr class="hover:bg-gw2-darker/50">
+                    <tr class="hover:bg-gw2-darker/50"
+                        data-profession="{{ enemy.profession|lower }}"
+                        data-group="0"
+                        data-damage="{{ enemy.damage_taken }}"
+                        data-original-order="{{ loop.index0 }}">
                         <td class="py-2">
                             <span class="font-medium text-white">{{ enemy.name }}</span>
                         </td>
@@ -258,3 +305,40 @@
         </p>
     </div>
 </div>
+
+<script>
+document.addEventListener('htmx:afterSwap', initSortingControls);
+document.addEventListener('DOMContentLoaded', initSortingControls);
+
+function initSortingControls() {
+    document.querySelectorAll('.sort-controls button').forEach(btn => {
+        btn.removeEventListener('click', handleSortClick);
+        btn.addEventListener('click', handleSortClick);
+    });
+}
+
+function handleSortClick(event) {
+    const btn = event.currentTarget;
+    const tableId = btn.dataset.sortTarget;
+    const mode = btn.dataset.sortMode;
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    if (mode === 'default') {
+        rows.sort((a, b) => Number(a.dataset.originalOrder) - Number(b.dataset.originalOrder));
+    } else if (mode === 'profession') {
+        rows.sort((a, b) => a.dataset.profession.localeCompare(b.dataset.profession));
+    } else if (mode === 'group') {
+        rows.sort((a, b) => Number(a.dataset.group) - Number(b.dataset.group));
+    } else if (mode === 'damage') {
+        rows.sort((a, b) => Number(b.dataset.damage) - Number(a.dataset.damage));
+    }
+
+    const tbody = table.querySelector('tbody');
+    rows.forEach(row => tbody.appendChild(row));
+}
+</script>
