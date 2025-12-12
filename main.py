@@ -136,8 +136,6 @@ async def analyze_single_evtc(
         
         # Upload to dps.report API for reliable parsing
         try:
-            import aiohttp
-            
             async with httpx.AsyncClient(timeout=60.0) as client:
                 # Upload to dps.report
                 files = {'file': (file.filename, data)}
