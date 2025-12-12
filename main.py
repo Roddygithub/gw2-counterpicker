@@ -303,11 +303,11 @@ def extract_players_from_ei_json(data: dict) -> dict:
 
     # Role detection based on elite spec (WvW meta)
     # Primary stab providers
-    STAB_SPECS = {'Firebrand', 'Luminary', 'Willbender'}
+    STAB_SPECS = {'Firebrand', 'Luminary'}
     # Primary healers
-    HEALER_SPECS = {'Druid', 'Tempest', 'Scrapper', 'Vindicator'}  # Troubadour = Tempest
+    HEALER_SPECS = {'Druid', 'Tempest', 'Scrapper', 'Vindicator', 'Specter'}
     # Primary boon providers
-    BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer', 'Specter', 'Mechanist'}
+    BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer'}
     
     def detect_role(profession, cleanses_per_sec, damage):
         """Detect player role based on spec and stats (WvW meta)"""
@@ -323,7 +323,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
         # High cleanses from other specs = likely healer
         if cleanses_per_sec >= 2.0:
             return 'healer'
-        # Default = DPS
+        # Default = DPS (includes Willbender, Mechanist, etc.)
         return 'dps'
 
     players = []
