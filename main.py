@@ -248,15 +248,19 @@ def extract_players_from_ei_json(data: dict) -> dict:
     for target in data.get('targets', []):
         if target.get('enemyPlayer', False):
             damage_taken = safe_number(target.get('totalDamageTaken', 0))
+            raw_name = target.get('name', 'Unknown')
+            profession_guess = raw_name.split(' ')[0] if raw_name and ' ' in raw_name else 'Unknown'
             enemies.append({
-                'name': target.get('name', 'Unknown'),
-                'profession': 'Unknown',  # Targets don't have profession in standard EI output
+                'name': raw_name,
+                'profession': profession_guess,
                 'damage_taken': int(damage_taken),
             })
 
+    enemies_sorted = sorted(enemies, key=lambda e: e['damage_taken'], reverse=True)[:20]
+
     return {
         'allies': players,
-        'enemies': enemies,
+        'enemies': enemies_sorted,
         'fight_name': data.get('fightName', data.get('name', 'Unknown'))
     }
 
