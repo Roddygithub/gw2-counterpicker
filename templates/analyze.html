@@ -17,24 +17,19 @@
     
     handleDrop(event) {
         this.isDragging = false;
-        console.log('Drop event fired', event);
-        console.log('Files dropped:', event.dataTransfer.files.length);
         const file = event.dataTransfer.files[0];
         if (file) {
-            console.log('File selected:', file.name);
             this.selectedFile = file;
-            const input = this.$refs.fileInput;
+            const input = document.getElementById('evtc-file');
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
             input.files = dataTransfer.files;
-        } else {
-            console.log('No file found in drop event');
         }
     },
     
     clearFile() {
         this.selectedFile = null;
-        const input = this.$refs.fileInput;
+        const input = document.getElementById('evtc-file');
         if (input) input.value = '';
     },
     
@@ -88,21 +83,19 @@
               hx-indicator="#loading-file">
             
             <!-- Drag & Drop Zone -->
-            <div class="relative"
+            <label for="evtc-file" class="block relative cursor-pointer"
                  @dragover.prevent="isDragging = true"
                  @dragenter.prevent="isDragging = true"
                  @dragleave.prevent="isDragging = false"
-                 @drop.prevent="handleDrop($event)"
-                 @click="$refs.fileInput.click()">
+                 @drop.prevent="handleDrop($event)">
                 <input type="file" 
-                       ref="fileInput"
                        id="evtc-file" 
                        name="file" 
                        accept=".evtc,.zevtc,.zip"
                        @change="handleFileSelect($event)"
-                       style="display: none">
+                       class="sr-only">
                 
-                <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer"
+                <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all"
                      :class="isDragging ? 'border-gw2-purple bg-gw2-purple/10' : (selectedFile ? 'border-green-500 bg-green-500/10' : 'border-gray-600')">
                     
                     <!-- No file selected -->
@@ -138,7 +131,7 @@
                         </button>
                     </div>
                 </div>
-            </div>
+            </label>
             
             <button type="submit" 
                     :disabled="!selectedFile"
