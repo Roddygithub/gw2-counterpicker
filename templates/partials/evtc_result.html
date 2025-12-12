@@ -1,0 +1,192 @@
+<!-- Real EVTC Parse Result - Shows EXACT player builds -->
+<div class="space-y-6 animate-slide-up">
+    <!-- Success Header -->
+    <div class="glow-card rounded-2xl p-6 border-2 border-green-500/50">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <h2 class="font-display text-2xl font-bold text-white flex items-center gap-2">
+                    🎯 REAL EVTC Analysis
+                    <span class="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+                        v2.0 - Real Parsing
+                    </span>
+                </h2>
+                <p class="text-gray-400">
+                    {{ filename }} • Parsed at {{ timestamp }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Log Info -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-xl font-display font-bold text-gw2-purple">{{ log.duration_seconds }}s</div>
+                <div class="text-xs text-gray-400">Duration</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-xl font-display font-bold text-cyber-pink">{{ log.enemies|length }}</div>
+                <div class="text-xs text-gray-400">Enemies</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-xl font-display font-bold text-cyber-cyan">{{ log.players|length }}</div>
+                <div class="text-xs text-gray-400">Allies</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-xl font-display font-bold text-green-400">
+                    {% if log.is_wvw %}WvW{% else %}PvE{% endif %}
+                </div>
+                <div class="text-xs text-gray-400">Mode</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enemy Players - EXACT BUILDS -->
+    {% if log.enemies %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            🎯 Enemy Builds ({{ log.enemies|length }} players)
+        </h3>
+        
+        <div class="space-y-3">
+            {% for player in log.enemies %}
+            <div class="bg-gw2-darker rounded-xl p-4 border border-red-500/20 hover:border-red-500/40 transition-all">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <!-- Player Info -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-red-500/30 to-orange-500/30 flex items-center justify-center">
+                            <span class="text-2xl">⚔️</span>
+                        </div>
+                        <div>
+                            <div class="font-display font-bold text-white">{{ player.character_name }}</div>
+                            <div class="text-xs text-gray-500">{{ player.account_name }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Build Info -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Elite Spec Badge -->
+                        <span class="px-3 py-1 rounded-lg text-sm font-medium bg-gw2-purple/20 text-gw2-purple border border-gw2-purple/30">
+                            {{ player.elite_spec }}
+                        </span>
+                        
+                        <!-- Role Badge -->
+                        <span class="px-3 py-1 rounded-lg text-sm font-medium
+                            {% if player.estimated_role == 'Support' %}
+                                bg-green-500/20 text-green-400 border border-green-500/30
+                            {% elif player.estimated_role == 'Frontline' %}
+                                bg-red-500/20 text-red-400 border border-red-500/30
+                            {% elif player.estimated_role == 'Backline' %}
+                                bg-blue-500/20 text-blue-400 border border-blue-500/30
+                            {% else %}
+                                bg-yellow-500/20 text-yellow-400 border border-yellow-500/30
+                            {% endif %}
+                        ">
+                            {{ player.estimated_role }}
+                        </span>
+                        
+                        <!-- Confidence -->
+                        <span class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">
+                            {{ "%.0f"|format(player.confidence) }}% conf
+                        </span>
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="flex items-center gap-4 text-sm">
+                        <div class="text-center">
+                            <div class="font-bold text-orange-400">{{ "{:,}".format(player.damage_dealt) }}</div>
+                            <div class="text-xs text-gray-500">DMG</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-bold text-green-400">{{ player.kills }}</div>
+                            <div class="text-xs text-gray-500">Kills</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-bold text-red-400">{{ player.deaths }}</div>
+                            <div class="text-xs text-gray-500">Deaths</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Estimated Build -->
+                <div class="mt-3 pt-3 border-t border-gray-700/50">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Estimated Build:</span>
+                        <span class="font-display font-bold text-white">{{ player.estimated_build }}</span>
+                    </div>
+                    
+                    <!-- Stat Hints -->
+                    {% if player.toughness > 1000 or player.healing_power > 500 or player.concentration > 500 %}
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        {% if player.toughness > 1200 %}
+                        <span class="px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400">High Toughness</span>
+                        {% endif %}
+                        {% if player.healing_power > 800 %}
+                        <span class="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">Healer Stats</span>
+                        {% endif %}
+                        {% if player.concentration > 800 %}
+                        <span class="px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-400">Boon Duration</span>
+                        {% endif %}
+                        {% if player.condition_damage > 1000 %}
+                        <span class="px-2 py-1 rounded text-xs bg-orange-500/20 text-orange-400">Condi Build</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Allied Players -->
+    {% if log.players %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            🛡️ Allied Players ({{ log.players|length }})
+        </h3>
+        
+        <div class="grid md:grid-cols-2 gap-3">
+            {% for player in log.players %}
+            <div class="bg-gw2-darker rounded-xl p-3 border border-green-500/20">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-white text-sm">{{ player.character_name }}</div>
+                        <div class="text-xs text-gray-500">{{ player.elite_spec }}</div>
+                    </div>
+                    <span class="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">
+                        {{ player.estimated_role }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Skills Used Summary -->
+    {% if log.skills %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-cyan-400 mb-4">
+            📊 Skills Detected: {{ log.skills|length }}
+        </h3>
+        <p class="text-sm text-gray-400">
+            Full skill analysis available for build verification and trait detection.
+        </p>
+    </div>
+    {% endif %}
+    
+    <!-- Footer -->
+    <div class="text-center text-sm text-gray-500">
+        <span class="text-green-400">✓</span> Real EVTC parsing powered by GW2 CounterPicker v2.0
+    </div>
+</div>

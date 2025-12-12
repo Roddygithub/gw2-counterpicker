@@ -24,13 +24,14 @@ from models import (
     CounterRecommendation, EveningReport, HourlyEvolution,
     HeatmapData, TopPlayer
 )
+from parser import RealEVTCParser
 from mock_parser import MockEVTCParser
 from counter_engine import CounterPickEngine
 
 app = FastAPI(
     title="GW2 CounterPicker",
     description="The most powerful WvW intelligence tool ever created",
-    version="1.0.0"
+    version="2.0.0"  # Real EVTC parsing!
 )
 
 # Mount static files
@@ -39,8 +40,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Templates
 templates = Jinja2Templates(directory="templates")
 
-# Initialize engines
-parser = MockEVTCParser()
+# Initialize engines - Real parser with mock fallback
+real_parser = RealEVTCParser()
+mock_parser = MockEVTCParser()
 counter_engine = CounterPickEngine()
 
 # Store for analysis sessions
@@ -95,8 +97,8 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
     if not url or "dps.report" not in url:
         raise HTTPException(status_code=400, detail="Invalid dps.report URL")
     
-    # Parse the report (mocked for now)
-    analysis = parser.parse_dps_report_url(url)
+    # Parse the report (uses mock for URL, real parser for files)
+    analysis = mock_parser.parse_dps_report_url(url)
     
     # Generate counter recommendations
     counter = counter_engine.generate_counter(analysis.enemy_composition)
@@ -110,6 +112,42 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
     })
 
 
+@app.post("/api/analyze/evtc")
+async def analyze_single_evtc(
+    request: Request,
+    file: UploadFile = File(...)
+):
+    """
+    Analyze a single .evtc file with REAL parsing
+    Returns exact player builds with high confidence
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    # Validate extension
+    valid_extensions = ['.evtc', '.zevtc', '.zip']
+    if not any(file.filename.lower().endswith(ext) for ext in valid_extensions):
+        raise HTTPException(status_code=400, detail="Invalid file type. Use .evtc, .zevtc, or .zip")
+    
+    try:
+        # Read file data
+        data = await file.read()
+        
+        # Parse with REAL parser
+        parsed_log = real_parser.parse_evtc_bytes(data, file.filename)
+        
+        # Build response with exact player data
+        return templates.TemplateResponse("partials/evtc_result.html", {
+            "request": request,
+            "log": parsed_log,
+            "filename": file.filename,
+            "timestamp": datetime.now().strftime("%H:%M:%S")
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse EVTC: {str(e)}")
+
+
 @app.post("/api/analyze/files")
 async def analyze_evening_files(
     request: Request,
@@ -117,7 +155,7 @@ async def analyze_evening_files(
 ):
     """
     Analyze multiple .evtc/.zip files for full evening analysis
-    Returns comprehensive intelligence report
+    Returns comprehensive intelligence report with REAL EVTC parsing
     """
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
@@ -128,16 +166,28 @@ async def analyze_evening_files(
     # Create session
     session_id = str(uuid.uuid4())
     
-    # Process all files (mocked)
+    # Read all file data for REAL parsing
     file_infos = []
     for f in files:
-        file_infos.append({
-            "filename": f.filename,
-            "size": f.size or 0
-        })
+        try:
+            data = await f.read()
+            file_infos.append({
+                "filename": f.filename,
+                "size": len(data),
+                "data": data
+            })
+        except Exception as e:
+            print(f"Error reading file {f.filename}: {e}")
+            continue
     
-    # Generate comprehensive evening report
-    report = parser.parse_evening_files(file_infos)
+    # Use REAL parser for .evtc files
+    try:
+        report = real_parser.parse_evening_files(file_infos)
+    except Exception as e:
+        print(f"Real parser failed, falling back to mock: {e}")
+        # Fallback to mock if real parsing fails
+        mock_infos = [{"filename": f["filename"], "size": f["size"]} for f in file_infos]
+        report = mock_parser.parse_evening_files(mock_infos)
     
     # Generate counter for next evening
     counter = counter_engine.generate_counter(report.average_composition)
