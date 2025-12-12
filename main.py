@@ -301,22 +301,28 @@ def extract_players_from_ei_json(data: dict) -> dict:
     if duration_sec <= 0:
         duration_sec = 1  # Avoid division by zero
 
-    # Role detection based on elite spec
-    HEALER_SPECS = {'Druid', 'Tempest', 'Scrapper', 'Firebrand', 'Scourge', 'Vindicator', 'Willbender', 'Specter', 'Mechanist', 'Untamed', 'Catalyst', 'Harbinger', 'Virtuoso', 'Bladesworn'}
-    STAB_SPECS = {'Firebrand', 'Scrapper', 'Chronomancer', 'Herald', 'Revenant', 'Vindicator', 'Willbender'}  # Primary stab providers
-    BOON_SPECS = {'Chronomancer', 'Herald', 'Renegade', 'Firebrand', 'Tempest', 'Druid', 'Specter', 'Mechanist', 'Vindicator', 'Catalyst'}  # Boon providers
+    # Role detection based on elite spec (WvW meta)
+    # Primary stab providers
+    STAB_SPECS = {'Firebrand', 'Luminary', 'Willbender'}
+    # Primary healers
+    HEALER_SPECS = {'Druid', 'Tempest', 'Scrapper', 'Vindicator'}  # Troubadour = Tempest
+    # Primary boon providers
+    BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer', 'Specter', 'Mechanist'}
     
     def detect_role(profession, cleanses_per_sec, damage):
-        """Detect player role based on spec and stats"""
-        # High cleanses = likely healer
-        if cleanses_per_sec >= 1.5:
-            return 'healer'
-        # Stab specs with moderate cleanses = stab
-        if profession in STAB_SPECS and cleanses_per_sec >= 0.5:
+        """Detect player role based on spec and stats (WvW meta)"""
+        # Stab specs are almost always stab role
+        if profession in STAB_SPECS:
             return 'stab'
+        # Healer specs with any cleanses = healer
+        if profession in HEALER_SPECS and cleanses_per_sec >= 0.3:
+            return 'healer'
         # Boon specs = boon
-        if profession in BOON_SPECS and cleanses_per_sec >= 0.3:
+        if profession in BOON_SPECS:
             return 'boon'
+        # High cleanses from other specs = likely healer
+        if cleanses_per_sec >= 2.0:
+            return 'healer'
         # Default = DPS
         return 'dps'
 
