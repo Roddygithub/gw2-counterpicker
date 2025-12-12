@@ -1,24 +1,23 @@
-# GW2 CounterPicker - Fly.io Configuration
-# fly launch to initialize, fly deploy to deploy
+# fly.toml app configuration file generated for gw2-counterpicker on 2025-12-12T19:28:30+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "gw2-counterpicker"
-primary_region = "cdg"  # Paris - EU region
+app = 'gw2-counterpicker'
+primary_region = 'cdg'
 
 [build]
-  dockerfile = "Dockerfile"
-
-[env]
-  PORT = "8000"
 
 [http_service]
   internal_port = 8000
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["app"]
+  processes = ['app']
 
 [[vm]]
-  cpu_kind = "shared"
+  memory = '1gb'
+  cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 256
+  memory_mb = 1024
