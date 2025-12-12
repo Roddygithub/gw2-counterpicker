@@ -39,6 +39,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Templates
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["app_version"] = app.version
 
 # Initialize engines - Real parser with mock fallback
 real_parser = RealEVTCParser()
