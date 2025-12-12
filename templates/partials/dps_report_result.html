@@ -110,20 +110,56 @@
         </div>
     </div>
     
+    <!-- Squad Composition Summary -->
+    {% if players.composition %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-green-400 mb-4">📊 Résumé de Composition</h3>
+        
+        <!-- Role Distribution -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-orange-500/30">
+                <div class="text-3xl font-bold text-orange-400">{{ players.composition.role_counts.dps }}</div>
+                <div class="text-sm text-gray-400">⚔️ DPS</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-yellow-500/30">
+                <div class="text-3xl font-bold text-yellow-400">{{ players.composition.role_counts.stab }}</div>
+                <div class="text-sm text-gray-400">🛡️ Stab</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-green-500/30">
+                <div class="text-3xl font-bold text-green-400">{{ players.composition.role_counts.healer }}</div>
+                <div class="text-sm text-gray-400">💚 Healers</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-cyan-500/30">
+                <div class="text-3xl font-bold text-cyan-400">{{ players.composition.role_counts.boon }}</div>
+                <div class="text-sm text-gray-400">✨ Boons</div>
+            </div>
+        </div>
+        
+        <!-- Spec Breakdown -->
+        <div class="flex flex-wrap gap-2">
+            {% for spec, count in players.composition.spec_counts.items() %}
+            <span class="px-3 py-1 rounded-lg text-sm prof-{{ spec|lower|replace(' ', '') }} border border-gray-700">
+                {{ spec }}: <strong>{{ count }}</strong>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Allied Players -->
     {% if players.allies %}
     <div class="glow-card rounded-2xl p-6">
-        <div class="flex flex-wrap gap-2 justify-end mb-4 text-xs text-gray-300">
+        <div class="sort-controls flex flex-wrap gap-2 justify-end mb-4 text-xs text-gray-300">
             <span class="uppercase tracking-wide text-gray-500 mr-auto">Tri</span>
-            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+            <button type="button" class="sort-btn px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
                     data-sort-target="allies-table" data-sort-mode="default">
                 Par défaut
             </button>
-            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+            <button type="button" class="sort-btn px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
                     data-sort-target="allies-table" data-sort-mode="profession">
                 Par classe
             </button>
-            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+            <button type="button" class="sort-btn px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
                     data-sort-target="allies-table" data-sort-mode="group">
                 Par sous-groupe
             </button>
@@ -143,9 +179,7 @@
                         <th class="pb-2">Classe</th>
                         <th class="pb-2">Groupe</th>
                         <th class="pb-2 text-right">Dégâts</th>
-                        <th class="pb-2 text-right">Cleanses</th>
                         <th class="pb-2 text-right">C/s</th>
-                        <th class="pb-2 text-right">Strips</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -174,13 +208,7 @@
                             {{ "{:,}".format(player.damage) }}
                         </td>
                         <td class="py-2 text-right font-mono text-cyan-400">
-                            {{ player.cleanses|default(0) }}
-                        </td>
-                        <td class="py-2 text-right font-mono text-cyan-300">
                             {{ player.cleanses_per_sec|default(0) }}
-                        </td>
-                        <td class="py-2 text-right font-mono text-purple-400">
-                            {{ player.boon_strips|default(0) }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -193,17 +221,17 @@
     <!-- Enemy Players (if WvW) -->
     {% if players.enemies %}
     <div class="glow-card rounded-2xl p-6">
-        <div class="flex flex-wrap gap-2 justify-end mb-4 text-xs text-gray-300">
+        <div class="sort-controls flex flex-wrap gap-2 justify-end mb-4 text-xs text-gray-300">
             <span class="uppercase tracking-wide text-gray-500 mr-auto">Tri</span>
-            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+            <button type="button" class="sort-btn px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
                     data-sort-target="enemies-table" data-sort-mode="default">
                 Par défaut
             </button>
-            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+            <button type="button" class="sort-btn px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
                     data-sort-target="enemies-table" data-sort-mode="profession">
                 Par classe
             </button>
-            <button type="button" class="px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
+            <button type="button" class="sort-btn px-3 py-1 rounded-lg bg-gw2-darker border border-gray-700 hover:border-white transition-all"
                     data-sort-target="enemies-table" data-sort-mode="damage">
                 Par dégâts subis
             </button>

@@ -301,6 +301,25 @@ def extract_players_from_ei_json(data: dict) -> dict:
     if duration_sec <= 0:
         duration_sec = 1  # Avoid division by zero
 
+    # Role detection based on elite spec
+    HEALER_SPECS = {'Druid', 'Tempest', 'Scrapper', 'Firebrand', 'Scourge', 'Vindicator', 'Willbender', 'Specter', 'Mechanist', 'Untamed', 'Catalyst', 'Harbinger', 'Virtuoso', 'Bladesworn'}
+    STAB_SPECS = {'Firebrand', 'Scrapper', 'Chronomancer', 'Herald', 'Revenant', 'Vindicator', 'Willbender'}  # Primary stab providers
+    BOON_SPECS = {'Chronomancer', 'Herald', 'Renegade', 'Firebrand', 'Tempest', 'Druid', 'Specter', 'Mechanist', 'Vindicator', 'Catalyst'}  # Boon providers
+    
+    def detect_role(profession, cleanses_per_sec, damage):
+        """Detect player role based on spec and stats"""
+        # High cleanses = likely healer
+        if cleanses_per_sec >= 1.5:
+            return 'healer'
+        # Stab specs with moderate cleanses = stab
+        if profession in STAB_SPECS and cleanses_per_sec >= 0.5:
+            return 'stab'
+        # Boon specs = boon
+        if profession in BOON_SPECS and cleanses_per_sec >= 0.3:
+            return 'boon'
+        # Default = DPS
+        return 'dps'
+
     players = []
 
     for player in data.get('players', []):
@@ -318,10 +337,13 @@ def extract_players_from_ei_json(data: dict) -> dict:
         # Calculate per-second values
         cleanses_per_sec = round(condi_cleanse / duration_sec, 2) if duration_sec > 0 else 0
         
+        profession = player.get('profession', 'Unknown')
+        role = detect_role(profession, cleanses_per_sec, int(damage_value))
+        
         players.append({
             'name': player.get('name', 'Unknown'),
             'account': player.get('account', ''),
-            'profession': player.get('profession', 'Unknown'),
+            'profession': profession,
             'group': player.get('group', 0),
             'damage': int(damage_value),
             'is_commander': player.get('hasCommanderTag', False),
@@ -330,6 +352,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'cleanses_per_sec': cleanses_per_sec,
             'resurrects': resurrects,
             'boon_strips': boon_strips,
+            'role': role,
         })
 
     # Get targets (enemies in WvW)
@@ -347,10 +370,23 @@ def extract_players_from_ei_json(data: dict) -> dict:
 
     enemies_sorted = sorted(enemies, key=lambda e: e['damage_taken'], reverse=True)[:20]
 
+    # Calculate composition summary
+    spec_counts = {}
+    role_counts = {'dps': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    for p in players:
+        spec = p['profession']
+        spec_counts[spec] = spec_counts.get(spec, 0) + 1
+        role_counts[p['role']] += 1
+
     return {
         'allies': players,
         'enemies': enemies_sorted,
-        'fight_name': data.get('fightName', data.get('name', 'Unknown'))
+        'fight_name': data.get('fightName', data.get('name', 'Unknown')),
+        'composition': {
+            'spec_counts': spec_counts,
+            'role_counts': role_counts,
+            'total': len(players)
+        }
     }
 
 
