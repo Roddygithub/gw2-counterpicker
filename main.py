@@ -147,16 +147,23 @@ async def analyze_single_evtc(
                 
                 if response.status_code == 200:
                     result = response.json()
-                    print(f"[EVTC] dps.report upload success: {result.get('permalink', 'no link')}")
+                    permalink = result.get('permalink', '')
+                    print(f"[EVTC] dps.report upload success: {permalink}")
                     
                     # Get the JSON data from dps.report
-                    if 'permalink' in result:
-                        # Fetch the detailed JSON
-                        json_url = result['permalink'].replace('https://dps.report/', 'https://dps.report/getJson?permalink=')
+                    if permalink:
+                        # Build correct JSON URL - handle both dps.report and wvw.report
+                        if 'wvw.report' in permalink:
+                            json_url = f"https://dps.report/getJson?permalink={permalink}"
+                        else:
+                            json_url = f"https://dps.report/getJson?permalink={permalink}"
+                        
+                        print(f"[EVTC] Fetching JSON from: {json_url}")
                         json_response = await client.get(json_url)
                         
-                        if json_response.status_code == 200:
+                        if json_response.status_code == 200 and json_response.text.strip().startswith('{'):
                             log_data = json_response.json()
+                            print(f"[EVTC] JSON fetched successfully, players: {len(log_data.get('players', []))}")
                             
                             # Extract player data from Elite Insights JSON
                             players_data = extract_players_from_ei_json(log_data)
