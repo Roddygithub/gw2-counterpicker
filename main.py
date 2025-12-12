@@ -208,31 +208,57 @@ async def analyze_single_evtc(
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
 
 
-def extract_players_from_ei_json(data: dict) -> list:
+def extract_players_from_ei_json(data: dict) -> dict:
     """Extract player information from Elite Insights JSON"""
+
+    def safe_number(value):
+        """Convert nested EI values (lists/dicts) to a numeric scalar"""
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                return 0
+        if isinstance(value, dict):
+            for key in ('damage', 'totalDamage', 'value', 'amount', 'damageTaken'):
+                if key in value:
+                    return safe_number(value[key])
+            return 0
+        if isinstance(value, list) and value:
+            return safe_number(value[0])
+        return 0
+
     players = []
-    
+
     for player in data.get('players', []):
+        dps_entries = player.get('dpsAll', [])
+        damage_value = safe_number(dps_entries)
         players.append({
             'name': player.get('name', 'Unknown'),
             'account': player.get('account', ''),
             'profession': player.get('profession', 'Unknown'),
             'group': player.get('group', 0),
-            'damage': player.get('dpsAll', [{}])[0].get('damage', 0) if player.get('dpsAll') else 0,
+            'damage': int(damage_value),
             'is_commander': player.get('hasCommanderTag', False),
         })
-    
+
     # Get targets (enemies in WvW)
     enemies = []
     for target in data.get('targets', []):
         if target.get('enemyPlayer', False):
+            damage_taken = safe_number(target.get('totalDamageTaken', 0))
             enemies.append({
                 'name': target.get('name', 'Unknown'),
                 'profession': 'Unknown',  # Targets don't have profession in standard EI output
-                'damage_taken': target.get('totalDamageTaken', [0])[0] if target.get('totalDamageTaken') else 0,
+                'damage_taken': int(damage_taken),
             })
-    
-    return {'allies': players, 'enemies': enemies, 'fight_name': data.get('fightName', 'Unknown')}
+
+    return {
+        'allies': players,
+        'enemies': enemies,
+        'fight_name': data.get('fightName', data.get('name', 'Unknown'))
+    }
 
 
 @app.post("/api/analyze/files")
