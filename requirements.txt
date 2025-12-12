@@ -2,26 +2,23 @@
 # The most powerful WvW intelligence tool ever created
 
 # Core Framework
-fastapi
-uvicorn[standard]
-python-multipart
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+python-multipart>=0.0.6
 
 # Templating
-jinja2
+jinja2>=3.1.0
 
 # HTTP Client (for dps.report API)
-httpx
-aiofiles
+httpx>=0.24.0
+aiofiles>=23.0.0
 
 # Data Processing
-pydantic
-python-dateutil
+pydantic>=2.0.0
+python-dateutil>=2.8.0
 
 # PDF Generation  
-reportlab
-
-# Future: Real EVTC parsing
-# python-evtc
+reportlab>=4.0.0
 
 # Utilities
-python-dotenv
+python-dotenv>=1.0.0

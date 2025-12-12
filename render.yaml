@@ -4,14 +4,13 @@
 services:
   - type: web
     name: gw2-counterpicker
-    env: python
     runtime: python
-    region: frankfurt  # EU region for lower latency
+    region: frankfurt
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: "3.11"
     autoDeploy: true
