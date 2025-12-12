@@ -309,8 +309,22 @@ def extract_players_from_ei_json(data: dict) -> dict:
     # Primary boon providers
     BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer'}
     
-    def detect_role(profession, cleanses_per_sec, damage):
+    # Minimum fight duration for reliable role detection (seconds)
+    MIN_DURATION_FOR_ROLE = 60
+    
+    def detect_role(profession, cleanses_per_sec, damage, fight_duration):
         """Detect player role based on spec and stats (WvW meta)"""
+        # For short fights, rely only on spec-based detection
+        if fight_duration < MIN_DURATION_FOR_ROLE:
+            if profession in STAB_SPECS:
+                return 'stab'
+            if profession in HEALER_SPECS:
+                return 'healer'
+            if profession in BOON_SPECS:
+                return 'boon'
+            return 'dps'
+        
+        # For longer fights, use stats-based detection
         # Stab specs are almost always stab role
         if profession in STAB_SPECS:
             return 'stab'
@@ -344,7 +358,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
         cleanses_per_sec = round(condi_cleanse / duration_sec, 2) if duration_sec > 0 else 0
         
         profession = player.get('profession', 'Unknown')
-        role = detect_role(profession, cleanses_per_sec, int(damage_value))
+        role = detect_role(profession, cleanses_per_sec, int(damage_value), duration_sec)
         
         players.append({
             'name': player.get('name', 'Unknown'),
@@ -388,6 +402,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
         'allies': players,
         'enemies': enemies_sorted,
         'fight_name': data.get('fightName', data.get('name', 'Unknown')),
+        'duration_sec': round(duration_sec, 1),
         'composition': {
             'spec_counts': spec_counts,
             'role_counts': role_counts,
