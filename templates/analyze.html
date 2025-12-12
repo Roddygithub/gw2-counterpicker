@@ -17,19 +17,24 @@
     
     handleDrop(event) {
         this.isDragging = false;
+        console.log('Drop event fired', event);
+        console.log('Files dropped:', event.dataTransfer.files.length);
         const file = event.dataTransfer.files[0];
         if (file) {
+            console.log('File selected:', file.name);
             this.selectedFile = file;
-            const input = document.getElementById('evtc-file');
+            const input = this.$refs.fileInput;
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
             input.files = dataTransfer.files;
+        } else {
+            console.log('No file found in drop event');
         }
     },
     
     clearFile() {
         this.selectedFile = null;
-        const input = document.getElementById('evtc-file');
+        const input = this.$refs.fileInput;
         if (input) input.value = '';
     },
     
@@ -85,17 +90,19 @@
             <!-- Drag & Drop Zone -->
             <div class="relative"
                  @dragover.prevent="isDragging = true"
+                 @dragenter.prevent="isDragging = true"
                  @dragleave.prevent="isDragging = false"
-                 @drop.prevent="handleDrop($event)">
+                 @drop.prevent="handleDrop($event)"
+                 @click="$refs.fileInput.click()">
                 <input type="file" 
+                       ref="fileInput"
                        id="evtc-file" 
                        name="file" 
                        accept=".evtc,.zevtc,.zip"
                        @change="handleFileSelect($event)"
-                       @drop.prevent="handleDrop($event)"
-                       class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                       style="display: none">
                 
-                <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all pointer-events-none"
+                <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer"
                      :class="isDragging ? 'border-gw2-purple bg-gw2-purple/10' : (selectedFile ? 'border-green-500 bg-green-500/10' : 'border-gray-600')">
                     
                     <!-- No file selected -->
