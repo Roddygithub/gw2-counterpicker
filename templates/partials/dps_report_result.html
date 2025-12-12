@@ -1,4 +1,61 @@
 <!-- Real dps.report Analysis Result -->
+<style>
+/* ArcDPS Profession Colors */
+.prof-guardian { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
+.prof-dragonhunter { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
+.prof-firebrand { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
+.prof-willbender { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
+
+.prof-warrior { color: #FFD166; background-color: rgba(255, 209, 102, 0.15); }
+.prof-berserker { color: #FFD166; background-color: rgba(255, 209, 102, 0.15); }
+.prof-spellbreaker { color: #FFD166; background-color: rgba(255, 209, 102, 0.15); }
+.prof-bladesworn { color: #FFD166; background-color: rgba(255, 209, 102, 0.15); }
+
+.prof-engineer { color: #D09C59; background-color: rgba(208, 156, 89, 0.15); }
+.prof-scrapper { color: #D09C59; background-color: rgba(208, 156, 89, 0.15); }
+.prof-holosmith { color: #D09C59; background-color: rgba(208, 156, 89, 0.15); }
+.prof-mechanist { color: #D09C59; background-color: rgba(208, 156, 89, 0.15); }
+
+.prof-ranger { color: #8CDC82; background-color: rgba(140, 220, 130, 0.15); }
+.prof-druid { color: #8CDC82; background-color: rgba(140, 220, 130, 0.15); }
+.prof-soulbeast { color: #8CDC82; background-color: rgba(140, 220, 130, 0.15); }
+.prof-untamed { color: #8CDC82; background-color: rgba(140, 220, 130, 0.15); }
+
+.prof-thief { color: #C08F95; background-color: rgba(192, 143, 149, 0.15); }
+.prof-daredevil { color: #C08F95; background-color: rgba(192, 143, 149, 0.15); }
+.prof-deadeye { color: #C08F95; background-color: rgba(192, 143, 149, 0.15); }
+.prof-specter { color: #C08F95; background-color: rgba(192, 143, 149, 0.15); }
+
+.prof-elementalist { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
+.prof-tempest { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
+.prof-weaver { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
+.prof-catalyst { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
+
+.prof-mesmer { color: #B679D5; background-color: rgba(182, 121, 213, 0.15); }
+.prof-chronomancer { color: #B679D5; background-color: rgba(182, 121, 213, 0.15); }
+.prof-mirage { color: #B679D5; background-color: rgba(182, 121, 213, 0.15); }
+.prof-virtuoso { color: #B679D5; background-color: rgba(182, 121, 213, 0.15); }
+
+.prof-necromancer { color: #52A76F; background-color: rgba(82, 167, 111, 0.15); }
+.prof-reaper { color: #52A76F; background-color: rgba(82, 167, 111, 0.15); }
+.prof-scourge { color: #52A76F; background-color: rgba(82, 167, 111, 0.15); }
+.prof-harbinger { color: #52A76F; background-color: rgba(82, 167, 111, 0.15); }
+
+.prof-revenant { color: #D16E5A; background-color: rgba(209, 110, 90, 0.15); }
+.prof-herald { color: #D16E5A; background-color: rgba(209, 110, 90, 0.15); }
+.prof-renegade { color: #D16E5A; background-color: rgba(209, 110, 90, 0.15); }
+.prof-vindicator { color: #D16E5A; background-color: rgba(209, 110, 90, 0.15); }
+
+/* JW specs */
+.prof-paragon { color: #D16E5A; background-color: rgba(209, 110, 90, 0.15); }
+.prof-luminary { color: #B679D5; background-color: rgba(182, 121, 213, 0.15); }
+.prof-troubadour { color: #72C1D9; background-color: rgba(114, 193, 217, 0.15); }
+.prof-ritualist { color: #52A76F; background-color: rgba(82, 167, 111, 0.15); }
+.prof-conduit { color: #F68A87; background-color: rgba(246, 138, 135, 0.15); }
+.prof-amalgam { color: #D09C59; background-color: rgba(208, 156, 89, 0.15); }
+
+.prof-unknown { color: #888888; background-color: rgba(136, 136, 136, 0.15); }
+</style>
 <div class="space-y-6 animate-slide-up">
     <!-- Success Header -->
     <div class="glow-card rounded-2xl p-6 border-2 border-green-500/50">
@@ -77,7 +134,7 @@
                             </div>
                         </td>
                         <td class="py-2">
-                            <span class="px-2 py-1 rounded text-xs bg-gw2-purple/20 text-gw2-purple">
+                            <span class="px-2 py-1 rounded text-xs prof-{{ player.profession|lower|replace(' ', '') }}">
                                 {{ player.profession }}
                             </span>
                         </td>
@@ -119,7 +176,7 @@
                             <span class="font-medium text-white">{{ enemy.name }}</span>
                         </td>
                         <td class="py-2">
-                            <span class="px-2 py-1 rounded text-xs bg-red-500/20 text-red-300">
+                            <span class="px-2 py-1 rounded text-xs prof-{{ enemy.profession|lower|replace(' ', '') }}">
                                 {{ enemy.profession }}
                             </span>
                         </td>
