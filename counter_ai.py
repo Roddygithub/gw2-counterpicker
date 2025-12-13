@@ -139,35 +139,40 @@ class CounterAI:
     
     def generate_fight_fingerprint(self, fight_data: dict) -> str:
         """
-        Generate a unique fingerprint for a fight based on:
-        - Duration (rounded to 5 seconds)
-        - Ally composition (sorted spec counts)
-        - Enemy composition (sorted spec counts)
-        - Total ally damage (rounded to 10k)
+        Generate a unique fingerprint for a fight that INCLUDES the perspective.
         
-        This allows detecting same fights uploaded by different players.
+        This ensures that:
+        - Same guild members uploading same fight = DUPLICATE (blocked)
+        - Allied guild uploading their perspective = DIFFERENT (allowed)
+        - Enemy guild uploading their perspective = DIFFERENT (allowed)
+        
+        Fingerprint components:
+        - Duration (rounded to 5 seconds)
+        - Sorted ally ACCOUNT NAMES (unique to each guild's perspective)
+        - Ally composition (specs)
+        - Total ally damage (rounded to 50k)
         """
         import hashlib
         
         duration = fight_data.get('duration_sec', 0)
         duration_bucket = int(duration // 5) * 5  # Round to 5 seconds
         
-        # Get ally composition
+        # Get ally account names - THIS IS THE KEY DIFFERENTIATOR
+        # Each guild will have different ally accounts in their logs
         allies = fight_data.get('allies', [])
+        ally_accounts = sorted([a.get('account', a.get('name', 'Unknown'))[:20] for a in allies])
+        ally_accounts_hash = "_".join(ally_accounts[:10])  # Top 10 accounts
+        
+        # Get ally specs (secondary identifier)
         ally_specs = sorted([a.get('profession', 'Unknown') for a in allies])
-        ally_hash = "_".join(ally_specs)
+        ally_specs_hash = "_".join(ally_specs)
         
-        # Get enemy composition  
-        enemies = fight_data.get('enemies', [])
-        enemy_specs = sorted([e.get('profession', 'Unknown') for e in enemies])[:15]  # Top 15 enemies
-        enemy_hash = "_".join(enemy_specs)
-        
-        # Total damage bucket
+        # Total damage bucket (perspective-specific)
         total_damage = fight_data.get('fight_stats', {}).get('ally_damage', 0)
         damage_bucket = int(total_damage // 50000) * 50000  # Round to 50k
         
-        # Combine into fingerprint
-        fingerprint_data = f"{duration_bucket}|{ally_hash}|{enemy_hash}|{damage_bucket}"
+        # Combine into fingerprint - includes WHO recorded it (ally accounts)
+        fingerprint_data = f"{duration_bucket}|{ally_accounts_hash}|{ally_specs_hash}|{damage_bucket}"
         return hashlib.md5(fingerprint_data.encode()).hexdigest()[:16]
     
     def is_fight_duplicate(self, fingerprint: str) -> bool:
