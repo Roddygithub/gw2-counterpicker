@@ -94,7 +94,13 @@
                 <div class="text-xs text-gray-400">Combat</div>
             </div>
             <div class="bg-gw2-darker rounded-xl p-3 text-center">
-                <div class="text-xl font-display font-bold text-white">{{ players.duration_sec|default(0) }}s</div>
+                <div class="text-xl font-display font-bold text-white">
+                    {% if players.duration_sec >= 60 %}
+                        {{ (players.duration_sec // 60)|int }}m {{ (players.duration_sec % 60)|int }}s
+                    {% else %}
+                        {{ players.duration_sec|default(0)|int }}s
+                    {% endif %}
+                </div>
                 <div class="text-xs text-gray-400">Durée</div>
             </div>
             <div class="bg-gw2-darker rounded-xl p-3 text-center">
@@ -119,37 +125,83 @@
     <div class="glow-card rounded-2xl p-6">
         <h3 class="font-display text-xl font-bold text-green-400 mb-4">📊 Résumé de Composition</h3>
         
-        <!-- Role Distribution -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-orange-500/30">
-                <div class="text-3xl font-bold text-orange-400">{{ players.composition.role_counts.dps }}</div>
-                <div class="text-sm text-gray-400">⚔️ DPS</div>
+        <!-- Role Distribution with specs aligned below -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <!-- DPS -->
+            <div class="bg-gw2-darker rounded-xl p-4 border border-orange-500/30">
+                <div class="text-center mb-3">
+                    <div class="text-3xl font-bold text-orange-400">{{ players.composition.role_counts.dps }}</div>
+                    <div class="text-sm text-gray-400">⚔️ DPS</div>
+                </div>
+                <div class="space-y-1">
+                    {% for spec, count in players.composition.specs_by_role.dps.items() %}
+                    <div class="flex justify-between text-xs">
+                        <span class="prof-{{ spec|lower|replace(' ', '') }}">{{ spec }}</span>
+                        <span class="text-gray-400">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-purple-500/30">
-                <div class="text-3xl font-bold text-purple-400">{{ players.composition.role_counts.dps_strip|default(0) }}</div>
-                <div class="text-sm text-gray-400">💀 Strip</div>
+            <!-- Strip -->
+            <div class="bg-gw2-darker rounded-xl p-4 border border-purple-500/30">
+                <div class="text-center mb-3">
+                    <div class="text-3xl font-bold text-purple-400">{{ players.composition.role_counts.dps_strip|default(0) }}</div>
+                    <div class="text-sm text-gray-400">💀 Strip</div>
+                </div>
+                <div class="space-y-1">
+                    {% for spec, count in players.composition.specs_by_role.dps_strip.items() %}
+                    <div class="flex justify-between text-xs">
+                        <span class="prof-{{ spec|lower|replace(' ', '') }}">{{ spec }}</span>
+                        <span class="text-gray-400">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-yellow-500/30">
-                <div class="text-3xl font-bold text-yellow-400">{{ players.composition.role_counts.stab }}</div>
-                <div class="text-sm text-gray-400">🛡️ Stab</div>
+            <!-- Stab -->
+            <div class="bg-gw2-darker rounded-xl p-4 border border-yellow-500/30">
+                <div class="text-center mb-3">
+                    <div class="text-3xl font-bold text-yellow-400">{{ players.composition.role_counts.stab }}</div>
+                    <div class="text-sm text-gray-400">🛡️ Stab</div>
+                </div>
+                <div class="space-y-1">
+                    {% for spec, count in players.composition.specs_by_role.stab.items() %}
+                    <div class="flex justify-between text-xs">
+                        <span class="prof-{{ spec|lower|replace(' ', '') }}">{{ spec }}</span>
+                        <span class="text-gray-400">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-green-500/30">
-                <div class="text-3xl font-bold text-green-400">{{ players.composition.role_counts.healer }}</div>
-                <div class="text-sm text-gray-400">💚 Healers</div>
+            <!-- Healers -->
+            <div class="bg-gw2-darker rounded-xl p-4 border border-green-500/30">
+                <div class="text-center mb-3">
+                    <div class="text-3xl font-bold text-green-400">{{ players.composition.role_counts.healer }}</div>
+                    <div class="text-sm text-gray-400">💚 Healers</div>
+                </div>
+                <div class="space-y-1">
+                    {% for spec, count in players.composition.specs_by_role.healer.items() %}
+                    <div class="flex justify-between text-xs">
+                        <span class="prof-{{ spec|lower|replace(' ', '') }}">{{ spec }}</span>
+                        <span class="text-gray-400">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-cyan-500/30">
-                <div class="text-3xl font-bold text-cyan-400">{{ players.composition.role_counts.boon }}</div>
-                <div class="text-sm text-gray-400">✨ Boons</div>
+            <!-- Boons -->
+            <div class="bg-gw2-darker rounded-xl p-4 border border-cyan-500/30">
+                <div class="text-center mb-3">
+                    <div class="text-3xl font-bold text-cyan-400">{{ players.composition.role_counts.boon }}</div>
+                    <div class="text-sm text-gray-400">✨ Boons</div>
+                </div>
+                <div class="space-y-1">
+                    {% for spec, count in players.composition.specs_by_role.boon.items() %}
+                    <div class="flex justify-between text-xs">
+                        <span class="prof-{{ spec|lower|replace(' ', '') }}">{{ spec }}</span>
+                        <span class="text-gray-400">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
-        
-        <!-- Spec Breakdown -->
-        <div class="flex flex-wrap gap-2">
-            {% for spec, count in players.composition.spec_counts.items() %}
-            <span class="px-3 py-1 rounded-lg text-sm prof-{{ spec|lower|replace(' ', '') }} border border-gray-700">
-                {{ spec }}: <strong>{{ count }}</strong>
-            </span>
-            {% endfor %}
         </div>
     </div>
     {% endif %}

@@ -283,7 +283,7 @@ class MockEVTCParser:
         top_players = []
         for rank in range(1, 11):
             spec = self._weighted_random_spec()
-            times_seen = random.randint(15, total_fights)
+            times_seen = random.randint(1, max(15, total_fights))
             avg_damage = random.randint(80000, 350000)
             
             if avg_damage > 250000:

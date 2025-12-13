@@ -337,8 +337,21 @@ def extract_players_from_ei_json(data: dict) -> dict:
         strips_per_min = (strips / duration) * 60 if duration > 0 else 0
         healing_per_sec = healing / duration if duration > 0 else 0
         
+        # === STAB DETECTION (priority) ===
+        # Stab specs are almost always stab
+        if profession in STAB_SPECS:
+            return 'stab'
+        # Any spec with high stability generation
+        if stab_gen >= 5.0:
+            return 'stab'
+        
+        # === BOON DETECTION (before healer to avoid Paragon misdetection) ===
+        # Boon specs stay boon even with high healing
+        if profession in BOON_SPECS:
+            return 'boon'
+        
         # === HEALER DETECTION ===
-        # High healing output = healer (threshold ~1000 HPS for active healers)
+        # High healing output = healer (threshold ~800 HPS for active healers)
         if healing_per_sec >= 800:
             return 'healer'
         # Healer specs with moderate healing
@@ -348,29 +361,12 @@ def extract_players_from_ei_json(data: dict) -> dict:
         if profession in {'Scrapper', 'Tempest'} and healing_per_sec >= 500:
             return 'healer'
         
-        # === STAB DETECTION ===
-        # Stab specs are almost always stab
-        if profession in STAB_SPECS:
-            return 'stab'
-        # Any spec with high stability generation
-        if stab_gen >= 5.0:
-            return 'stab'
-        
-        # === BOON DETECTION ===
-        # Boon specs with some support activity
-        if profession in BOON_SPECS:
-            return 'boon'
-        
         # === DPS DETECTION (with sub-roles) ===
         # High strip count = strip DPS
         if strips_per_min >= 10 and profession in STRIP_DPS_SPECS:
             return 'dps_strip'
         if strips_per_min >= 20:  # Very high strips from any class
             return 'dps_strip'
-        
-        # High down contribution = effective DPS
-        if down_contrib >= 5000:
-            return 'dps'
         
         # === FALLBACK DETECTION ===
         # Use cleanses as fallback for healer detection
@@ -491,14 +487,18 @@ def extract_players_from_ei_json(data: dict) -> dict:
     # Calculate composition summary
     spec_counts = {}
     role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    specs_by_role = {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}}
+    
     for p in players:
         spec = p['profession']
         spec_counts[spec] = spec_counts.get(spec, 0) + 1
         role = p['role']
         if role in role_counts:
             role_counts[role] += 1
+            specs_by_role[role][spec] = specs_by_role[role].get(spec, 0) + 1
         else:
-            role_counts['dps'] += 1  # Fallback
+            role_counts['dps'] += 1
+            specs_by_role['dps'][spec] = specs_by_role['dps'].get(spec, 0) + 1
 
     return {
         'allies': players,
@@ -508,6 +508,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
         'composition': {
             'spec_counts': spec_counts,
             'role_counts': role_counts,
+            'specs_by_role': specs_by_role,
             'total': len(players)
         }
     }
