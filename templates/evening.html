@@ -68,11 +68,11 @@
     <div class="text-center mb-12">
         <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
             <span class="bg-gradient-to-r from-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
-                📊 Soirée Complète
+                📊 {% if lang == 'en' %}Full Evening{% else %}Soirée Complète{% endif %}
             </span>
         </h1>
         <p class="text-xl text-gray-400">
-            Analyse complète de ta soirée WvW - jusqu'à 100 fichiers .evtc
+            {% if lang == 'en' %}Complete analysis of your WvW evening - up to 100 .evtc files{% else %}Analyse complète de ta soirée WvW - jusqu'à 100 fichiers .evtc{% endif %}
         </p>
     </div>
     
@@ -109,13 +109,13 @@
                 </div>
                 
                 <h3 class="font-display text-xl font-bold text-white mb-2">
-                    Drag & Drop tes fichiers
+                    {% if lang == 'en' %}Drag & Drop your files{% else %}Drag & Drop tes fichiers{% endif %}
                 </h3>
                 <p class="text-gray-400 mb-4">
-                    ou clique pour sélectionner
+                    {% if lang == 'en' %}or click to select{% else %}ou clique pour sélectionner{% endif %}
                 </p>
                 <p class="text-sm text-gray-500">
-                    Formats supportés: .evtc, .zip, .zevtc (max 100 fichiers)
+                    {% if lang == 'en' %}Supported formats{% else %}Formats supportés{% endif %}: .evtc, .zip, .zevtc (max 100 {% if lang == 'en' %}files{% else %}fichiers{% endif %})
                 </p>
             </div>
             
@@ -123,12 +123,12 @@
             <div x-show="files.length > 0" class="mt-6" x-cloak>
                 <div class="flex items-center justify-between mb-4">
                     <h4 class="font-display font-bold text-white">
-                        Fichiers sélectionnés (<span x-text="files.length"></span>)
+                        {% if lang == 'en' %}Selected files{% else %}Fichiers sélectionnés{% endif %} (<span x-text="files.length"></span>)
                     </h4>
                     <button type="button" 
                             @click="clearFiles()"
                             class="text-sm text-red-400 hover:text-red-300 transition-colors">
-                        Tout supprimer
+                        {% if lang == 'en' %}Remove all{% else %}Tout supprimer{% endif %}
                     </button>
                 </div>
                 
@@ -157,7 +157,7 @@
                 
                 <!-- Total size -->
                 <div class="mt-4 flex items-center justify-between text-sm">
-                    <span class="text-gray-500">Taille totale:</span>
+                    <span class="text-gray-500">{% if lang == 'en' %}Total size{% else %}Taille totale{% endif %}:</span>
                     <span class="text-gw2-purple font-medium" x-text="formatSize(totalSize)"></span>
                 </div>
             </div>
@@ -170,7 +170,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                 </svg>
-                Analyser la Soirée
+                {% if lang == 'en' %}Analyze Evening{% else %}Analyser la Soirée{% endif %}
                 
                 <!-- Loading indicator -->
                 <span id="upload-indicator" class="htmx-indicator">
@@ -194,32 +194,32 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
-                    Ce que tu vas obtenir
+                    {% if lang == 'en' %}What you'll get{% else %}Ce que tu vas obtenir{% endif %}
                 </h4>
                 <ul class="space-y-3 text-sm text-gray-400">
                     <li class="flex items-start gap-2">
                         <span class="text-green-400">✓</span>
-                        Composition moyenne du serveur adverse
+                        {% if lang == 'en' %}Average enemy server composition{% else %}Composition moyenne du serveur adverse{% endif %}
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-green-400">✓</span>
-                        Évolution horaire des builds (20h → 00h)
+                        {% if lang == 'en' %}Hourly build evolution (8pm → 12am){% else %}Évolution horaire des builds (20h → 00h){% endif %}
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-green-400">✓</span>
-                        Heatmap des zones les plus fightées
+                        {% if lang == 'en' %}Heatmap of most contested zones{% else %}Heatmap des zones les plus fightées{% endif %}
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-green-400">✓</span>
-                        Top 10 joueurs + leurs builds exacts
+                        {% if lang == 'en' %}Top 10 players + their exact builds{% else %}Top 10 joueurs + leurs builds exacts{% endif %}
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-green-400">✓</span>
-                        Build le plus joué par classe
+                        {% if lang == 'en' %}Most played build per class{% else %}Build le plus joué par classe{% endif %}
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-green-400">✓</span>
-                        Counter parfait pour demain soir
+                        {% if lang == 'en' %}Perfect counter for tomorrow night{% else %}Counter parfait pour demain soir{% endif %}
                     </li>
                 </ul>
             </div>
@@ -232,24 +232,24 @@
                     Bonus: Night Intelligence Report
                 </h4>
                 <p class="text-sm text-gray-400 mb-4">
-                    Génère un PDF professionnel à partager avec ta guilde :
+                    {% if lang == 'en' %}Generate a professional PDF to share with your guild:{% else %}Génère un PDF professionnel à partager avec ta guilde :{% endif %}
                 </p>
                 <ul class="space-y-2 text-sm text-gray-400">
                     <li class="flex items-start gap-2">
                         <span class="text-cyber-cyan">→</span>
-                        Résumé exécutif de la soirée
+                        {% if lang == 'en' %}Executive summary of the evening{% else %}Résumé exécutif de la soirée{% endif %}
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-cyber-cyan">→</span>
-                        Graphiques et statistiques
+                        {% if lang == 'en' %}Charts and statistics{% else %}Graphiques et statistiques{% endif %}
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-cyber-cyan">→</span>
-                        Stratégies recommandées
+                        {% if lang == 'en' %}Recommended strategies{% else %}Stratégies recommandées{% endif %}
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-cyber-cyan">→</span>
-                        Liste des menaces prioritaires
+                        {% if lang == 'en' %}Priority threat list{% else %}Liste des menaces prioritaires{% endif %}
                     </li>
                 </ul>
             </div>
