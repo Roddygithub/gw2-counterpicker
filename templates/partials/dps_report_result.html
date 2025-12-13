@@ -369,38 +369,44 @@
 </div>
 
 <script>
-document.addEventListener('htmx:afterSwap', initSortingControls);
-document.addEventListener('DOMContentLoaded', initSortingControls);
+(function() {
+    function initSortingControls() {
+        document.querySelectorAll('.sort-controls .sort-btn').forEach(btn => {
+            btn.onclick = function(event) {
+                const tableId = this.dataset.sortTarget;
+                const mode = this.dataset.sortMode;
+                const table = document.getElementById(tableId);
+                if (!table) {
+                    console.log('Table not found:', tableId);
+                    return;
+                }
 
-function initSortingControls() {
-    document.querySelectorAll('.sort-controls button').forEach(btn => {
-        btn.removeEventListener('click', handleSortClick);
-        btn.addEventListener('click', handleSortClick);
-    });
-}
+                // Update active state
+                this.parentElement.querySelectorAll('.sort-btn').forEach(b => {
+                    b.classList.remove('border-white');
+                    b.classList.add('border-gray-700');
+                });
+                this.classList.remove('border-gray-700');
+                this.classList.add('border-white');
 
-function handleSortClick(event) {
-    const btn = event.currentTarget;
-    const tableId = btn.dataset.sortTarget;
-    const mode = btn.dataset.sortMode;
-    const table = document.getElementById(tableId);
-    if (!table) return;
+                const rows = Array.from(table.querySelectorAll('tbody tr'));
+                if (mode === 'default') {
+                    rows.sort((a, b) => Number(a.dataset.originalOrder) - Number(b.dataset.originalOrder));
+                } else if (mode === 'profession') {
+                    rows.sort((a, b) => (a.dataset.profession || '').localeCompare(b.dataset.profession || ''));
+                } else if (mode === 'group') {
+                    rows.sort((a, b) => Number(a.dataset.group || 0) - Number(b.dataset.group || 0));
+                } else if (mode === 'damage') {
+                    rows.sort((a, b) => Number(b.dataset.damage || 0) - Number(a.dataset.damage || 0));
+                }
 
-    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
-    if (mode === 'default') {
-        rows.sort((a, b) => Number(a.dataset.originalOrder) - Number(b.dataset.originalOrder));
-    } else if (mode === 'profession') {
-        rows.sort((a, b) => a.dataset.profession.localeCompare(b.dataset.profession));
-    } else if (mode === 'group') {
-        rows.sort((a, b) => Number(a.dataset.group) - Number(b.dataset.group));
-    } else if (mode === 'damage') {
-        rows.sort((a, b) => Number(b.dataset.damage) - Number(a.dataset.damage));
+                const tbody = table.querySelector('tbody');
+                rows.forEach(row => tbody.appendChild(row));
+            };
+        });
     }
 
-    const tbody = table.querySelector('tbody');
-    rows.forEach(row => tbody.appendChild(row));
-}
+    // Initialize immediately since this script is in the HTMX-loaded content
+    initSortingControls();
+})();
 </script>

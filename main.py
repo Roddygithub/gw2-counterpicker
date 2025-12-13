@@ -385,6 +385,11 @@ def extract_players_from_ei_json(data: dict) -> dict:
     players = []
 
     for player in data.get('players', []):
+        # Filter out non-squad allies (names like "Profession pl-XXXX")
+        player_name = player.get('name', 'Unknown')
+        if ' pl-' in player_name:
+            continue  # Skip non-squad allies
+        
         dps_entries = player.get('dpsAll', [])
         damage_value = safe_number(dps_entries)
         

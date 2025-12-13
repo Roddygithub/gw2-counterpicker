@@ -3,7 +3,67 @@
 {% block title %}Soirée Complète - GW2 CounterPicker{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="fileUploader()">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="{
+    files: [],
+    isDragging: false,
+    
+    get totalSize() {
+        return this.files.reduce((acc, file) => acc + file.size, 0);
+    },
+    
+    handleDrop(event) {
+        this.isDragging = false;
+        const droppedFiles = Array.from(event.dataTransfer.files);
+        this.addFiles(droppedFiles);
+    },
+    
+    handleFileSelect(event) {
+        const selectedFiles = Array.from(event.target.files);
+        this.addFiles(selectedFiles);
+    },
+    
+    addFiles(newFiles) {
+        const validExtensions = ['.evtc', '.zip', '.zevtc'];
+        const validFiles = newFiles.filter(file => {
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            return validExtensions.includes(ext);
+        });
+        const remainingSlots = 100 - this.files.length;
+        const filesToAdd = validFiles.slice(0, remainingSlots);
+        this.files = [...this.files, ...filesToAdd];
+        this.updateFileInput();
+    },
+    
+    removeFile(index) {
+        this.files.splice(index, 1);
+        this.updateFileInput();
+    },
+    
+    clearFiles() {
+        this.files = [];
+        this.updateFileInput();
+    },
+    
+    updateFileInput() {
+        const dt = new DataTransfer();
+        this.files.forEach(file => dt.items.add(file));
+        this.$refs.fileInput.files = dt.files;
+    },
+    
+    formatSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+    
+    handleSubmit(event) {
+        if (this.files.length === 0) {
+            event.preventDefault();
+        }
+    }
+}">
     <!-- Header -->
     <div class="text-center mb-12">
         <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
@@ -197,76 +257,4 @@
     </div>
 </div>
 
-<script>
-function fileUploader() {
-    return {
-        files: [],
-        isDragging: false,
-        
-        get totalSize() {
-            return this.files.reduce((acc, file) => acc + file.size, 0);
-        },
-        
-        handleDrop(event) {
-            this.isDragging = false;
-            const droppedFiles = Array.from(event.dataTransfer.files);
-            this.addFiles(droppedFiles);
-        },
-        
-        handleFileSelect(event) {
-            const selectedFiles = Array.from(event.target.files);
-            this.addFiles(selectedFiles);
-        },
-        
-        addFiles(newFiles) {
-            // Filter valid extensions
-            const validExtensions = ['.evtc', '.zip', '.zevtc'];
-            const validFiles = newFiles.filter(file => {
-                const ext = '.' + file.name.split('.').pop().toLowerCase();
-                return validExtensions.includes(ext);
-            });
-            
-            // Add files up to 100 max
-            const remainingSlots = 100 - this.files.length;
-            const filesToAdd = validFiles.slice(0, remainingSlots);
-            
-            this.files = [...this.files, ...filesToAdd];
-            
-            // Update the file input for HTMX
-            this.updateFileInput();
-        },
-        
-        removeFile(index) {
-            this.files.splice(index, 1);
-            this.updateFileInput();
-        },
-        
-        clearFiles() {
-            this.files = [];
-            this.updateFileInput();
-        },
-        
-        updateFileInput() {
-            // Create a new DataTransfer to update the input
-            const dt = new DataTransfer();
-            this.files.forEach(file => dt.items.add(file));
-            this.$refs.fileInput.files = dt.files;
-        },
-        
-        formatSize(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        },
-        
-        handleSubmit(event) {
-            if (this.files.length === 0) {
-                event.preventDefault();
-            }
-        }
-    }
-}
-</script>
 {% endblock %}
