@@ -840,62 +840,89 @@
     
     <!-- IA VIVANTE Counter Section -->
     {% if ai_counter %}
-    <div class="glow-card rounded-2xl p-6 border-2 border-red-500/50 bg-gradient-to-br from-red-900/20 to-gw2-darker">
+    <div class="glow-card rounded-2xl p-6 border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-900/20 to-gw2-darker">
         <!-- IA VIVANTE Header -->
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center animate-pulse">
-                    <span class="text-2xl">⚡</span>
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                    <span class="text-2xl">🧠</span>
                 </div>
                 <div>
-                    <h3 class="font-display text-2xl font-black text-red-400 tracking-tight">
-                        IA VIVANTE
+                    <h3 class="font-display text-2xl font-black text-emerald-400 tracking-tight">
+                        {% if lang == 'en' %}LIVE AI{% else %}IA VIVANTE{% endif %}
                     </h3>
                     <p class="text-sm text-gray-400">
-                        Précision <span class="text-red-400 font-bold">{{ ai_counter.precision }}%</span> 
-                        (basée sur <span class="text-white font-medium">{{ ai_counter.fights_analyzed }}</span> fights réels)
+                        {% if lang == 'en' %}Based on{% else %}Basée sur{% endif %} 
+                        <span class="text-white font-medium">{{ ai_counter.fights_analyzed }}</span> 
+                        {% if lang == 'en' %}real fights{% else %}fights réels{% endif %}
+                        {% if ai_counter.similar_fights > 0 %}
+                        (<span class="text-emerald-400">{{ ai_counter.similar_fights }}</span> {% if lang == 'en' %}similar{% else %}similaires{% endif %})
+                        {% endif %}
                     </p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <span class="px-3 py-1 rounded-full text-xs bg-red-500/20 text-red-400 border border-red-500/30 font-medium">
+                <span class="px-3 py-1 rounded-full text-xs font-medium
+                    {% if ai_counter.fallback %}bg-yellow-500/20 text-yellow-400 border border-yellow-500/30
+                    {% else %}bg-emerald-500/20 text-emerald-400 border border-emerald-500/30{% endif %}">
                     {% if ai_counter.fallback %}
-                    🔄 Mode Fallback
+                    🔄 {% if lang == 'en' %}Fallback Rules{% else %}Règles Fallback{% endif %}
                     {% else %}
-                    🧠 Llama 3.2 8B
+                    🧠 Llama 3.2
                     {% endif %}
                 </span>
             </div>
         </div>
         
         <!-- Enemy Composition Analyzed -->
-        <div class="bg-gw2-darker/80 rounded-xl p-4 mb-4 border border-red-500/20">
-            <div class="text-xs text-gray-500 uppercase tracking-wide mb-2">Composition ennemie analysée</div>
-            <div class="text-white font-medium">{{ ai_counter.enemy_composition }}</div>
-        </div>
-        
-        <!-- AI Counter Recommendation -->
-        <div class="bg-gradient-to-r from-red-900/30 to-orange-900/30 rounded-xl p-5 border border-red-500/30">
-            <div class="text-xs text-red-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                Counter généré par IA
+        <div class="bg-gw2-darker/80 rounded-xl p-4 mb-4 border border-emerald-500/20">
+            <div class="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                {% if lang == 'en' %}Enemy composition analyzed{% else %}Composition ennemie analysée{% endif %}
             </div>
-            <div class="text-white text-lg leading-relaxed whitespace-pre-line font-medium">{{ ai_counter.counter }}</div>
+            <div class="text-white font-medium text-sm">{{ ai_counter.enemy_composition }}</div>
         </div>
         
-        <!-- Similar Fights Info -->
-        {% if ai_counter.similar_fights > 0 %}
-        <div class="mt-4 text-center text-sm text-gray-500">
-            Basé sur <span class="text-red-400 font-medium">{{ ai_counter.similar_fights }}</span> fights similaires dans notre base
+        <!-- AI Counter Recommendation - RESTRUCTURED -->
+        <div class="bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 rounded-xl p-5 border border-emerald-500/30 mb-4">
+            <div class="text-xs text-emerald-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                {% if lang == 'en' %}Recommended counter-composition (by role){% else %}Contre-composition recommandée (par rôle){% endif %}
+            </div>
+            <div class="text-white leading-relaxed whitespace-pre-line">{{ ai_counter.counter }}</div>
         </div>
-        {% endif %}
+        
+        <!-- IMPORTANT: Limitations Warning -->
+        <div class="bg-yellow-900/20 rounded-xl p-4 border border-yellow-500/30 mb-4">
+            <div class="flex items-start gap-3">
+                <span class="text-yellow-400 text-lg">⚠️</span>
+                <div>
+                    <div class="text-xs text-yellow-400 uppercase tracking-wide mb-1">
+                        {% if lang == 'en' %}Important limitations{% else %}Limites importantes{% endif %}
+                    </div>
+                    <p class="text-xs text-gray-400">
+                        {% if lang == 'en' %}
+                        The AI works by <strong class="text-white">roles and observed performance</strong>, NOT by exact builds.
+                        It does NOT know traits, runes, sigils, relics or equipment stats.
+                        Use as a <strong class="text-white">decision-making aid</strong>, not as an infallible oracle.
+                        {% else %}
+                        L'IA travaille par <strong class="text-white">rôles et performances observées</strong>, PAS par builds exacts.
+                        Elle ne connaît NI traits, NI runes, NI sigils, NI reliques, NI stats d'équipement.
+                        À utiliser comme <strong class="text-white">aide à la décision</strong>, pas comme un oracle infaillible.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
         
         <!-- BEST BUILDS AGAINST THIS COMP -->
         {% if ai_counter.best_builds %}
-        <div class="mt-6 pt-6 border-t border-red-500/20">
-            <h4 class="font-display text-lg font-bold text-orange-400 mb-4 flex items-center gap-2">
-                🏆 MEILLEURS BUILDS RÉELS CONTRE CETTE COMP
+        <div class="mt-2 pt-4 border-t border-emerald-500/20">
+            <h4 class="font-display text-lg font-bold text-orange-400 mb-2 flex items-center gap-2">
+                🏆 {% if lang == 'en' %}OBSERVED DATA: Best performing specs{% else %}DONNÉES OBSERVÉES: Specs les plus performantes{% endif %}
             </h4>
+            <p class="text-xs text-gray-500 mb-4">
+                {% if lang == 'en' %}Stats from real fights against similar compositions{% else %}Stats issues de fights réels contre des compositions similaires{% endif %}
+            </p>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {% for role, build in ai_counter.best_builds.items() %}
                 <div class="bg-gw2-darker rounded-xl p-4 border border-orange-500/30 hover:border-orange-500 transition-all">
@@ -926,7 +953,7 @@
                     </div>
                     
                     <div class="text-xs text-gray-400 mb-2">
-                        Sur <span class="text-white font-medium">{{ build.fights_played }}</span> fights réels
+                        {% if lang == 'en' %}From{% else %}Sur{% endif %} <span class="text-white font-medium">{{ build.fights_played }}</span> {% if lang == 'en' %}real fights{% else %}fights réels{% endif %}
                     </div>
                     
                     <!-- Stats -->
@@ -934,25 +961,25 @@
                         {% if build.avg_dps > 0 %}
                         <div class="bg-gw2-darker/50 rounded p-2">
                             <div class="text-orange-400 font-mono">{{ "{:,.0f}".format(build.avg_dps) }}</div>
-                            <div class="text-gray-500">DPS moy.</div>
+                            <div class="text-gray-500">{% if lang == 'en' %}Avg DPS{% else %}DPS moy.{% endif %}</div>
                         </div>
                         {% endif %}
                         {% if build.avg_healing > 0 %}
                         <div class="bg-gw2-darker/50 rounded p-2">
                             <div class="text-green-400 font-mono">{{ "{:,.0f}".format(build.avg_healing) }}</div>
-                            <div class="text-gray-500">Heal moy.</div>
+                            <div class="text-gray-500">{% if lang == 'en' %}Avg Heal{% else %}Heal moy.{% endif %}</div>
                         </div>
                         {% endif %}
                         {% if build.avg_strips > 0 %}
                         <div class="bg-gw2-darker/50 rounded p-2">
                             <div class="text-purple-400 font-mono">{{ build.avg_strips }}</div>
-                            <div class="text-gray-500">Strips moy.</div>
+                            <div class="text-gray-500">{% if lang == 'en' %}Avg Strips{% else %}Strips moy.{% endif %}</div>
                         </div>
                         {% endif %}
                         {% if build.avg_cleanses > 0 %}
                         <div class="bg-gw2-darker/50 rounded p-2">
                             <div class="text-cyan-400 font-mono">{{ build.avg_cleanses }}</div>
-                            <div class="text-gray-500">Cleanses moy.</div>
+                            <div class="text-gray-500">{% if lang == 'en' %}Avg Cleanses{% else %}Cleanses moy.{% endif %}</div>
                         </div>
                         {% endif %}
                     </div>
@@ -961,7 +988,7 @@
             </div>
             
             <p class="mt-4 text-xs text-gray-500 italic text-center">
-                Ces builds ont historiquement gagné contre des compositions similaires
+                {% if lang == 'en' %}These specs have historically won against similar compositions{% else %}Ces specs ont historiquement gagné contre des compositions similaires{% endif %}
             </p>
         </div>
         {% endif %}

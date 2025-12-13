@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
+            <span class="bg-gradient-to-r from-emerald-400 to-cyan-500 bg-clip-text text-transparent inline-flex items-center gap-3">
+                <svg class="w-10 h-10 md:w-12 md:h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {% if lang == 'en' %}About & How It Works{% else %}À propos & Comment ça marche{% endif %}
+            </span>
+        </h1>
+        <p class="text-xl text-gray-400">
+            {% if lang == 'en' %}Transparency about what the AI can and cannot do{% else %}Transparence sur ce que l'IA peut et ne peut pas faire{% endif %}
+        </p>
+    </div>
+
+    <!-- What is GW2 CounterPicker -->
+    <div class="glow-card rounded-2xl p-6 mb-8">
+        <h2 class="font-display text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            🎯 {% if lang == 'en' %}What is GW2 CounterPicker?{% else %}Qu'est-ce que GW2 CounterPicker ?{% endif %}
+        </h2>
+        <div class="text-gray-300 space-y-4">
+            {% if lang == 'en' %}
+            <p>GW2 CounterPicker analyzes <strong class="text-white">WvW combat logs</strong> (.evtc/.zevtc files from ArcDPS or dps.report links) to provide:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li>A <strong class="text-emerald-400">detailed view of your squad</strong>: DPS, heal, cleanses, strips, boons, etc.</li>
+                <li>An <strong class="text-emerald-400">analysis of enemy composition</strong> (professions / elite specs / roles).</li>
+                <li><strong class="text-emerald-400">Counter-composition recommendations</strong> based on real fights.</li>
+                <li><strong class="text-emerald-400">Aggregated statistics</strong> across dozens or hundreds of fights.</li>
+            </ul>
+            <p class="text-gray-400 italic">The goal is not to invent a "magic" meta, but to <strong class="text-white">highlight what has actually worked in practice</strong> in your own fights.</p>
+            {% else %}
+            <p>GW2 CounterPicker analyse des <strong class="text-white">logs de combats WvW</strong> (fichiers .evtc/.zevtc d'ArcDPS ou liens dps.report) pour fournir :</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li>Une <strong class="text-emerald-400">vue détaillée de ton escouade</strong> : DPS, heal, cleanses, strips, boons, etc.</li>
+                <li>Une <strong class="text-emerald-400">analyse de la composition ennemie</strong> (professions / élites / rôles).</li>
+                <li>Des <strong class="text-emerald-400">recommandations de contre-composition</strong> basées sur des combats réels.</li>
+                <li>Des <strong class="text-emerald-400">statistiques agrégées</strong> sur des dizaines ou centaines de fights.</li>
+            </ul>
+            <p class="text-gray-400 italic">L'objectif n'est pas d'inventer un meta "magique", mais de <strong class="text-white">mettre en lumière ce qui a déjà fonctionné en pratique</strong> dans tes propres combats.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- How it works technically -->
+    <div class="glow-card rounded-2xl p-6 mb-8">
+        <h2 class="font-display text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            ⚙️ {% if lang == 'en' %}How It Works Technically{% else %}Comment ça marche techniquement{% endif %}
+        </h2>
+        
+        <!-- Step 1 -->
+        <div class="mb-6">
+            <h3 class="font-display text-lg font-bold text-emerald-400 mb-2">
+                1. {% if lang == 'en' %}Data Collection{% else %}Collecte des données{% endif %}
+            </h3>
+            <div class="text-gray-300 text-sm space-y-2">
+                {% if lang == 'en' %}
+                <p>You upload WvW logs (.evtc/.zevtc) or dps.report links. The parser extracts for each player:</p>
+                <ul class="list-disc list-inside ml-4 text-gray-400">
+                    <li>Profession + elite specialization</li>
+                    <li>Performance stats (DPS, heal, cleanses, strips, CC...)</li>
+                    <li>Boons and conditions applied</li>
+                    <li>Role identification (heal, dps, strip, boon, stab, etc.)</li>
+                </ul>
+                <p class="text-gray-400">This data is stored locally in a TinyDB database.</p>
+                {% else %}
+                <p>Tu uploades des logs WvW (.evtc/.zevtc) ou des liens dps.report. Le parser extrait pour chaque joueur :</p>
+                <ul class="list-disc list-inside ml-4 text-gray-400">
+                    <li>Profession + spécialisation élite</li>
+                    <li>Stats de performance (DPS, heal, cleanses, strips, CC...)</li>
+                    <li>Boons et conditions appliqués</li>
+                    <li>Identification de rôle (heal, dps, strip, boon, stab, etc.)</li>
+                </ul>
+                <p class="text-gray-400">Ces données sont stockées localement dans une base TinyDB.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Step 2 -->
+        <div>
+            <h3 class="font-display text-lg font-bold text-emerald-400 mb-2">
+                2. {% if lang == 'en' %}AI Analysis (Local){% else %}Analyse IA (locale){% endif %}
+            </h3>
+            <div class="text-gray-300 text-sm space-y-2">
+                {% if lang == 'en' %}
+                <p>If an Ollama model (e.g. <code class="text-cyan-400">llama3.2</code>) is available, the AI:</p>
+                <ul class="list-disc list-inside ml-4 text-gray-400">
+                    <li>Searches history for <strong class="text-white">most similar fights</strong> (close enemy composition)</li>
+                    <li>Observes which <strong class="text-white">allied specs/roles</strong> had the best <strong class="text-white">win rate</strong></li>
+                    <li>Generates a <strong class="text-white">counter-composition recommendation</strong></li>
+                </ul>
+                <p class="text-gray-400">When AI is unavailable, a static rules system serves as <strong class="text-yellow-400">fallback</strong>.</p>
+                {% else %}
+                <p>Si un modèle Ollama (ex: <code class="text-cyan-400">llama3.2</code>) est disponible, l'IA :</p>
+                <ul class="list-disc list-inside ml-4 text-gray-400">
+                    <li>Cherche dans l'historique les <strong class="text-white">combats les plus similaires</strong></li>
+                    <li>Observe quelles <strong class="text-white">spés/rôles alliés</strong> ont eu le meilleur <strong class="text-white">taux de victoire</strong></li>
+                    <li>Génère une <strong class="text-white">recommandation de contre-composition</strong></li>
+                </ul>
+                <p class="text-gray-400">Quand l'IA n'est pas disponible, un système de règles statiques sert de <strong class="text-yellow-400">fallback</strong>.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- What the AI CAN do -->
+    <div class="glow-card rounded-2xl p-6 mb-8 border border-emerald-500/30">
+        <h2 class="font-display text-2xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
+            ✅ {% if lang == 'en' %}What the AI CAN Do (Realistically){% else %}Ce que l'IA PEUT faire (réellement){% endif %}
+        </h2>
+        <div class="text-gray-300 space-y-3">
+            {% if lang == 'en' %}
+            <p>Based on log data, GW2 CounterPicker can:</p>
+            <ul class="space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">✓</span>
+                    <span>Tell which <strong class="text-white">professions/specializations</strong> perform well or poorly against a given enemy comp.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">✓</span>
+                    <span>Give <strong class="text-white">quantified indications</strong>: estimated win rate, average DPS/heal/strips/cleanses for a role.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">✓</span>
+                    <span>Propose <strong class="text-white">role recommendations</strong>: "2-3 heals", "3 strips minimum", etc.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">✓</span>
+                    <span>Identify <strong class="text-white">focus priorities</strong> based on observed patterns.</span>
+                </li>
+            </ul>
+            <p class="text-gray-400 italic mt-4">In summary: the tool helps answer <strong class="text-white">"With what type of comp do we most often win against THIS type of enemy?"</strong></p>
+            {% else %}
+            <p>Basé sur les données des logs, GW2 CounterPicker peut :</p>
+            <ul class="space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">✓</span>
+                    <span>Dire quelles <strong class="text-white">professions/spécialisations</strong> performent bien ou mal contre une comp ennemie donnée.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">✓</span>
+                    <span>Donner des <strong class="text-white">indications chiffrées</strong> : win rate estimé, moyenne de DPS/heal/strips/cleanses pour un rôle.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">✓</span>
+                    <span>Proposer des <strong class="text-white">recommandations de rôles</strong> : "2-3 heals", "3 strips minimum", etc.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">✓</span>
+                    <span>Identifier des <strong class="text-white">priorités de focus</strong> basées sur les patterns observés.</span>
+                </li>
+            </ul>
+            <p class="text-gray-400 italic mt-4">En résumé : l'outil aide à répondre à <strong class="text-white">"Avec quel type de comp gagnons-nous le plus souvent contre CE type d'ennemi ?"</strong></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- What the AI CANNOT do -->
+    <div class="glow-card rounded-2xl p-6 mb-8 border border-red-500/30">
+        <h2 class="font-display text-2xl font-bold text-red-400 mb-4 flex items-center gap-2">
+            ❌ {% if lang == 'en' %}What the AI CANNOT Do (Important Limitations){% else %}Ce que l'IA NE PEUT PAS faire (limites importantes){% endif %}
+        </h2>
+        <div class="text-gray-300 space-y-3">
+            {% if lang == 'en' %}
+            <p>By design of EVTC logs / dps.report, <strong class="text-red-400">the following are NOT available</strong>:</p>
+            <ul class="space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Exact traits</strong> (the 3×3 choices)</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Runes</strong></span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Sigils</strong></span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Relics</strong></span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Equipment stats</strong> (Marauder, Viper, Celestial, etc.)</span>
+                </li>
+            </ul>
+            <p class="mt-4">Therefore the tool <strong class="text-red-400">CANNOT</strong>:</p>
+            <ul class="space-y-2 ml-4">
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">•</span>
+                    <span>Give you a complete build trait-by-trait, rune-by-rune</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">•</span>
+                    <span>Calculate exactly: "this player is in full Marauder with X rune"</span>
+                </li>
+            </ul>
+            <p class="text-gray-400 italic mt-4">It works at the <strong class="text-white">"spec / role / real performance"</strong> level, not at the <strong class="text-white">template code</strong> level.</p>
+            {% else %}
+            <p>Par conception des logs EVTC / dps.report, <strong class="text-red-400">les choses suivantes ne sont PAS disponibles</strong> :</p>
+            <ul class="space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Traits exacts</strong> (les 3×3 choix)</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Runes</strong></span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Sigils</strong></span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Reliques</strong></span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✗</span>
+                    <span><strong class="text-white">Stats d'équipement</strong> (Marauder, Viper, Céleste, etc.)</span>
+                </li>
+            </ul>
+            <p class="mt-4">Donc l'outil <strong class="text-red-400">NE PEUT PAS</strong> :</p>
+            <ul class="space-y-2 ml-4">
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">•</span>
+                    <span>Te sortir un build complet trait-par-trait, rune-par-rune</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">•</span>
+                    <span>Calculer exactement : "tel joueur est en full Marauder avec X rune"</span>
+                </li>
+            </ul>
+            <p class="text-gray-400 italic mt-4">Il travaille au niveau <strong class="text-white">"spé / rôle / performance réelle"</strong>, pas au niveau <strong class="text-white">template code</strong>.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- How to read recommendations -->
+    <div class="glow-card rounded-2xl p-6 mb-8">
+        <h2 class="font-display text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            📖 {% if lang == 'en' %}How to Read AI Recommendations{% else %}Comment lire les recommandations IA{% endif %}
+        </h2>
+        <div class="text-gray-300 space-y-4">
+            {% if lang == 'en' %}
+            <p>When you see something like:</p>
+            <div class="bg-gw2-darker rounded-xl p-4 border border-emerald-500/30 my-4">
+                <p class="text-emerald-400 text-sm mb-2">🧠 LIVE AI - Based on 94 real fights</p>
+                <p class="text-white">→ 2-3 Spellbreaker strip<br>→ 2 healers (Scrapper/Tempest)<br>→ 1 Chronomancer pull<br>Priority: Druid > Firebrand > Reaper</p>
+            </div>
+            <p>This <strong class="text-white">concretely means</strong>:</p>
+            <ul class="list-disc list-inside ml-4 space-y-2 text-gray-400">
+                <li>"In similar real fights, this type of allied composition (in terms of roles) gave the most victories."</li>
+                <li>This is <strong class="text-red-400">NOT</strong> a guarantee, nor a perfect build, nor an absolute truth.</li>
+                <li>It's a <strong class="text-white">statistical synthesis</strong> of what has tended to work so far.</li>
+            </ul>
+            <p class="text-yellow-400 mt-4">⚠️ Use as a <strong class="text-white">decision-making aid</strong>, not as an "infallible oracle".</p>
+            {% else %}
+            <p>Quand tu vois quelque chose comme :</p>
+            <div class="bg-gw2-darker rounded-xl p-4 border border-emerald-500/30 my-4">
+                <p class="text-emerald-400 text-sm mb-2">🧠 IA VIVANTE - Basée sur 94 fights réels</p>
+                <p class="text-white">→ 2-3 Spellbreaker strip<br>→ 2 healers (Scrapper/Tempest)<br>→ 1 Chronomancer pull<br>Priorité : Druid > Firebrand > Reaper</p>
+            </div>
+            <p>Cela signifie <strong class="text-white">concrètement</strong> :</p>
+            <ul class="list-disc list-inside ml-4 space-y-2 text-gray-400">
+                <li>"Dans des combats réels similaires, ce type de composition alliée (en termes de rôles) a donné le plus de victoires."</li>
+                <li>Ce n'est <strong class="text-red-400">PAS</strong> une garantie, ni un build parfait, ni une vérité absolue.</li>
+                <li>C'est une <strong class="text-white">synthèse statistique</strong> de ce qui a eu tendance à marcher jusqu'ici.</li>
+            </ul>
+            <p class="text-yellow-400 mt-4">⚠️ À utiliser comme <strong class="text-white">aide à la décision</strong>, pas comme un "oracle infaillible".</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Privacy -->
+    <div class="glow-card rounded-2xl p-6 mb-8">
+        <h2 class="font-display text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            🔒 {% if lang == 'en' %}Privacy & Data{% else %}Vie privée & Données{% endif %}
+        </h2>
+        <div class="text-gray-300 space-y-3">
+            {% if lang == 'en' %}
+            <ul class="space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">•</span>
+                    <span>Logs you upload are processed <strong class="text-white">locally</strong> or via dps.report if you use a link.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">•</span>
+                    <span>The TinyDB database stays <strong class="text-white">on your machine / server</strong> (no resale, no hidden tracking).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">•</span>
+                    <span>If you self-host, <strong class="text-white">you fully control your data</strong>.</span>
+                </li>
+            </ul>
+            {% else %}
+            <ul class="space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">•</span>
+                    <span>Les logs que tu uploades sont traités <strong class="text-white">localement</strong> ou via dps.report si tu utilises un lien.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">•</span>
+                    <span>La base de données TinyDB reste <strong class="text-white">chez toi / sur ton serveur</strong> (pas de revente, pas de tracking caché).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 mt-1">•</span>
+                    <span>Si tu auto-héberges, <strong class="text-white">tu contrôles intégralement tes données</strong>.</span>
+                </li>
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Back to analyze -->
+    <div class="text-center">
+        <a href="/analyze" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-cyan-500 hover:to-emerald-500 transition-all font-display font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            {% if lang == 'en' %}Start Analyzing{% else %}Commencer l'analyse{% endif %}
+        </a>
+    </div>
+</div>
+{% endblock %}

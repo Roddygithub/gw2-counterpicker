@@ -99,6 +99,18 @@ async def set_language(request: Request, lang: str):
     return response
 
 
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    """About page - How it works and limitations"""
+    lang = get_lang(request)
+    return templates.TemplateResponse("about.html", {
+        "request": request,
+        "title": "About" if lang == 'en' else "À propos",
+        "lang": lang,
+        "t": get_all_translations(lang)
+    })
+
+
 @app.get("/analyze", response_class=HTMLResponse)
 async def analyze_page(request: Request):
     """Single report analysis page"""
