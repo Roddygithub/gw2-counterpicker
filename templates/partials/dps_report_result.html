@@ -369,9 +369,11 @@
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('damage-table', 0)">Joueur</th>
                         <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('damage-table', 1)">Classe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 2, true)">Dégâts Infligés</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 3, true)" title="Dégâts par seconde">DPS</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 4, true)" title="Dégâts Out / Dégâts In">Ratio O/I</th>
+                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('damage-table', 2, true)">Grp</th>
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('damage-table', 3)">Rôle</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 4, true)">Dégâts Infligés</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 5, true)" title="Dégâts par seconde">DPS</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 6, true)" title="Dégâts Out / Dégâts In">Ratio O/I</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -379,6 +381,8 @@
                     <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-center text-gray-400">{{ p.group }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs {% if p.role == 'healer' %}bg-green-500/20 text-green-400{% elif p.role == 'stab' %}bg-yellow-500/20 text-yellow-400{% elif p.role == 'dps_strip' %}bg-purple-500/20 text-purple-400{% else %}bg-orange-500/20 text-orange-400{% endif %}">{{ p.role }}</span></td>
                         <td class="py-2 text-right font-mono text-orange-400">{{ "{:,}".format(p.damage_out|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-orange-300">{{ "{:,.0f}".format(p.dps|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-yellow-400">{{ p.damage_ratio|default(0) }}</td>
@@ -403,12 +407,14 @@
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2">Joueur</th>
                         <th class="pb-2">Classe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 2, true)" title="Dégâts sur ennemis down">Down Contrib</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 3, true)" title="Down Contrib par seconde">DC/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)" title="Crowd Control infligé">CC Out</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)" title="CC par seconde">CC/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 6, true)" title="Boons retirés aux ennemis">Strips Out</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)" title="Strips par seconde">S/s</th>
+                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('combat-table', 2, true)">Grp</th>
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('combat-table', 3)">Rôle</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)" title="Dégâts sur ennemis down">Down Contrib</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)" title="Down Contrib par seconde">DC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 6, true)" title="Crowd Control infligé">CC Out</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)" title="CC par seconde">CC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 8, true)" title="Boons retirés aux ennemis">Strips Out</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 9, true)" title="Strips par seconde">S/s</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -416,6 +422,8 @@
                     <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-center text-gray-400">{{ p.group }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs {% if p.role == 'healer' %}bg-green-500/20 text-green-400{% elif p.role == 'stab' %}bg-yellow-500/20 text-yellow-400{% elif p.role == 'dps_strip' %}bg-purple-500/20 text-purple-400{% else %}bg-orange-500/20 text-orange-400{% endif %}">{{ p.role }}</span></td>
                         <td class="py-2 text-right font-mono text-pink-400">{{ "{:,}".format(p.down_contrib|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-pink-300">{{ p.down_contrib_per_sec|default(0) }}</td>
                         <td class="py-2 text-right font-mono text-blue-400">{{ "{:,}".format(p.cc_out|default(0)) }}</td>
@@ -443,12 +451,14 @@
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2">Joueur</th>
                         <th class="pb-2">Classe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 2, true)" title="Soins directs">Heal</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 3, true)" title="Barrier appliqué">Barrier</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 4, true)" title="Heal+Barrier par seconde">HPS</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 5, true)">Cleanses</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 6, true)" title="Cleanses par seconde">C/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 7, true)">Rez</th>
+                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('support-table', 2, true)">Grp</th>
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('support-table', 3)">Rôle</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 4, true)" title="Soins directs">Heal</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 5, true)" title="Barrier appliqué">Barrier</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 6, true)" title="Heal+Barrier par seconde">HPS</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 7, true)">Cleanses</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 8, true)" title="Cleanses par seconde">C/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 9, true)">Rez</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -456,6 +466,8 @@
                     <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-center text-gray-400">{{ p.group }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs {% if p.role == 'healer' %}bg-green-500/20 text-green-400{% elif p.role == 'stab' %}bg-yellow-500/20 text-yellow-400{% elif p.role == 'dps_strip' %}bg-purple-500/20 text-purple-400{% else %}bg-orange-500/20 text-orange-400{% endif %}">{{ p.role }}</span></td>
                         <td class="py-2 text-right font-mono text-green-400">{{ "{:,}".format(p.heal_only|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-blue-400">{{ "{:,}".format(p.barrier|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-green-300">{{ "{:,.0f}".format(p.healing_per_sec|default(0)) }}</td>
@@ -483,11 +495,13 @@
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2">Joueur</th>
                         <th class="pb-2">Classe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 2, true)">Dmg In</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 3, true)">Strips In</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 4, true)">Strips/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 5, true)">Deaths</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 6, true)">Downs</th>
+                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 2, true)">Grp</th>
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 3)">Rôle</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 4, true)">Dmg In</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 5, true)">Strips In</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 6, true)">Strips/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 7, true)">Deaths</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 8, true)">Downs</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -495,6 +509,8 @@
                     <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-center text-gray-400">{{ p.group }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs {% if p.role == 'healer' %}bg-green-500/20 text-green-400{% elif p.role == 'stab' %}bg-yellow-500/20 text-yellow-400{% elif p.role == 'dps_strip' %}bg-purple-500/20 text-purple-400{% else %}bg-orange-500/20 text-orange-400{% endif %}">{{ p.role }}</span></td>
                         <td class="py-2 text-right font-mono text-red-400">{{ "{:,}".format(p.damage_in|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-purple-400">{{ "{:,}".format(p.boon_strip_in|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-purple-300">{{ p.strip_in_per_sec|default(0) }}</td>
