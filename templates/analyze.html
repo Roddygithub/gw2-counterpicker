@@ -48,7 +48,7 @@
             </span>
         </h1>
         <p class="text-xl text-gray-400">
-            Glisse ton fichier .evtc/.zevtc ou colle un lien dps.report
+            {% if lang == 'en' %}Drop your .evtc/.zevtc file or paste a dps.report link{% else %}Glisse ton fichier .evtc/.zevtc ou colle un lien dps.report{% endif %}
         </p>
     </div>
     
@@ -61,7 +61,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                 </svg>
-                Fichier .evtc
+                {% if lang == 'en' %}.evtc File{% else %}Fichier .evtc{% endif %}
             </button>
             <button @click="mode = 'url'" 
                     :class="mode === 'url' ? 'bg-gw2-purple text-white' : 'text-gray-400 hover:text-white'"
@@ -69,7 +69,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                 </svg>
-                Lien dps.report
+                {% if lang == 'en' %}dps.report Link{% else %}Lien dps.report{% endif %}
             </button>
         </div>
     </div>
@@ -108,10 +108,10 @@
                             </svg>
                         </div>
                         <p class="text-lg font-display font-bold text-white mb-2">
-                            Glisse ton fichier ici
+                            {% if lang == 'en' %}Drop your file here{% else %}Glisse ton fichier ici{% endif %}
                         </p>
                         <p class="text-gray-400 text-sm">
-                            ou clique pour sélectionner un fichier .evtc, .zevtc ou .zip
+                            {% if lang == 'en' %}or click to select a .evtc, .zevtc or .zip file{% else %}ou clique pour sélectionner un fichier .evtc, .zevtc ou .zip{% endif %}
                         </p>
                     </div>
                     
@@ -142,7 +142,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
-                Analyser le fichier
+                {% if lang == 'en' %}Analyze file{% else %}Analyser le fichier{% endif %}
                 
                 <span id="loading-file" class="htmx-indicator">
                     <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -154,7 +154,7 @@
         </form>
         
         <p class="mt-4 text-center text-sm text-gray-500">
-            📁 Formats supportés: .evtc, .zevtc, .zip
+            📁 {% if lang == 'en' %}Supported formats{% else %}Formats supportés{% endif %}: .evtc, .zevtc, .zip
         </p>
     </div>
     
@@ -168,7 +168,7 @@
             
             <div>
                 <label for="url" class="block text-sm font-medium text-gray-300 mb-2">
-                    Lien dps.report
+                    {% if lang == 'en' %}dps.report Link{% else %}Lien dps.report{% endif %}
                 </label>
                 <div class="relative">
                     <input type="url" 
@@ -184,7 +184,7 @@
                     </div>
                 </div>
                 <p class="mt-2 text-sm text-gray-500">
-                    Supporte tous les liens dps.report de combats WvW
+                    {% if lang == 'en' %}Supports all WvW combat dps.report links{% else %}Supporte tous les liens dps.report de combats WvW{% endif %}
                 </p>
             </div>
             
@@ -193,7 +193,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
-                Analyser
+                {% if lang == 'en' %}Analyze{% else %}Analyser{% endif %}
                 
                 <span id="loading-indicator" class="htmx-indicator">
                     <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -216,9 +216,9 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                 </svg>
             </div>
-            <h3 class="font-display text-xl font-bold text-white mb-2">En attente d'analyse</h3>
+            <h3 class="font-display text-xl font-bold text-white mb-2">{% if lang == 'en' %}Waiting for analysis{% else %}En attente d'analyse{% endif %}</h3>
             <p class="text-gray-400">
-                Colle un lien dps.report ci-dessus pour commencer l'analyse
+                {% if lang == 'en' %}Paste a dps.report link above to start the analysis{% else %}Colle un lien dps.report ci-dessus pour commencer l'analyse{% endif %}
             </p>
         </div>
     </div>
@@ -230,13 +230,13 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                Comment obtenir un lien dps.report ?
+                {% if lang == 'en' %}How to get a dps.report link?{% else %}Comment obtenir un lien dps.report ?{% endif %}
             </h4>
             <ol class="text-sm text-gray-400 space-y-2 list-decimal list-inside">
-                <li>Active ArcDPS dans Guild Wars 2</li>
-                <li>Après un combat, le fichier .evtc est généré</li>
-                <li>Upload sur <a href="https://dps.report" target="_blank" class="text-gw2-purple hover:underline">dps.report</a></li>
-                <li>Copie le lien et colle-le ici</li>
+                <li>{% if lang == 'en' %}Enable ArcDPS in Guild Wars 2{% else %}Active ArcDPS dans Guild Wars 2{% endif %}</li>
+                <li>{% if lang == 'en' %}After a fight, the .evtc file is generated{% else %}Après un combat, le fichier .evtc est généré{% endif %}</li>
+                <li>{% if lang == 'en' %}Upload to{% else %}Upload sur{% endif %} <a href="https://dps.report" target="_blank" class="text-gw2-purple hover:underline">dps.report</a></li>
+                <li>{% if lang == 'en' %}Copy the link and paste it here{% else %}Copie le lien et colle-le ici{% endif %}</li>
             </ol>
         </div>
         
@@ -250,15 +250,15 @@
             <ul class="text-sm text-gray-400 space-y-2">
                 <li class="flex items-start gap-2">
                     <span class="text-cyber-cyan">→</span>
-                    Analyse plusieurs combats pour voir les patterns
+                    {% if lang == 'en' %}Analyze multiple fights to see patterns{% else %}Analyse plusieurs combats pour voir les patterns{% endif %}
                 </li>
                 <li class="flex items-start gap-2">
                     <span class="text-cyber-cyan">→</span>
-                    Utilise "Soirée Complète" pour une vue d'ensemble
+                    {% if lang == 'en' %}Use "Full Evening" for an overview{% else %}Utilise "Soirée Complète" pour une vue d'ensemble{% endif %}
                 </li>
                 <li class="flex items-start gap-2">
                     <span class="text-cyber-cyan">→</span>
-                    Les counters sont basés sur le meta EU 2025
+                    {% if lang == 'en' %}Counters are based on EU 2025 meta{% else %}Les counters sont basés sur le meta EU 2025{% endif %}
                 </li>
             </ul>
         </div>
