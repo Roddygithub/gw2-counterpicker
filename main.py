@@ -302,12 +302,13 @@ def extract_players_from_ei_json(data: dict) -> dict:
         duration_sec = 1  # Avoid division by zero
 
     # Role detection based on elite spec (WvW meta)
-    # Primary stab providers
+    # Primary stab providers (Guardian)
     STAB_SPECS = {'Firebrand', 'Luminary'}
-    # Primary healers
-    HEALER_SPECS = {'Druid', 'Tempest', 'Scrapper', 'Vindicator', 'Specter'}
+    # Primary healers (various classes)
+    HEALER_SPECS = {'Druid', 'Troubadour', 'Specter', 'Vindicator'}  # Troubadour = Mesmer heal
     # Primary boon providers
-    BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer'}
+    BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer', 'Paragon'}  # Paragon = Warrior boon
+    # Scrapper can be heal or DPS - detect by cleanses
     
     # Minimum fight duration for reliable role detection (seconds)
     MIN_DURATION_FOR_ROLE = 60
@@ -322,6 +323,9 @@ def extract_players_from_ei_json(data: dict) -> dict:
                 return 'healer'
             if profession in BOON_SPECS:
                 return 'boon'
+            # Scrapper with any cleanses = healer
+            if profession == 'Scrapper' and cleanses_per_sec > 0:
+                return 'healer'
             return 'dps'
         
         # For longer fights, use stats-based detection
@@ -329,15 +333,21 @@ def extract_players_from_ei_json(data: dict) -> dict:
         if profession in STAB_SPECS:
             return 'stab'
         # Healer specs with any cleanses = healer
-        if profession in HEALER_SPECS and cleanses_per_sec >= 0.3:
+        if profession in HEALER_SPECS and cleanses_per_sec >= 0.2:
             return 'healer'
+        # Scrapper: healer if cleanses >= 0.5, else DPS
+        if profession == 'Scrapper':
+            return 'healer' if cleanses_per_sec >= 0.5 else 'dps'
+        # Tempest: healer if cleanses >= 0.3, else DPS
+        if profession == 'Tempest':
+            return 'healer' if cleanses_per_sec >= 0.3 else 'dps'
         # Boon specs = boon
         if profession in BOON_SPECS:
             return 'boon'
         # High cleanses from other specs = likely healer
-        if cleanses_per_sec >= 2.0:
+        if cleanses_per_sec >= 1.5:
             return 'healer'
-        # Default = DPS (includes Willbender, Mechanist, etc.)
+        # Default = DPS (includes Willbender, Mechanist, Reaper, Harbinger, etc.)
         return 'dps'
 
     players = []
