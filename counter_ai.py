@@ -230,13 +230,27 @@ class CounterAI:
         enemy_comp = {}
         ally_comp = {}
         
-        # From enemy_composition
+        # From enemy_composition (structured data)
         if 'enemy_composition' in fight_data:
             enemy_comp = fight_data['enemy_composition'].get('spec_counts', {})
+        
+        # Fallback: build enemy_comp from enemies list if spec_counts is empty
+        if not enemy_comp and 'enemies' in fight_data:
+            for enemy in fight_data['enemies']:
+                spec = enemy.get('profession', 'Unknown')
+                if spec and spec != 'Unknown':
+                    enemy_comp[spec] = enemy_comp.get(spec, 0) + 1
         
         # From composition (allies)
         if 'composition' in fight_data:
             ally_comp = fight_data['composition'].get('spec_counts', {})
+        
+        # Fallback: build ally_comp from allies list if spec_counts is empty
+        if not ally_comp and 'allies' in fight_data:
+            for ally in fight_data['allies']:
+                spec = ally.get('profession', 'Unknown')
+                if spec and spec != 'Unknown':
+                    ally_comp[spec] = ally_comp.get(spec, 0) + 1
         
         # Extract detailed ally builds (NEW)
         ally_builds = []

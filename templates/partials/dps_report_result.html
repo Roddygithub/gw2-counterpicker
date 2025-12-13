@@ -296,6 +296,63 @@
     </div>
     {% endif %}
     
+    <!-- AFK Players Warning -->
+    {% if players.allies_afk and players.allies_afk|length > 0 %}
+    <div class="glow-card rounded-2xl p-4 border border-yellow-500/30 bg-yellow-900/10">
+        <h3 class="font-display text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+            ⚠️ {% if lang == 'en' %}Inactive Players{% else %}Joueurs Inactifs{% endif %} ({{ players.allies_afk|length }})
+        </h3>
+        <p class="text-xs text-gray-400 mb-3">
+            {% if lang == 'en' %}These players were in the squad but had no activity (no damage, no healing, no kills). They are excluded from statistics.{% else %}Ces joueurs étaient dans l'escouade mais n'ont eu aucune activité (pas de dégâts, pas de heal, pas de kills). Ils sont exclus des statistiques.{% endif %}
+        </p>
+        <div class="flex flex-wrap gap-2">
+            {% for p in players.allies_afk %}
+            <span class="px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                {{ p.name }} <span class="text-gray-500">({{ p.profession }})</span>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Out-of-Squad Allies (Pugs) -->
+    {% set pugs = [] %}
+    {% for p in players.allies if p.in_squad == false %}
+        {% set _ = pugs.append(p) %}
+    {% endfor %}
+    {% if pugs|length > 0 %}
+    <div class="glow-card rounded-2xl p-4 border border-cyan-500/30 bg-cyan-900/10">
+        <h3 class="font-display text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
+            👥 {% if lang == 'en' %}Allied Pugs (Out of Squad){% else %}Pugs Alliés (Hors Escouade){% endif %} ({{ pugs|length }})
+        </h3>
+        <p class="text-xs text-gray-400 mb-3">
+            {% if lang == 'en' %}These players participated in the fight but were not in your squad.{% else %}Ces joueurs ont participé au combat mais n'étaient pas dans ton escouade.{% endif %}
+        </p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">{% if lang == 'en' %}Player{% else %}Joueur{% endif %}</th>
+                        <th class="pb-2">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</th>
+                        <th class="pb-2 text-right">{% if lang == 'en' %}Damage{% else %}Dégâts{% endif %}</th>
+                        <th class="pb-2 text-right">{% if lang == 'en' %}Kills{% else %}Kills{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for p in pugs|sort(attribute='damage', reverse=true) %}
+                    <tr class="hover:bg-gw2-darker/50">
+                        <td class="py-2 font-medium text-white">{{ p.name }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-right font-mono text-orange-400">{{ "{:,.0f}".format(p.damage|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-red-400">{{ p.kills|default(0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- DETAILED SQUAD STATISTICS -->
     {% if players.allies %}
     <div class="glow-card rounded-2xl p-6" x-data="{ activeTab: 'damage' }">
@@ -585,7 +642,7 @@
                                 <th class="pb-2 text-center" title="Quickness - Priorité #1"><img src="/static/img/boons/quickness.png" class="w-5 h-5 inline" alt="Quick"> Quick</th>
                                 <th class="pb-2 text-center" title="Resistance - Priorité #2"><img src="/static/img/boons/resistance.png" class="w-5 h-5 inline" alt="Resist"> Resist</th>
                                 <th class="pb-2 text-center" title="Aegis - Priorité #3"><img src="/static/img/boons/aegis.png" class="w-5 h-5 inline" alt="Aegis"> Aegis</th>
-                                <th class="pb-2 text-center" title="Superspeed - Priorité #4"><img src="/static/img/boons/superspeed.png" class="w-5 h-5 inline" alt="Superspeed"> Superspeed</th>
+                                <th class="pb-2 text-center" title="Superspeed - Priorité #4"><img src="/static/img/boons/superspeed.svg" class="w-5 h-5 inline" alt="Superspeed"> Speed</th>
                                 <th class="pb-2 text-center"><img src="/static/img/boons/stability.png" class="w-5 h-5 inline" alt="Stab"> Stab</th>
                                 <th class="pb-2 text-center"><img src="/static/img/boons/protection.png" class="w-5 h-5 inline" alt="Prot"> Prot</th>
                                 <th class="pb-2 text-center"><img src="/static/img/boons/vigor.png" class="w-5 h-5 inline" alt="Vigor"> Vigor</th>
@@ -630,7 +687,7 @@
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 4, true)" title="Quickness - Priorité #1"><img src="/static/img/boons/quickness.png" class="w-5 h-5 inline" alt="Quick"> Quick</th>
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 5, true)" title="Resistance - Priorité #2"><img src="/static/img/boons/resistance.png" class="w-5 h-5 inline" alt="Resist"> Resist</th>
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 6, true)" title="Aegis - Priorité #3"><img src="/static/img/boons/aegis.png" class="w-5 h-5 inline" alt="Aegis"> Aegis</th>
-                                <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 7, true)" title="Superspeed - Priorité #4"><img src="/static/img/boons/superspeed.png" class="w-5 h-5 inline" alt="Superspeed"> Superspeed</th>
+                                <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 7, true)" title="Superspeed - Priorité #4"><img src="/static/img/boons/superspeed.svg" class="w-5 h-5 inline" alt="Superspeed"> Speed</th>
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 8, true)"><img src="/static/img/boons/stability.png" class="w-5 h-5 inline" alt="Stab"> Stab</th>
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 9, true)"><img src="/static/img/boons/protection.png" class="w-5 h-5 inline" alt="Prot"> Prot</th>
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 10, true)"><img src="/static/img/boons/vigor.png" class="w-5 h-5 inline" alt="Vigor"> Vigor</th>
