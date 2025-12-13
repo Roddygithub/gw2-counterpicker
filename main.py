@@ -570,7 +570,7 @@ async def analyze_evening_files(
 ):
     """
     Analyze multiple .evtc/.zip files for full evening analysis
-    Returns comprehensive intelligence report with REAL EVTC parsing
+    Uploads each file to dps.report for REAL data extraction
     """
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
@@ -581,43 +581,128 @@ async def analyze_evening_files(
     # Create session
     session_id = str(uuid.uuid4())
     
-    # Read all file data for REAL parsing
-    file_infos = []
-    for f in files:
-        try:
-            data = await f.read()
-            file_infos.append({
-                "filename": f.filename,
-                "size": len(data),
-                "data": data
-            })
-        except Exception as e:
-            print(f"Error reading file {f.filename}: {e}")
-            continue
+    # Upload each file to dps.report and collect results
+    fight_results = []
+    aggregated_composition = {
+        'spec_counts': {},
+        'role_counts': {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0},
+        'specs_by_role': {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}},
+        'total_players': 0
+    }
+    total_duration = 0
+    victories = 0
+    defeats = 0
     
-    # Use REAL parser for .evtc files
-    try:
-        report = real_parser.parse_evening_files(file_infos)
-    except Exception as e:
-        print(f"Real parser failed, falling back to mock: {e}")
-        # Fallback to mock if real parsing fails
-        mock_infos = [{"filename": f["filename"], "size": f["size"]} for f in file_infos]
-        report = mock_parser.parse_evening_files(mock_infos)
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        for f in files:
+            try:
+                file_data = await f.read()
+                print(f"[Evening] Uploading {f.filename} to dps.report...")
+                
+                # Upload to dps.report
+                upload_files = {"file": (f.filename, file_data)}
+                upload_data = {"json": "1"}
+                
+                response = await client.post(
+                    "https://dps.report/uploadContent",
+                    files=upload_files,
+                    data=upload_data
+                )
+                
+                if response.status_code != 200:
+                    print(f"[Evening] Upload failed for {f.filename}: {response.status_code}")
+                    continue
+                
+                result = response.json()
+                permalink = result.get('permalink', '')
+                
+                if not permalink:
+                    print(f"[Evening] No permalink for {f.filename}")
+                    continue
+                
+                # Fetch JSON data
+                json_url = f"https://dps.report/getJson?permalink={permalink}"
+                json_response = await client.get(json_url)
+                
+                if json_response.status_code != 200:
+                    continue
+                
+                log_data = json_response.json()
+                
+                if 'error' in log_data:
+                    print(f"[Evening] Error in JSON for {f.filename}: {log_data.get('error')}")
+                    continue
+                
+                # Extract player data using existing function
+                players_data = extract_players_from_ei_json(log_data)
+                
+                # Aggregate composition data
+                if players_data.get('composition'):
+                    comp = players_data['composition']
+                    for spec, count in comp.get('spec_counts', {}).items():
+                        aggregated_composition['spec_counts'][spec] = aggregated_composition['spec_counts'].get(spec, 0) + count
+                    for role, count in comp.get('role_counts', {}).items():
+                        aggregated_composition['role_counts'][role] = aggregated_composition['role_counts'].get(role, 0) + count
+                    for role, specs in comp.get('specs_by_role', {}).items():
+                        for spec, count in specs.items():
+                            aggregated_composition['specs_by_role'][role][spec] = aggregated_composition['specs_by_role'][role].get(spec, 0) + count
+                    aggregated_composition['total_players'] += comp.get('total', 0)
+                
+                total_duration += players_data.get('duration_sec', 0)
+                
+                # Track wins/losses
+                outcome = players_data.get('fight_outcome', 'unknown')
+                if outcome == 'victory':
+                    victories += 1
+                elif outcome == 'defeat':
+                    defeats += 1
+                
+                fight_results.append({
+                    'filename': f.filename,
+                    'permalink': permalink,
+                    'fight_name': players_data.get('fight_name', 'Unknown'),
+                    'duration_sec': players_data.get('duration_sec', 0),
+                    'fight_outcome': outcome,
+                    'fight_stats': players_data.get('fight_stats', {}),
+                    'allies_count': len(players_data.get('allies', [])),
+                    'enemies_count': len(players_data.get('enemies', []))
+                })
+                
+                print(f"[Evening] Processed {f.filename}: {players_data.get('fight_name')}")
+                
+            except Exception as e:
+                print(f"[Evening] Error processing {f.filename}: {e}")
+                continue
     
-    # Generate counter for next evening
-    counter = counter_engine.generate_counter(report.average_composition)
+    # Calculate averages
+    num_fights = len(fight_results)
+    if num_fights > 0:
+        avg_players = aggregated_composition['total_players'] // num_fights
+        avg_duration = total_duration / num_fights
+    else:
+        avg_players = 0
+        avg_duration = 0
     
-    # Store session
+    # Store session with real data
     sessions[session_id] = {
-        "report": report,
-        "counter": counter,
+        "fights": fight_results,
+        "composition": aggregated_composition,
+        "stats": {
+            "total_fights": num_fights,
+            "total_duration_min": round(total_duration / 60, 1),
+            "avg_duration_sec": round(avg_duration, 1),
+            "avg_players": avg_players,
+            "victories": victories,
+            "defeats": defeats
+        },
         "created_at": datetime.now()
     }
     
-    return templates.TemplateResponse("partials/evening_result.html", {
+    return templates.TemplateResponse("partials/evening_result_v2.html", {
         "request": request,
-        "report": report,
-        "counter": counter,
+        "fights": fight_results,
+        "composition": aggregated_composition,
+        "stats": sessions[session_id]["stats"],
         "session_id": session_id,
         "file_count": len(files)
     })
