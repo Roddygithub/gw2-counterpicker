@@ -44,6 +44,7 @@ from counter_ai import (
     get_ai_status,
     counter_ai
 )
+from translations import get_all_translations
 
 app = FastAPI(
     title="GW2 CounterPicker",
@@ -70,30 +71,53 @@ db = TinyDB(DB_PATH / "sessions.json")
 sessions_table = db.table("sessions")
 
 
+def get_lang(request: Request) -> str:
+    """Get language from cookie or default to French"""
+    return request.cookies.get("lang", "fr")
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Main landing page - The gateway to victory"""
+    lang = get_lang(request)
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "title": "GW2 CounterPicker"
+        "title": "GW2 CounterPicker",
+        "lang": lang,
+        "t": get_all_translations(lang)
     })
+
+@app.get("/set-lang/{lang}")
+async def set_language(request: Request, lang: str):
+    """Set user language preference"""
+    from fastapi.responses import RedirectResponse
+    if lang not in ["fr", "en"]:
+        lang = "fr"
+    response = RedirectResponse(url=request.headers.get("referer", "/"), status_code=302)
+    response.set_cookie(key="lang", value=lang, max_age=365*24*60*60)
+    return response
 
 
 @app.get("/analyze", response_class=HTMLResponse)
 async def analyze_page(request: Request):
     """Single report analysis page"""
+    lang = get_lang(request)
     return templates.TemplateResponse("analyze.html", {
         "request": request,
-        "title": "Quick Analysis"
+        "title": "Quick Analysis",
+        "lang": lang,
+        "t": get_all_translations(lang)
     })
 
 
 @app.get("/evening", response_class=HTMLResponse)
 async def evening_page(request: Request):
     """Full evening analysis page"""
+    lang = get_lang(request)
     return templates.TemplateResponse("evening.html", {
         "request": request,
-        "title": "Soirée Complète"
+        "title": "Soirée Complète",
+        "lang": lang,
+        "t": get_all_translations(lang)
     })
 
 
@@ -111,11 +135,14 @@ async def meta_page(request: Request):
     # Add AI learning status
     ai_status = get_ai_status()
     
+    lang = get_lang(request)
     return templates.TemplateResponse("meta.html", {
         "request": request,
         "title": "Meta 2025",
         "meta_data": meta_data,
-        "ai_status": ai_status
+        "ai_status": ai_status,
+        "lang": lang,
+        "t": get_all_translations(lang)
     })
 
 
@@ -150,6 +177,7 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
                 enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
                 ai_counter = await get_ai_counter(enemy_spec_counts)
                 
+                lang = get_lang(request)
                 return templates.TemplateResponse("partials/dps_report_result.html", {
                     "request": request,
                     "data": log_data,
@@ -158,7 +186,9 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
                     "permalink": url,
                     "filename": "dps.report URL",
                     "timestamp": datetime.now().strftime("%H:%M:%S"),
-                    "parse_mode": "online"
+                    "parse_mode": "online",
+                    "lang": lang,
+                    "t": get_all_translations(lang)
                 })
     except Exception as e:
         print(f"[URL] dps.report API failed: {e}")
@@ -221,6 +251,7 @@ async def analyze_single_evtc(
                         
                         print(f"[EVTC] dps.report success: {len(players_data['enemies'])} enemies")
                         
+                        lang = get_lang(request)
                         return templates.TemplateResponse("partials/dps_report_result.html", {
                             "request": request,
                             "data": log_data,
@@ -229,7 +260,9 @@ async def analyze_single_evtc(
                             "permalink": permalink,
                             "filename": file.filename,
                             "timestamp": datetime.now().strftime("%H:%M:%S"),
-                            "parse_mode": "online"
+                            "parse_mode": "online",
+                            "lang": lang,
+                            "t": get_all_translations(lang)
                         })
     except Exception as api_error:
         print(f"[EVTC] dps.report unavailable: {api_error}")
@@ -254,6 +287,7 @@ async def analyze_single_evtc(
         
         print(f"[EVTC] Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
         
+        lang = get_lang(request)
         return templates.TemplateResponse("partials/dps_report_result.html", {
             "request": request,
             "data": {"fightName": f"Offline: {file.filename}", "duration": f"{parsed_log.duration_seconds}s"},
@@ -262,7 +296,9 @@ async def analyze_single_evtc(
             "permalink": "",
             "filename": file.filename,
             "timestamp": datetime.now().strftime("%H:%M:%S"),
-            "parse_mode": "offline"
+            "parse_mode": "offline",
+            "lang": lang,
+            "t": get_all_translations(lang)
         })
     except Exception as parse_error:
         print(f"[EVTC] Local parser failed: {parse_error}")

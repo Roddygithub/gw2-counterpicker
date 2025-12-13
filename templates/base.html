@@ -441,11 +441,10 @@
                 </div>
                 
                 <!-- Language Toggle -->
-                <button @click="lang = lang === 'fr' ? 'en' : 'fr'" 
-                        class="px-3 py-1.5 rounded-lg text-sm font-medium border border-gw2-purple/30 hover:border-gw2-purple hover:bg-gw2-purple/20 transition-all flex items-center gap-2">
-                    <span x-show="lang === 'fr'">🇫🇷 FR</span>
-                    <span x-show="lang === 'en'">🇬🇧 EN</span>
-                </button>
+                <div class="flex items-center gap-1">
+                    <a href="/set-lang/fr" class="px-2 py-1 rounded text-sm font-medium transition-all {% if lang == 'fr' %}bg-gw2-purple/30 text-white{% else %}text-gray-400 hover:text-white{% endif %}">🇫🇷</a>
+                    <a href="/set-lang/en" class="px-2 py-1 rounded text-sm font-medium transition-all {% if lang == 'en' %}bg-gw2-purple/30 text-white{% else %}text-gray-400 hover:text-white{% endif %}">🇬🇧</a>
+                </div>
                 
                 <!-- Mobile menu button -->
                 <button class="md:hidden p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gw2-purple/20" 
