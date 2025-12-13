@@ -22,10 +22,10 @@
             
             <!-- Tagline -->
             <p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-4 animate-slide-up" style="animation-delay: 0.1s;">
-                Le seul outil capable de lire dans l'âme de ton adversaire.
+                {% if lang == 'en' %}The only tool that can read your enemy's soul.{% else %}Le seul outil capable de lire dans l'âme de ton adversaire.{% endif %}
             </p>
             <p class="text-lg md:text-xl text-gw2-purple font-medium mb-12 animate-slide-up" style="animation-delay: 0.15s;">
-                Et dans celle de tout son serveur.
+                {% if lang == 'en' %}And their entire server's.{% else %}Et dans celle de tout son serveur.{% endif %}
             </p>
             
             <!-- CTA Buttons -->
@@ -38,7 +38,7 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                         </svg>
-                        <span x-text="t('home.quick')">Quick Analysis</span>
+                        {% if lang == 'en' %}Quick Analysis{% else %}Analyse Rapide{% endif %}
                     </span>
                 </a>
                 
@@ -48,7 +48,7 @@
                         <svg class="w-5 h-5 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                         </svg>
-                        <span x-text="t('home.evening')">Soirée Complète</span>
+                        {% if lang == 'en' %}Full Evening{% else %}Soirée Complète{% endif %}
                     </span>
                 </a>
             </div>
@@ -65,9 +65,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                 </div>
-                <h3 class="font-display text-xl font-bold text-white mb-2">⚡ 3 Secondes</h3>
+                <h3 class="font-display text-xl font-bold text-white mb-2">⚡ {% if lang == 'en' %}3 Seconds{% else %}3 Secondes{% endif %}</h3>
                 <p class="text-gray-400">
-                    Colle un lien dps.report → Composition ennemie + Counter parfait instantanément.
+                    {% if lang == 'en' %}Paste a dps.report link → Enemy composition + Perfect counter instantly.{% else %}Colle un lien dps.report → Composition ennemie + Counter parfait instantanément.{% endif %}
                 </p>
             </div>
             
@@ -78,9 +78,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
-                <h3 class="font-display text-xl font-bold text-white mb-2">📊 Soirée Complète</h3>
+                <h3 class="font-display text-xl font-bold text-white mb-2">📊 {% if lang == 'en' %}Full Evening{% else %}Soirée Complète{% endif %}</h3>
                 <p class="text-gray-400">
-                    Drag & drop jusqu'à 100 fichiers .evtc → Analyse complète de 4h de WvW.
+                    {% if lang == 'en' %}Drag & drop up to 100 .evtc files → Complete 4h WvW analysis.{% else %}Drag & drop jusqu'à 100 fichiers .evtc → Analyse complète de 4h de WvW.{% endif %}
                 </p>
             </div>
             
@@ -93,7 +93,7 @@
                 </div>
                 <h3 class="font-display text-xl font-bold text-white mb-2">📄 PDF Report</h3>
                 <p class="text-gray-400">
-                    Exporte un "Night Intelligence Report" à partager avec ta guilde.
+                    {% if lang == 'en' %}Export a "Night Intelligence Report" to share with your guild.{% else %}Exporte un "Night Intelligence Report" à partager avec ta guilde.{% endif %}
                 </p>
             </div>
             
@@ -107,7 +107,7 @@
                 </div>
                 <h3 class="font-display text-xl font-bold text-white mb-2">🗺️ Heatmaps</h3>
                 <p class="text-gray-400">
-                    Visualise les zones les plus contestées et adapte ta stratégie.
+                    {% if lang == 'en' %}Visualize the most contested zones and adapt your strategy.{% else %}Visualise les zones les plus contestées et adapte ta stratégie.{% endif %}
                 </p>
             </div>
             
@@ -120,7 +120,7 @@
                 </div>
                 <h3 class="font-display text-xl font-bold text-white mb-2">🎯 Top Threats</h3>
                 <p class="text-gray-400">
-                    Identifie les 10 joueurs les plus dangereux et leurs builds exacts.
+                    {% if lang == 'en' %}Identify the 10 most dangerous players and their exact builds.{% else %}Identifie les 10 joueurs les plus dangereux et leurs builds exacts.{% endif %}
                 </p>
             </div>
             
@@ -133,7 +133,7 @@
                 </div>
                 <h3 class="font-display text-xl font-bold text-white mb-2">📈 Meta 2025</h3>
                 <p class="text-gray-400">
-                    Suis l'évolution du meta WvW en temps réel. Tier lists actualisées.
+                    {% if lang == 'en' %}Track WvW meta evolution in real-time. Updated tier lists.{% else %}Suis l'évolution du meta WvW en temps réel. Tier lists actualisées.{% endif %}
                 </p>
             </div>
         </div>
@@ -143,7 +143,7 @@
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <h2 class="font-display text-3xl md:text-4xl font-bold text-center mb-12">
             <span class="bg-gradient-to-r from-gw2-purple to-cyber-cyan bg-clip-text text-transparent">
-                Comment ça marche
+                {% if lang == 'en' %}How it works{% else %}Comment ça marche{% endif %}
             </span>
         </h2>
         
@@ -155,7 +155,7 @@
                 </div>
                 <h3 class="font-display text-xl font-bold text-white mb-2">Upload</h3>
                 <p class="text-gray-400">
-                    Colle un lien dps.report ou drag & drop tes fichiers .evtc
+                    {% if lang == 'en' %}Paste a dps.report link or drag & drop your .evtc files{% else %}Colle un lien dps.report ou drag & drop tes fichiers .evtc{% endif %}
                 </p>
             </div>
             
@@ -164,9 +164,9 @@
                 <div class="w-16 h-16 rounded-full bg-gradient-to-br from-cyber-pink to-cyber-cyan flex items-center justify-center mx-auto mb-4 text-2xl font-display font-bold">
                     2
                 </div>
-                <h3 class="font-display text-xl font-bold text-white mb-2">Analyse</h3>
+                <h3 class="font-display text-xl font-bold text-white mb-2">{% if lang == 'en' %}Analysis{% else %}Analyse{% endif %}</h3>
                 <p class="text-gray-400">
-                    L'IA analyse la composition ennemie et identifie les patterns
+                    {% if lang == 'en' %}AI analyzes enemy composition and identifies patterns{% else %}L'IA analyse la composition ennemie et identifie les patterns{% endif %}
                 </p>
             </div>
             
@@ -175,41 +175,49 @@
                 <div class="w-16 h-16 rounded-full bg-gradient-to-br from-cyber-cyan to-gw2-blue flex items-center justify-center mx-auto mb-4 text-2xl font-display font-bold">
                     3
                 </div>
-                <h3 class="font-display text-xl font-bold text-white mb-2">Domine</h3>
+                <h3 class="font-display text-xl font-bold text-white mb-2">{% if lang == 'en' %}Dominate{% else %}Domine{% endif %}</h3>
                 <p class="text-gray-400">
-                    Reçois le counter parfait et écrase l'adversaire
+                    {% if lang == 'en' %}Get the perfect counter and crush your opponent{% else %}Reçois le counter parfait et écrase l'adversaire{% endif %}
                 </p>
             </div>
         </div>
     </section>
     
-    <!-- Stats Section -->
+    <!-- AI Learning Stats Section -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div class="glow-card rounded-3xl p-8 md:p-12">
+        <div class="glow-card rounded-3xl p-8 md:p-12 border border-gw2-purple/30">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 border border-green-500/30 mb-4">
+                    <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse mr-2"></span>
+                    <span class="text-sm font-medium text-green-400">🧠 {% if lang == 'en' %}AI continuously learning{% else %}IA en apprentissage continu{% endif %}</span>
+                </div>
+                <h3 class="font-display text-2xl font-bold text-white mb-2">{% if lang == 'en' %}The AI improves with every analyzed fight{% else %}L'IA s'améliore à chaque combat analysé{% endif %}</h3>
+                <p class="text-gray-400">{% if lang == 'en' %}The more logs you analyze, the more accurate the recommendations become{% else %}Plus vous analysez de logs, plus les recommandations deviennent précises{% endif %}</p>
+            </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 <div>
                     <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-gw2-purple to-cyber-pink bg-clip-text text-transparent">
-                        27
+                        {{ ai_status.total_fights|default(0) }}
                     </div>
-                    <div class="text-gray-400 mt-2">Elite Specs</div>
+                    <div class="text-gray-400 mt-2">🎯 {% if lang == 'en' %}Fights analyzed{% else %}Combats analysés{% endif %}</div>
                 </div>
                 <div>
                     <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
-                        100+
+                        {{ ai_status.win_rate|default(0) }}%
                     </div>
-                    <div class="text-gray-400 mt-2">Counter Strategies</div>
+                    <div class="text-gray-400 mt-2">📈 {% if lang == 'en' %}Average Win Rate{% else %}Win Rate moyen{% endif %}</div>
                 </div>
                 <div>
                     <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-cyber-cyan to-gw2-blue bg-clip-text text-transparent">
-                        3s
+                        27
                     </div>
-                    <div class="text-gray-400 mt-2">Analysis Time</div>
+                    <div class="text-gray-400 mt-2">⚔️ Elite Specs</div>
                 </div>
                 <div>
                     <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-gw2-blue to-gw2-purple bg-clip-text text-transparent">
-                        15
+                        3s
                     </div>
-                    <div class="text-gray-400 mt-2">Years of Pain</div>
+                    <div class="text-gray-400 mt-2">⚡ {% if lang == 'en' %}Analysis Time{% else %}Temps d'analyse{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -219,18 +227,18 @@
     <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 class="font-display text-3xl md:text-4xl font-bold mb-6">
             <span class="bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
-                Prêt à changer la guerre ?
+                {% if lang == 'en' %}Ready to change the war?{% else %}Prêt à changer la guerre ?{% endif %}
             </span>
         </h2>
         <p class="text-xl text-gray-400 mb-8">
-            Demain matin, les commandants EU découvriront que tout a changé.
+            {% if lang == 'en' %}Tomorrow morning, EU commanders will discover everything has changed.{% else %}Demain matin, les commandants EU découvriront que tout a changé.{% endif %}
         </p>
         <a href="/analyze" 
            class="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-display font-bold text-lg bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple transition-all hover:scale-105 animate-glow">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
             </svg>
-            Commencer Maintenant
+            {% if lang == 'en' %}Start Now{% else %}Commencer Maintenant{% endif %}
         </a>
     </section>
 </div>

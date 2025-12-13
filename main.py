@@ -79,11 +79,13 @@ def get_lang(request: Request) -> str:
 async def home(request: Request):
     """Main landing page - The gateway to victory"""
     lang = get_lang(request)
+    ai_status = get_ai_status()
     return templates.TemplateResponse("index.html", {
         "request": request,
         "title": "GW2 CounterPicker",
         "lang": lang,
-        "t": get_all_translations(lang)
+        "t": get_all_translations(lang),
+        "ai_status": ai_status
     })
 
 @app.get("/set-lang/{lang}")

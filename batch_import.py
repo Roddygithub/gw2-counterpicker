@@ -10,12 +10,14 @@ This will:
 1. Find all .zevtc and .evtc files in the folder
 2. Upload each to dps.report for parsing
 3. Record each fight in the AI database
+4. Track processed files to allow resuming if interrupted
 """
 
 import sys
 import os
 import asyncio
 import httpx
+import json
 from pathlib import Path
 from datetime import datetime
 
@@ -25,6 +27,22 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from counter_ai import record_fight_for_learning, get_ai_status
 
 DPS_REPORT_URL = "https://dps.report/uploadContent"
+PROGRESS_FILE = "batch_import_progress.json"
+
+def load_progress() -> dict:
+    """Load progress from file to allow resuming"""
+    if os.path.exists(PROGRESS_FILE):
+        try:
+            with open(PROGRESS_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    return {'processed_files': [], 'success_count': 0, 'fail_count': 0}
+
+def save_progress(progress: dict):
+    """Save progress to file"""
+    with open(PROGRESS_FILE, 'w') as f:
+        json.dump(progress, f, indent=2)
 
 async def upload_to_dps_report(file_path: Path) -> dict:
     """Upload a file to dps.report and get the JSON response"""
@@ -128,6 +146,7 @@ async def main():
     if len(sys.argv) < 2:
         print("Usage: python batch_import.py /path/to/logs/folder")
         print("\nThis script imports all .zevtc and .evtc files to train the AI.")
+        print("Progress is saved automatically - you can interrupt and resume later.")
         sys.exit(1)
     
     folder_path = Path(sys.argv[1])
@@ -143,12 +162,26 @@ async def main():
         print(f"No .zevtc or .evtc files found in {folder_path}")
         sys.exit(1)
     
+    # Load progress
+    progress = load_progress()
+    processed_set = set(progress['processed_files'])
+    
+    # Filter out already processed files
+    remaining_files = [f for f in log_files if str(f) not in processed_set]
+    
     print(f"=" * 60)
     print(f"GW2 CounterPicker - Batch Import")
     print(f"=" * 60)
     print(f"Folder: {folder_path}")
-    print(f"Files found: {len(log_files)}")
+    print(f"Total files found: {len(log_files)}")
+    print(f"Already processed: {len(processed_set)}")
+    print(f"Remaining to process: {len(remaining_files)}")
     print(f"=" * 60)
+    
+    if not remaining_files:
+        print("All files have already been processed!")
+        print(f"Delete {PROGRESS_FILE} to start fresh.")
+        sys.exit(0)
     
     # Show current AI status
     status = get_ai_status()
@@ -158,12 +191,13 @@ async def main():
     print(f"=" * 60)
     
     # Process files
-    success_count = 0
-    fail_count = 0
+    success_count = progress['success_count']
+    fail_count = progress['fail_count']
     
-    for i, file_path in enumerate(log_files, 1):
+    for i, file_path in enumerate(remaining_files, 1):
+        total_done = len(processed_set) + i
         try:
-            if await process_file(file_path, i, len(log_files)):
+            if await process_file(file_path, total_done, len(log_files)):
                 success_count += 1
             else:
                 fail_count += 1
@@ -171,8 +205,14 @@ async def main():
             print(f"  ❌ Error: {e}")
             fail_count += 1
         
+        # Save progress after each file
+        progress['processed_files'].append(str(file_path))
+        progress['success_count'] = success_count
+        progress['fail_count'] = fail_count
+        save_progress(progress)
+        
         # Rate limiting
-        if i < len(log_files):
+        if i < len(remaining_files):
             await asyncio.sleep(3)
     
     # Final summary
@@ -187,6 +227,11 @@ async def main():
     print(f"\nUpdated AI status:")
     print(f"  - Total fights: {status['total_fights']}")
     print(f"  - Win rate: {status['win_rate']}%")
+    
+    # Clean up progress file on completion
+    if os.path.exists(PROGRESS_FILE):
+        os.remove(PROGRESS_FILE)
+        print(f"\nProgress file cleaned up.")
 
 if __name__ == "__main__":
     asyncio.run(main())
