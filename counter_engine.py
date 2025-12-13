@@ -280,36 +280,40 @@ class CounterPickEngine:
         return reasons.get(counter_spec, f"Strong against {dominant_spec}")
     
     def get_current_meta(self) -> Dict:
-        """Get current WvW meta data for 2025"""
+        """Get current WvW meta data for 2025 - Based on EU zerg meta"""
         return {
             "tier_s": [
-                {"spec": "Firebrand", "role": "Support", "usage": 94},
-                {"spec": "Scrapper", "role": "Support", "usage": 89},
-                {"spec": "Scourge", "role": "Backline", "usage": 85},
+                {"spec": "Firebrand", "role": "Support/Stab", "usage": 95},
+                {"spec": "Scrapper", "role": "Support/Heal", "usage": 90},
+                {"spec": "Scourge", "role": "DPS/Strip", "usage": 88},
             ],
             "tier_a": [
-                {"spec": "Herald", "role": "Frontline", "usage": 78},
-                {"spec": "Spellbreaker", "role": "Frontline", "usage": 72},
-                {"spec": "Tempest", "role": "Backline", "usage": 68},
+                {"spec": "Herald", "role": "Frontline/Boon", "usage": 75},
+                {"spec": "Spellbreaker", "role": "Frontline/Strip", "usage": 70},
+                {"spec": "Tempest", "role": "Heal/Backline", "usage": 65},
+                {"spec": "Harbinger", "role": "DPS/Condi", "usage": 60},
             ],
             "tier_b": [
-                {"spec": "Willbender", "role": "Roamer", "usage": 55},
-                {"spec": "Vindicator", "role": "Frontline", "usage": 52},
-                {"spec": "Harbinger", "role": "Backline", "usage": 48},
-                {"spec": "Chronomancer", "role": "Support", "usage": 45},
+                {"spec": "Vindicator", "role": "Frontline/DPS", "usage": 50},
+                {"spec": "Willbender", "role": "Roamer/DPS", "usage": 45},
+                {"spec": "Chronomancer", "role": "Support/Strip", "usage": 42},
+                {"spec": "Druid", "role": "Heal/Support", "usage": 38},
             ],
             "tier_c": [
-                {"spec": "Berserker", "role": "Frontline", "usage": 35},
-                {"spec": "Reaper", "role": "Frontline", "usage": 32},
-                {"spec": "Catalyst", "role": "Backline", "usage": 28},
+                {"spec": "Reaper", "role": "Frontline/DPS", "usage": 30},
+                {"spec": "Berserker", "role": "Frontline/DPS", "usage": 28},
+                {"spec": "Catalyst", "role": "Backline/DPS", "usage": 25},
+                {"spec": "Mechanist", "role": "Backline/DPS", "usage": 22},
             ],
             "rising": [
-                {"spec": "Vindicator", "change": "+12%", "reason": "Alliance stance buffs"},
-                {"spec": "Harbinger", "change": "+8%", "reason": "Elixir rework"},
+                {"spec": "Harbinger", "change": "+15%", "reason": "Elixir buffs + condi meta"},
+                {"spec": "Vindicator", "change": "+10%", "reason": "Alliance stance buffs"},
+                {"spec": "Tempest", "change": "+8%", "reason": "Heal tempest buffs"},
             ],
             "falling": [
-                {"spec": "Dragonhunter", "change": "-15%", "reason": "Trap nerfs"},
-                {"spec": "Weaver", "change": "-10%", "reason": "Sword nerf"},
+                {"spec": "Weaver", "change": "-12%", "reason": "Sword nerfs"},
+                {"spec": "Dragonhunter", "change": "-10%", "reason": "Trap nerfs, FB preferred"},
+                {"spec": "Renegade", "change": "-8%", "reason": "Herald preferred for boons"},
             ],
-            "last_updated": "December 2025"
+            "last_updated": "Décembre 2025"
         }
