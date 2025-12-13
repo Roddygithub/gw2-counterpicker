@@ -282,10 +282,10 @@ async def analyze_single_evtc(
         players_data = convert_parsed_log_to_players_data(parsed_log)
         enemy_composition = build_composition_from_enemies(players_data['enemies'])
         
-        # Record fight for AI learning
+        # Record fight for AI learning (with deduplication)
         players_data['source'] = 'evtc'
         players_data['source_name'] = file.filename
-        record_fight_for_learning(players_data)
+        record_fight_for_learning(players_data, filename=file.filename, filesize=file.size)
         
         # Generate AI counter
         enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})

@@ -25,6 +25,7 @@ FIGHTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 fights_db = TinyDB(str(FIGHTS_DB_PATH))
 fights_table = fights_db.table('fights')
 stats_table = fights_db.table('stats')
+analyzed_files_table = fights_db.table('analyzed_files')  # Track analyzed files to avoid duplicates
 
 
 @dataclass
@@ -115,12 +116,38 @@ class CounterAI:
             self.ollama_available = False
         return False
     
-    def record_fight(self, fight_data: dict) -> str:
+    def is_file_already_analyzed(self, filename: str, filesize: int) -> bool:
+        """
+        Check if a file with the same name and size has already been analyzed.
+        Returns True if duplicate, False if new file.
+        """
+        FileQuery = Query()
+        existing = analyzed_files_table.search(
+            (FileQuery.filename == filename) & (FileQuery.filesize == filesize)
+        )
+        return len(existing) > 0
+    
+    def mark_file_as_analyzed(self, filename: str, filesize: int, fight_id: str):
+        """Mark a file as analyzed to prevent duplicate processing"""
+        analyzed_files_table.insert({
+            'filename': filename,
+            'filesize': filesize,
+            'fight_id': fight_id,
+            'analyzed_at': datetime.now().isoformat()
+        })
+    
+    def record_fight(self, fight_data: dict, filename: str = None, filesize: int = None) -> str:
         """
         Record a fight for learning with detailed ally build information
         Called automatically after each analysis
-        Returns the fight_id
+        Returns the fight_id, or None if file was already analyzed
         """
+        # Check for duplicate file
+        if filename and filesize:
+            if self.is_file_already_analyzed(filename, filesize):
+                print(f"[CounterAI] Skipping duplicate file: {filename} ({filesize} bytes)")
+                return None
+        
         fight_id = f"fight_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(fights_table)}"
         
         # Extract compositions from fight data
@@ -193,6 +220,11 @@ class CounterAI:
         self._store_build_performance(ally_builds, enemy_comp, outcome)
         
         print(f"[CounterAI] Recorded fight {fight_id}: {outcome} vs {list(enemy_comp.keys())[:3]}... ({len(ally_builds)} builds)")
+        
+        # Mark file as analyzed to prevent duplicates
+        if filename and filesize:
+            self.mark_file_as_analyzed(filename, filesize, fight_id)
+        
         return fight_id
     
     def _store_build_performance(self, ally_builds: List[dict], enemy_comp: Dict[str, int], outcome: str):
@@ -596,9 +628,14 @@ counter_ai = CounterAI()
 
 # === API Functions ===
 
-def record_fight_for_learning(fight_data: dict) -> str:
-    """Record a fight for AI learning"""
-    return counter_ai.record_fight(fight_data)
+def record_fight_for_learning(fight_data: dict, filename: str = None, filesize: int = None) -> str:
+    """Record a fight for AI learning. Returns None if file was already analyzed."""
+    return counter_ai.record_fight(fight_data, filename=filename, filesize=filesize)
+
+
+def is_file_already_analyzed(filename: str, filesize: int) -> bool:
+    """Check if a file has already been analyzed"""
+    return counter_ai.is_file_already_analyzed(filename, filesize)
 
 
 async def get_ai_counter(enemy_composition: Dict[str, int]) -> dict:
