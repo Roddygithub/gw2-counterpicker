@@ -74,6 +74,7 @@ class FightRecord:
     outcome: str  # 'victory', 'defeat', 'draw'
     duration_sec: float
     ally_deaths: int
+    ally_kills: int
     enemy_deaths: int
     
     # Stats
@@ -136,17 +137,87 @@ class CounterAI:
             'analyzed_at': datetime.now().isoformat()
         })
     
+    def generate_fight_fingerprint(self, fight_data: dict) -> str:
+        """
+        Generate a unique fingerprint for a fight based on:
+        - Duration (rounded to 5 seconds)
+        - Ally composition (sorted spec counts)
+        - Enemy composition (sorted spec counts)
+        - Total ally damage (rounded to 10k)
+        
+        This allows detecting same fights uploaded by different players.
+        """
+        import hashlib
+        
+        duration = fight_data.get('duration_sec', 0)
+        duration_bucket = int(duration // 5) * 5  # Round to 5 seconds
+        
+        # Get ally composition
+        allies = fight_data.get('allies', [])
+        ally_specs = sorted([a.get('profession', 'Unknown') for a in allies])
+        ally_hash = "_".join(ally_specs)
+        
+        # Get enemy composition  
+        enemies = fight_data.get('enemies', [])
+        enemy_specs = sorted([e.get('profession', 'Unknown') for e in enemies])[:15]  # Top 15 enemies
+        enemy_hash = "_".join(enemy_specs)
+        
+        # Total damage bucket
+        total_damage = fight_data.get('fight_stats', {}).get('ally_damage', 0)
+        damage_bucket = int(total_damage // 50000) * 50000  # Round to 50k
+        
+        # Combine into fingerprint
+        fingerprint_data = f"{duration_bucket}|{ally_hash}|{enemy_hash}|{damage_bucket}"
+        return hashlib.md5(fingerprint_data.encode()).hexdigest()[:16]
+    
+    def is_fight_duplicate(self, fingerprint: str) -> bool:
+        """Check if a fight with this fingerprint already exists"""
+        fingerprints_table = fights_db.table('fight_fingerprints')
+        FpQuery = Query()
+        existing = fingerprints_table.search(FpQuery.fingerprint == fingerprint)
+        return len(existing) > 0
+    
+    def mark_fight_fingerprint(self, fingerprint: str, fight_id: str):
+        """Store a fight fingerprint to prevent duplicates"""
+        fingerprints_table = fights_db.table('fight_fingerprints')
+        fingerprints_table.insert({
+            'fingerprint': fingerprint,
+            'fight_id': fight_id,
+            'created_at': datetime.now().isoformat()
+        })
+    
+    def cleanup_old_fingerprints(self, days_old: int = 7):
+        """Remove fingerprints older than X days"""
+        fingerprints_table = fights_db.table('fight_fingerprints')
+        cutoff = datetime.now() - timedelta(days=days_old)
+        cutoff_str = cutoff.isoformat()
+        
+        # Remove old fingerprints
+        FpQuery = Query()
+        removed = fingerprints_table.remove(FpQuery.created_at < cutoff_str)
+        if removed:
+            print(f"[CounterAI] Cleaned up {len(removed)} old fingerprints")
+    
     def record_fight(self, fight_data: dict, filename: str = None, filesize: int = None) -> str:
         """
         Record a fight for learning with detailed ally build information
         Called automatically after each analysis
         Returns the fight_id, or None if file was already analyzed
         """
-        # Check for duplicate file
+        # Check for duplicate file (same uploader)
         if filename and filesize:
             if self.is_file_already_analyzed(filename, filesize):
                 print(f"[CounterAI] Skipping duplicate file: {filename} ({filesize} bytes)")
                 return None
+        
+        # Check for duplicate fight (different uploaders, same fight)
+        fingerprint = self.generate_fight_fingerprint(fight_data)
+        if self.is_fight_duplicate(fingerprint):
+            print(f"[CounterAI] Skipping duplicate fight (fingerprint: {fingerprint})")
+            # Still mark file as analyzed so same person doesn't re-upload
+            if filename and filesize:
+                self.mark_file_as_analyzed(filename, filesize, f"duplicate_{fingerprint}")
+            return None
         
         fight_id = f"fight_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(fights_table)}"
         
@@ -184,18 +255,27 @@ class CounterAI:
             )
             ally_builds.append(build_record.to_dict())
         
-        # Determine outcome
+        # Determine outcome based on kill/death ratio
         outcome = fight_data.get('fight_outcome', 'unknown')
         if outcome == 'unknown':
-            # Calculate from stats
-            ally_deaths = fight_data.get('fight_stats', {}).get('ally_deaths', 0)
-            enemy_deaths = len(fight_data.get('enemies', []))
-            if ally_deaths <= 2 and enemy_deaths >= 5:
-                outcome = 'victory'
-            elif ally_deaths >= 5:
-                outcome = 'defeat'
+            fight_stats = fight_data.get('fight_stats', {})
+            ally_deaths = fight_stats.get('ally_deaths', 0)
+            ally_kills = fight_stats.get('ally_kills', 0)
+            
+            # WvW outcome heuristic based on K/D ratio
+            # Victory: we killed more than we lost
+            # Defeat: we died significantly more than we killed
+            # Draw: close fight or no clear winner
+            if ally_kills > 0 and ally_deaths == 0:
+                outcome = 'victory'  # Perfect fight
+            elif ally_kills > ally_deaths:
+                outcome = 'victory'  # Positive K/D
+            elif ally_deaths > ally_kills * 2 and ally_deaths >= 3:
+                outcome = 'defeat'  # Very negative K/D
+            elif ally_deaths > ally_kills and ally_deaths >= 5:
+                outcome = 'defeat'  # Wipe or heavy losses
             else:
-                outcome = 'draw'
+                outcome = 'draw'  # Close fight or inconclusive
         
         record = FightRecord(
             fight_id=fight_id,
@@ -208,7 +288,8 @@ class CounterAI:
             outcome=outcome,
             duration_sec=fight_data.get('duration_sec', 0),
             ally_deaths=fight_data.get('fight_stats', {}).get('ally_deaths', 0),
-            enemy_deaths=fight_data.get('fight_stats', {}).get('enemy_deaths', 0),
+            ally_kills=fight_data.get('fight_stats', {}).get('ally_kills', 0),
+            enemy_deaths=fight_data.get('fight_stats', {}).get('ally_kills', 0),  # enemy_deaths = our kills
             total_ally_damage=fight_data.get('fight_stats', {}).get('ally_damage', 0),
             total_enemy_damage=fight_data.get('fight_stats', {}).get('enemy_damage_taken', 0)
         )
@@ -224,6 +305,9 @@ class CounterAI:
         # Mark file as analyzed to prevent duplicates
         if filename and filesize:
             self.mark_file_as_analyzed(filename, filesize, fight_id)
+        
+        # Mark fight fingerprint to prevent duplicates from other uploaders
+        self.mark_fight_fingerprint(fingerprint, fight_id)
         
         return fight_id
     

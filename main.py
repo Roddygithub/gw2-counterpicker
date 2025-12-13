@@ -45,6 +45,7 @@ from counter_ai import (
     counter_ai
 )
 from translations import get_all_translations
+from scheduler import setup_scheduled_tasks
 
 app = FastAPI(
     title="GW2 CounterPicker",
@@ -63,6 +64,9 @@ templates.env.globals["ai_mode"] = True  # v3.0 IA VIVANTE
 
 # Initialize engines
 real_parser = RealEVTCParser()
+
+# Initialize scheduled tasks (fingerprint cleanup on Fridays at 18h55)
+setup_scheduled_tasks()
 
 # Persistent session storage with TinyDB
 DB_PATH = Path("data")
@@ -323,13 +327,28 @@ async def analyze_single_evtc(
         raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(parse_error)}")
 
 
+def is_player_afk(player) -> bool:
+    """
+    Determine if a player was AFK/inactive during the fight.
+    AFK criteria: no damage dealt, no healing, no damage taken, no kills
+    """
+    damage = getattr(player, 'damage_dealt', 0) or 0
+    healing = getattr(player, 'healing', 0) or 0
+    damage_taken = getattr(player, 'damage_taken', 0) or 0
+    kills = getattr(player, 'kills', 0) or 0
+    
+    # Player is AFK if they contributed nothing
+    return damage == 0 and healing == 0 and damage_taken == 0 and kills == 0
+
+
 def convert_parsed_log_to_players_data(parsed_log) -> dict:
     """Convert ParsedLog from local parser to players_data format used by templates."""
     allies = []
+    allies_afk = []  # Track AFK players separately
     enemies = []
     
     for player in parsed_log.players:
-        allies.append({
+        player_data = {
             'name': player.character_name,
             'account': player.account_name,
             'profession': player.elite_spec or player.profession,
@@ -345,7 +364,14 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
             'role': player.estimated_role.lower() if player.estimated_role else 'dps',
             'kills': player.kills,
             'deaths': player.deaths,
-        })
+            'is_afk': is_player_afk(player),
+            'in_squad': player.subgroup > 0,  # Group 0 = not in squad
+        }
+        
+        if player_data['is_afk']:
+            allies_afk.append(player_data)
+        else:
+            allies.append(player_data)
     
     for enemy in parsed_log.enemies:
         role = estimate_role_from_profession(enemy.elite_spec or enemy.profession)
@@ -377,23 +403,32 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
         if role in enemy_role_counts:
             enemy_role_counts[role] += 1
     
+    # Calculate stats from ACTIVE players only (exclude AFK)
+    active_deaths = sum(p.get('deaths', 0) for p in allies)
+    active_kills = sum(p.get('kills', 0) for p in allies)
+    active_damage = sum(p.get('damage', 0) for p in allies)
+    
     return {
         'allies': allies,
+        'allies_afk': allies_afk,  # AFK players tracked separately
         'enemies': sorted(enemies, key=lambda x: x.get('damage_taken', 0), reverse=True)[:20],
         'fight_name': f"WvW Combat ({parsed_log.duration_seconds}s)",
         'duration_sec': parsed_log.duration_seconds,
         'fight_outcome': 'unknown',
         'fight_stats': {
-            'ally_deaths': sum(p.deaths for p in parsed_log.players),
-            'ally_downs': sum(p.downs for p in parsed_log.players),
-            'ally_damage': sum(p.damage_dealt for p in parsed_log.players),
-            'enemy_damage_taken': sum(e.damage_taken for e in parsed_log.enemies)
+            'ally_deaths': active_deaths,
+            'ally_downs': sum(p.downs for p in parsed_log.players if not is_player_afk(p)),
+            'ally_kills': active_kills,
+            'ally_damage': active_damage,
+            'enemy_damage_taken': sum(e.damage_taken for e in parsed_log.enemies),
+            'afk_count': len(allies_afk),
+            'active_count': len(allies)
         },
         'composition': {
             'spec_counts': spec_counts,
             'role_counts': role_counts,
             'specs_by_role': {},
-            'total': len(allies)
+            'total': len(allies)  # Only active allies
         },
         'enemy_composition': {
             'spec_counts': enemy_spec_counts,
