@@ -408,25 +408,25 @@
         <!-- COMBAT TAB -->
         <div x-show="activeTab === 'combat'">
             <div class="flex flex-wrap gap-2 mb-3 text-xs">
-                <span class="text-gray-500">Trier:</span>
-                <button onclick="sortTableByAttr('combat-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Classe</button>
-                <button onclick="sortTableByAttr('combat-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Groupe</button>
-                <button onclick="sortTableByAttr('combat-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Rôle</button>
+                <span class="text-gray-500">{% if lang == 'en' %}Sort{% else %}Trier{% endif %}:</span>
+                <button onclick="sortTableByAttr('combat-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</button>
+                <button onclick="sortTableByAttr('combat-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</button>
+                <button onclick="sortTableByAttr('combat-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</button>
             </div>
             <div class="overflow-x-auto">
             <table class="w-full text-sm" id="combat-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
-                        <th class="pb-2">Joueur</th>
-                        <th class="pb-2">Classe</th>
-                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('combat-table', 2)">Rôle</th>
-                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('combat-table', 3, true)">Groupe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)" title="Dégâts sur ennemis down">Down Contrib</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)" title="Down Contrib par seconde">DC/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 6, true)" title="Crowd Control infligé">CC Out</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)" title="CC par seconde">CC/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 8, true)" title="Boons retirés aux ennemis">Strips Out</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 9, true)" title="Strips par seconde">S/s</th>
+                        <th class="pb-2">{% if lang == 'en' %}Player{% else %}Joueur{% endif %}</th>
+                        <th class="pb-2">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</th>
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('combat-table', 2)">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</th>
+                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('combat-table', 3, true)">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)" title="{% if lang == 'en' %}Damage on downed enemies{% else %}Dégâts sur ennemis down{% endif %}">Down Contrib</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)" title="{% if lang == 'en' %}Down Contrib per second{% else %}Down Contrib par seconde{% endif %}">DC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 6, true)" title="{% if lang == 'en' %}Crowd Control dealt{% else %}Crowd Control infligé{% endif %}">CC Out</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)" title="{% if lang == 'en' %}CC per second{% else %}CC par seconde{% endif %}">CC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 8, true)" title="{% if lang == 'en' %}Boons stripped from enemies{% else %}Boons retirés aux ennemis{% endif %}">Strips Out</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 9, true)" title="{% if lang == 'en' %}Strips per second{% else %}Strips par seconde{% endif %}">S/s</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -464,24 +464,24 @@
         <!-- SUPPORT TAB -->
         <div x-show="activeTab === 'support'">
             <div class="flex flex-wrap gap-2 mb-3 text-xs">
-                <span class="text-gray-500">Trier:</span>
-                <button onclick="sortTableByAttr('support-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Classe</button>
-                <button onclick="sortTableByAttr('support-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Groupe</button>
-                <button onclick="sortTableByAttr('support-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Rôle</button>
+                <span class="text-gray-500">{% if lang == 'en' %}Sort{% else %}Trier{% endif %}:</span>
+                <button onclick="sortTableByAttr('support-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</button>
+                <button onclick="sortTableByAttr('support-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</button>
+                <button onclick="sortTableByAttr('support-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</button>
             </div>
             <div class="overflow-x-auto">
             <table class="w-full text-sm" id="support-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
-                        <th class="pb-2">Joueur</th>
-                        <th class="pb-2">Classe</th>
-                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('support-table', 2)">Rôle</th>
-                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('support-table', 3, true)">Groupe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 4, true)" title="Soins directs">Heal</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 5, true)" title="Barrier appliqué">Barrier</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 6, true)" title="Heal+Barrier par seconde">HPS</th>
+                        <th class="pb-2">{% if lang == 'en' %}Player{% else %}Joueur{% endif %}</th>
+                        <th class="pb-2">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</th>
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('support-table', 2)">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</th>
+                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('support-table', 3, true)">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 4, true)" title="{% if lang == 'en' %}Direct healing{% else %}Soins directs{% endif %}">Heal</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 5, true)" title="{% if lang == 'en' %}Barrier applied{% else %}Barrier appliqué{% endif %}">Barrier</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 6, true)" title="{% if lang == 'en' %}Heal+Barrier per second{% else %}Heal+Barrier par seconde{% endif %}">HPS</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 7, true)">Cleanses</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 8, true)" title="Cleanses par seconde">C/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 8, true)" title="{% if lang == 'en' %}Cleanses per second{% else %}Cleanses par seconde{% endif %}">C/s</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 9, true)">Rez</th>
                     </tr>
                 </thead>
@@ -520,19 +520,19 @@
         <!-- DEFENSIVE TAB -->
         <div x-show="activeTab === 'defensive'">
             <div class="flex flex-wrap gap-2 mb-3 text-xs">
-                <span class="text-gray-500">Trier:</span>
-                <button onclick="sortTableByAttr('defensive-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Classe</button>
-                <button onclick="sortTableByAttr('defensive-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Groupe</button>
-                <button onclick="sortTableByAttr('defensive-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Rôle</button>
+                <span class="text-gray-500">{% if lang == 'en' %}Sort{% else %}Trier{% endif %}:</span>
+                <button onclick="sortTableByAttr('defensive-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</button>
+                <button onclick="sortTableByAttr('defensive-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</button>
+                <button onclick="sortTableByAttr('defensive-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</button>
             </div>
             <div class="overflow-x-auto">
             <table class="w-full text-sm" id="defensive-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
-                        <th class="pb-2">Joueur</th>
-                        <th class="pb-2">Classe</th>
-                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 2)">Rôle</th>
-                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 3, true)">Groupe</th>
+                        <th class="pb-2">{% if lang == 'en' %}Player{% else %}Joueur{% endif %}</th>
+                        <th class="pb-2">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</th>
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 2)">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</th>
+                        <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 3, true)">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 4, true)">Dmg In</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 5, true)">Strips In</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 6, true)">Strips/s</th>
@@ -576,12 +576,12 @@
             <!-- Group Boon Uptimes -->
             {% if players.group_boon_uptimes %}
             <div>
-                <h4 class="font-display font-bold text-cyan-400 mb-3">📊 Boon Uptime par Groupe</h4>
+                <h4 class="font-display font-bold text-cyan-400 mb-3">📊 {% if lang == 'en' %}Boon Uptime per Group{% else %}Boon Uptime par Groupe{% endif %}</h4>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="text-left text-gray-400 border-b border-gray-700">
-                                <th class="pb-2">Groupe</th>
+                                <th class="pb-2">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</th>
                                 <th class="pb-2 text-center" title="Quickness - Priorité #1"><img src="/static/img/boons/quickness.png" class="w-5 h-5 inline" alt="Quick"> Quick</th>
                                 <th class="pb-2 text-center" title="Resistance - Priorité #2"><img src="/static/img/boons/resistance.png" class="w-5 h-5 inline" alt="Resist"> Resist</th>
                                 <th class="pb-2 text-center" title="Aegis - Priorité #3"><img src="/static/img/boons/aegis.png" class="w-5 h-5 inline" alt="Aegis"> Aegis</th>
@@ -594,7 +594,7 @@
                         <tbody class="divide-y divide-gray-800">
                             {% for group, boons in players.group_boon_uptimes.items()|sort %}
                             <tr class="hover:bg-gw2-darker/50">
-                                <td class="py-2 font-bold text-white">Groupe {{ group }}</td>
+                                <td class="py-2 font-bold text-white">{% if lang == 'en' %}Group{% else %}Groupe{% endif %} {{ group }}</td>
                                 <td class="py-2 text-center font-mono {% if boons.quickness|default(0) >= 80 %}text-green-400{% elif boons.quickness|default(0) >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.quickness|default(0) }}%</td>
                                 <td class="py-2 text-center font-mono {% if boons.resistance|default(0) >= 50 %}text-green-400{% elif boons.resistance|default(0) >= 25 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.resistance|default(0) }}%</td>
                                 <td class="py-2 text-center font-mono {% if boons.aegis|default(0) >= 50 %}text-green-400{% elif boons.aegis|default(0) >= 25 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.aegis|default(0) }}%</td>
@@ -612,21 +612,21 @@
             
             <!-- Individual Boon Generation -->
             <div>
-                <h4 class="font-display font-bold text-cyan-400 mb-3">✨ Boon Generation par Joueur</h4>
+                <h4 class="font-display font-bold text-cyan-400 mb-3">✨ {% if lang == 'en' %}Boon Generation per Player{% else %}Boon Generation par Joueur{% endif %}</h4>
                 <div class="flex flex-wrap gap-2 mb-3 text-xs">
-                    <span class="text-gray-500">Trier:</span>
-                    <button onclick="sortTableByAttr('boon-gen-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Classe</button>
-                    <button onclick="sortTableByAttr('boon-gen-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Groupe</button>
-                    <button onclick="sortTableByAttr('boon-gen-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Rôle</button>
+                    <span class="text-gray-500">{% if lang == 'en' %}Sort{% else %}Trier{% endif %}:</span>
+                    <button onclick="sortTableByAttr('boon-gen-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</button>
+                    <button onclick="sortTableByAttr('boon-gen-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</button>
+                    <button onclick="sortTableByAttr('boon-gen-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</button>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm" id="boon-gen-table">
                         <thead>
                             <tr class="text-left text-gray-400 border-b border-gray-700">
-                                <th class="pb-2">Joueur</th>
-                                <th class="pb-2">Classe</th>
-                                <th class="pb-2">Rôle</th>
-                                <th class="pb-2 text-center">Groupe</th>
+                                <th class="pb-2">{% if lang == 'en' %}Player{% else %}Joueur{% endif %}</th>
+                                <th class="pb-2">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</th>
+                                <th class="pb-2">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</th>
+                                <th class="pb-2 text-center">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</th>
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 4, true)" title="Quickness - Priorité #1"><img src="/static/img/boons/quickness.png" class="w-5 h-5 inline" alt="Quick"> Quick</th>
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 5, true)" title="Resistance - Priorité #2"><img src="/static/img/boons/resistance.png" class="w-5 h-5 inline" alt="Resist"> Resist</th>
                                 <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('boon-gen-table', 6, true)" title="Aegis - Priorité #3"><img src="/static/img/boons/aegis.png" class="w-5 h-5 inline" alt="Aegis"> Aegis</th>
