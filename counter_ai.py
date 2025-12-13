@@ -571,11 +571,20 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
         # Check Ollama
         self._check_ollama()
         
+        # Count unique players from all fights
+        unique_players = set()
+        for fight in fights_table.all():
+            for build in fight.get('ally_builds', []):
+                account = build.get('account', '')
+                if account:
+                    unique_players.add(account)
+        
         return {
             'ollama_available': self.ollama_available,
             'model': MODEL_NAME if self.ollama_available else 'fallback_rules',
             'total_fights': stats['total_fights'],
             'win_rate': stats['win_rate'],
+            'unique_players': len(unique_players),
             'last_updated': stats.get('last_updated'),
             'status': 'active' if self.ollama_available else 'fallback'
         }

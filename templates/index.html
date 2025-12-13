@@ -194,7 +194,7 @@
                 <h3 class="font-display text-2xl font-bold text-white mb-2">{% if lang == 'en' %}The AI improves with every analyzed fight{% else %}L'IA s'améliore à chaque combat analysé{% endif %}</h3>
                 <p class="text-gray-400">{% if lang == 'en' %}The more logs you analyze, the more accurate the recommendations become{% else %}Plus vous analysez de logs, plus les recommandations deviennent précises{% endif %}</p>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-8 text-center">
                 <div>
                     <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-gw2-purple to-cyber-pink bg-clip-text text-transparent">
                         {{ ai_status.total_fights|default(0) }}
@@ -203,18 +203,12 @@
                 </div>
                 <div>
                     <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
-                        {{ ai_status.win_rate|default(0) }}%
+                        {{ ai_status.unique_players|default(0) }}
                     </div>
-                    <div class="text-gray-400 mt-2">📈 {% if lang == 'en' %}Average Win Rate{% else %}Win Rate moyen{% endif %}</div>
+                    <div class="text-gray-400 mt-2">👥 {% if lang == 'en' %}Unique players{% else %}Joueurs uniques{% endif %}</div>
                 </div>
                 <div>
                     <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-cyber-cyan to-gw2-blue bg-clip-text text-transparent">
-                        27
-                    </div>
-                    <div class="text-gray-400 mt-2">⚔️ Elite Specs</div>
-                </div>
-                <div>
-                    <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-gw2-blue to-gw2-purple bg-clip-text text-transparent">
                         3s
                     </div>
                     <div class="text-gray-400 mt-2">⚡ {% if lang == 'en' %}Analysis Time{% else %}Temps d'analyse{% endif %}</div>

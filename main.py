@@ -126,13 +126,17 @@ async def evening_page(request: Request):
 @app.get("/meta", response_class=HTMLResponse)
 async def meta_page(request: Request):
     """Meta 2025 page - Current trending builds with AI status"""
-    # Load meta data from static file (no more counter_engine dependency)
-    meta_file = Path("data/meta_2025.json")
-    if meta_file.exists():
-        with open(meta_file) as f:
-            meta_data = json.load(f)
-    else:
-        meta_data = get_default_meta_data()
+    # Try to get meta from database first (real data), fallback to static/default
+    meta_data = get_meta_from_database()
+    
+    # If no data from database, try static file
+    if not meta_data.get('tier_s'):
+        meta_file = Path("data/meta_2025.json")
+        if meta_file.exists():
+            with open(meta_file) as f:
+                meta_data = json.load(f)
+        else:
+            meta_data = get_default_meta_data()
     
     # Add AI learning status
     ai_status = get_ai_status()
@@ -1103,25 +1107,84 @@ def get_default_meta_data() -> dict:
     return {
         "last_updated": "Décembre 2025",
         "tier_s": [
-            {"name": "Firebrand", "role": "stab", "description": "Stabilité + Aegis + Quickness", "icon": "firebrand"},
-            {"name": "Scrapper", "role": "heal", "description": "Heal + Superspeed + Barrier", "icon": "scrapper"},
-            {"name": "Spellbreaker", "role": "strip", "description": "Full Counter + Boon Strip", "icon": "spellbreaker"}
+            {"spec": "Firebrand", "role": "Stab/Support", "usage": 95},
+            {"spec": "Scrapper", "role": "Heal/Superspeed", "usage": 90},
+            {"spec": "Spellbreaker", "role": "Strip/DPS", "usage": 85}
         ],
         "tier_a": [
-            {"name": "Scourge", "role": "dps", "description": "Condi Pressure + Corrupt", "icon": "scourge"},
-            {"name": "Herald", "role": "boon", "description": "Boons + Facet of Nature", "icon": "herald"},
-            {"name": "Tempest", "role": "heal", "description": "Aura Share + Heal", "icon": "tempest"}
+            {"spec": "Scourge", "role": "Condi/Corrupt", "usage": 75},
+            {"spec": "Herald", "role": "Boon/Frontline", "usage": 70},
+            {"spec": "Tempest", "role": "Heal/Aura", "usage": 65}
         ],
         "tier_b": [
-            {"name": "Reaper", "role": "dps", "description": "Power Burst + Shroud", "icon": "reaper"},
-            {"name": "Chronomancer", "role": "strip", "description": "Gravity Well + Strip", "icon": "chronomancer"},
-            {"name": "Vindicator", "role": "boon", "description": "Alliance Stance + Leap", "icon": "vindicator"}
+            {"spec": "Reaper", "role": "DPS/Power", "usage": 50},
+            {"spec": "Chronomancer", "role": "Strip/CC", "usage": 45},
+            {"spec": "Vindicator", "role": "Boon/Leap", "usage": 40}
         ],
         "tier_c": [
-            {"name": "Harbinger", "role": "dps", "description": "Elixir + Shroud DPS", "icon": "harbinger"},
-            {"name": "Willbender", "role": "dps", "description": "Roamer + Burst", "icon": "willbender"},
-            {"name": "Druid", "role": "heal", "description": "Spirits + Heal", "icon": "druid"}
+            {"spec": "Harbinger", "role": "DPS/Condi", "usage": 30},
+            {"spec": "Willbender", "role": "Roamer/Burst", "usage": 25},
+            {"spec": "Druid", "role": "Heal/Spirits", "usage": 20}
         ]
+    }
+
+
+def get_meta_from_database() -> dict:
+    """Generate meta data from actual fight database"""
+    from counter_ai import fights_table
+    
+    # Count spec usage across all fights
+    spec_counts = {}
+    total_builds = 0
+    
+    for fight in fights_table.all():
+        for build in fight.get('ally_builds', []):
+            spec = build.get('elite_spec', build.get('profession', 'Unknown'))
+            role = build.get('role', 'dps')
+            if spec and spec != 'Unknown':
+                if spec not in spec_counts:
+                    spec_counts[spec] = {'count': 0, 'roles': {}}
+                spec_counts[spec]['count'] += 1
+                spec_counts[spec]['roles'][role] = spec_counts[spec]['roles'].get(role, 0) + 1
+                total_builds += 1
+    
+    if total_builds == 0:
+        return get_default_meta_data()
+    
+    # Sort by usage and create tiers
+    sorted_specs = sorted(spec_counts.items(), key=lambda x: x[1]['count'], reverse=True)
+    
+    def get_main_role(roles_dict):
+        if not roles_dict:
+            return "DPS"
+        main_role = max(roles_dict.items(), key=lambda x: x[1])[0]
+        role_map = {'healer': 'Heal', 'stab': 'Stab', 'boon': 'Boon', 'dps_strip': 'Strip', 'dps': 'DPS'}
+        return role_map.get(main_role, main_role.capitalize())
+    
+    def make_tier(specs_slice):
+        result = []
+        for spec, data in specs_slice:
+            usage = round((data['count'] / total_builds) * 100)
+            main_role = get_main_role(data['roles'])
+            result.append({
+                'spec': spec,
+                'role': main_role,
+                'usage': min(usage, 99)  # Cap at 99%
+            })
+        return result
+    
+    # Distribute into tiers
+    tier_s = make_tier(sorted_specs[:3]) if len(sorted_specs) >= 3 else make_tier(sorted_specs)
+    tier_a = make_tier(sorted_specs[3:6]) if len(sorted_specs) >= 6 else []
+    tier_b = make_tier(sorted_specs[6:9]) if len(sorted_specs) >= 9 else []
+    tier_c = make_tier(sorted_specs[9:12]) if len(sorted_specs) >= 12 else []
+    
+    return {
+        "last_updated": "Décembre 2025 (Live Data)",
+        "tier_s": tier_s,
+        "tier_a": tier_a,
+        "tier_b": tier_b,
+        "tier_c": tier_c
     }
 
 
