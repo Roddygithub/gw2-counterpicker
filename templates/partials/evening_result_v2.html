@@ -156,6 +156,143 @@
     </div>
     {% endif %}
     
+    <!-- Enemy Composition Summary -->
+    {% if enemy_composition and enemy_composition.total > 0 %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-red-400 mb-4">👹 Composition Moyenne du Serveur Adverse ({{ enemy_composition.total }} joueurs détectés)</h3>
+        
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-orange-500/30">
+                <div class="text-2xl font-bold text-orange-400">{{ enemy_composition.role_counts.dps|default(0) }}</div>
+                <div class="text-xs text-gray-400">⚔️ DPS</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-purple-500/30">
+                <div class="text-2xl font-bold text-purple-400">{{ enemy_composition.role_counts.dps_strip|default(0) }}</div>
+                <div class="text-xs text-gray-400">💀 Strip</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-yellow-500/30">
+                <div class="text-2xl font-bold text-yellow-400">{{ enemy_composition.role_counts.stab|default(0) }}</div>
+                <div class="text-xs text-gray-400">🛡️ Stab</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-green-500/30">
+                <div class="text-2xl font-bold text-green-400">{{ enemy_composition.role_counts.healer|default(0) }}</div>
+                <div class="text-xs text-gray-400">💚 Healers</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-cyan-500/30">
+                <div class="text-2xl font-bold text-cyan-400">{{ enemy_composition.role_counts.boon|default(0) }}</div>
+                <div class="text-xs text-gray-400">✨ Boons</div>
+            </div>
+        </div>
+        
+        <!-- Top enemy specs -->
+        <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+            {% for spec, count in enemy_composition.spec_counts.items() %}
+            {% if loop.index <= 6 %}
+            <div class="bg-gw2-darker rounded-lg p-2 text-center border border-red-500/20">
+                <div class="text-lg font-bold text-red-400">{{ count }}</div>
+                <div class="text-xs text-gray-400 truncate">{{ spec }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Map/Zone Heatmap -->
+    {% if map_counts %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-amber-400 mb-4">🗺️ Zones les plus fightées</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {% for map_name, count in map_counts %}
+            <div class="bg-gw2-darker rounded-xl p-4 flex items-center justify-between border border-amber-500/20 hover:border-amber-500/50 transition-all">
+                <span class="text-white font-medium truncate">{{ map_name }}</span>
+                <div class="flex items-center gap-2">
+                    <div class="w-24 h-2 rounded-full bg-gw2-dark overflow-hidden">
+                        {% set max_count = map_counts[0][1] if map_counts else 1 %}
+                        <div class="h-full bg-gradient-to-r from-amber-400 to-orange-500" style="width: {{ (count / max_count * 100)|int }}%"></div>
+                    </div>
+                    <span class="text-amber-400 font-bold">{{ count }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Top 10 Players -->
+    {% if top_players %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-cyber-pink mb-4">🏅 Top 10 Joueurs (par dégâts totaux)</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-3 pr-4">#</th>
+                        <th class="pb-3 pr-4">Joueur</th>
+                        <th class="pb-3 pr-4">Build</th>
+                        <th class="pb-3 pr-4">Dégâts totaux</th>
+                        <th class="pb-3 pr-4">Kills</th>
+                        <th class="pb-3 pr-4">Deaths</th>
+                        <th class="pb-3">Apparitions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for player in top_players %}
+                    <tr class="hover:bg-gw2-darker/50">
+                        <td class="py-3 pr-4">
+                            {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+                        </td>
+                        <td class="py-3 pr-4 text-white font-medium">{{ player.name }}</td>
+                        <td class="py-3 pr-4 prof-{{ player.spec|lower|replace(' ', '') }}">{{ player.spec }}</td>
+                        <td class="py-3 pr-4 text-cyber-pink font-bold">{{ "{:,.0f}".format(player.damage) }}</td>
+                        <td class="py-3 pr-4 text-green-400">{{ player.kills }}</td>
+                        <td class="py-3 pr-4 text-red-400">{{ player.deaths }}</td>
+                        <td class="py-3 text-gray-400">{{ player.appearances }}/{{ stats.total_fights }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Build le plus joué par classe -->
+    {% if builds_by_class %}
+    <div class="glow-card rounded-2xl p-6">
+        <h3 class="font-display text-xl font-bold text-gw2-purple mb-4">🎮 Build le plus joué par classe</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {% for base_class, data in builds_by_class.items() %}
+            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-gw2-purple/20 hover:border-gw2-purple/50 transition-all">
+                <div class="text-xs text-gray-500 mb-1">{{ base_class }}</div>
+                <div class="font-bold prof-{{ data.spec|lower|replace(' ', '') }}">{{ data.spec }}</div>
+                <div class="text-sm text-gray-400">{{ data.count }} fois</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Counter Recommendation for Next Session -->
+    {% if counter_recommendation %}
+    <div class="glow-card rounded-2xl p-6 border-2 border-cyber-cyan/50">
+        <h3 class="font-display text-xl font-bold text-cyber-cyan mb-4">🎯 Counter Parfait pour Demain Soir</h3>
+        <div class="bg-gw2-darker rounded-xl p-4">
+            <div class="flex items-center gap-4 mb-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyber-cyan to-blue-500 flex items-center justify-center">
+                    <span class="text-2xl">⚔️</span>
+                </div>
+                <div>
+                    <p class="text-white font-medium">Cible principale: <span class="text-red-400 font-bold">{{ counter_recommendation.target }}</span> ({{ counter_recommendation.count }} détectés)</p>
+                    <p class="text-gray-400 text-sm">{{ counter_recommendation.suggestion }}</p>
+                </div>
+            </div>
+            <div class="text-xs text-gray-500 mt-2">
+                💡 Conseil: Adaptez votre composition en fonction des specs ennemies dominantes observées ce soir.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Fight List -->
     <div class="glow-card rounded-2xl p-6">
         <h3 class="font-display text-xl font-bold text-white mb-4">⚔️ Détail des Combats</h3>

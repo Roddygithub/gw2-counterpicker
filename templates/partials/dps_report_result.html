@@ -90,7 +90,7 @@
         <!-- Fight Info -->
         <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
             <div class="bg-gw2-darker rounded-xl p-3 text-center">
-                <div class="text-lg font-display font-bold text-gw2-purple truncate" title="{{ players.fight_name }}">{{ players.fight_name }}</div>
+                <div class="text-sm font-display font-bold text-gw2-purple" title="{{ players.fight_name }}">{{ players.fight_name }}</div>
                 <div class="text-xs text-gray-400">Combat</div>
             </div>
             <div class="bg-gw2-darker rounded-xl p-3 text-center">
@@ -485,7 +485,34 @@
         <!-- Recommended Builds -->
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
             {% for build in counter.recommended_builds[:9] %}
-            <a href="https://metabattle.com/wiki/WvW" target="_blank" 
+            {% set spec_slug = build.elite_spec|lower|replace(' ', '_') %}
+            {% set metabattle_urls = {
+                'firebrand': 'https://metabattle.com/wiki/Build:Firebrand_-_Support_Firebrand',
+                'scrapper': 'https://metabattle.com/wiki/Build:Scrapper_-_Support_Scrapper',
+                'scourge': 'https://metabattle.com/wiki/Build:Scourge_-_Scourge',
+                'herald': 'https://metabattle.com/wiki/Build:Herald_-_Power_Herald',
+                'spellbreaker': 'https://metabattle.com/wiki/Build:Spellbreaker_-_Spellbreaker',
+                'tempest': 'https://metabattle.com/wiki/Build:Tempest_-_Support_Tempest',
+                'harbinger': 'https://metabattle.com/wiki/Build:Harbinger_-_Harbinger',
+                'vindicator': 'https://metabattle.com/wiki/Build:Vindicator_-_Power_Vindicator',
+                'willbender': 'https://metabattle.com/wiki/Build:Willbender_-_Power_Willbender',
+                'chronomancer': 'https://metabattle.com/wiki/Build:Chronomancer_-_Support_Chronomancer',
+                'druid': 'https://metabattle.com/wiki/Build:Druid_-_Support_Druid',
+                'reaper': 'https://metabattle.com/wiki/Build:Reaper_-_Power_Reaper',
+                'berserker': 'https://metabattle.com/wiki/Build:Berserker_-_Power_Berserker',
+                'catalyst': 'https://metabattle.com/wiki/Build:Catalyst_-_Power_Catalyst',
+                'mechanist': 'https://metabattle.com/wiki/Build:Mechanist_-_Power_Mechanist',
+                'weaver': 'https://metabattle.com/wiki/Build:Weaver_-_Power_Weaver',
+                'mirage': 'https://metabattle.com/wiki/Build:Mirage_-_Condi_Mirage',
+                'renegade': 'https://metabattle.com/wiki/Build:Renegade_-_Power_Renegade',
+                'soulbeast': 'https://metabattle.com/wiki/Build:Soulbeast_-_Power_Soulbeast',
+                'deadeye': 'https://metabattle.com/wiki/Build:Deadeye_-_Power_Deadeye',
+                'daredevil': 'https://metabattle.com/wiki/Build:Daredevil_-_Power_Daredevil',
+                'holosmith': 'https://metabattle.com/wiki/Build:Holosmith_-_Power_Holosmith',
+                'dragonhunter': 'https://metabattle.com/wiki/Build:Dragonhunter_-_Power_Dragonhunter',
+                'virtuoso': 'https://metabattle.com/wiki/Build:Virtuoso_-_Power_Virtuoso'
+            } %}
+            <a href="{{ metabattle_urls.get(spec_slug, 'https://metabattle.com/wiki/WvW') }}" target="_blank" 
                class="bg-gw2-darker rounded-xl p-3 border border-gw2-purple/20 hover:border-gw2-purple hover:bg-gw2-purple/10 transition-all block group cursor-pointer">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="font-display font-bold text-white group-hover:text-gw2-purple transition-colors">{{ build.elite_spec }}</span>

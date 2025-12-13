@@ -3,6 +3,19 @@
 {% block title %}Meta 2025 - GW2 CounterPicker{% endblock %}
 
 {% block content %}
+<style>
+/* Role colors for meta page */
+.role-dps { color: #f97316; background-color: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.3); }
+.role-strip { color: #a855f7; background-color: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); }
+.role-support { color: #22c55e; background-color: rgba(34, 197, 94, 0.15); border-color: rgba(34, 197, 94, 0.3); }
+.role-heal { color: #10b981; background-color: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); }
+.role-stab { color: #eab308; background-color: rgba(234, 179, 8, 0.15); border-color: rgba(234, 179, 8, 0.3); }
+.role-frontline { color: #ef4444; background-color: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); }
+.role-backline { color: #06b6d4; background-color: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.3); }
+.role-boon { color: #8b5cf6; background-color: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3); }
+.role-roamer { color: #ec4899; background-color: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3); }
+.role-condi { color: #84cc16; background-color: rgba(132, 204, 22, 0.15); border-color: rgba(132, 204, 22, 0.3); }
+</style>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
     <div class="text-center mb-12">
@@ -42,7 +55,8 @@
                         </div>
                         <div>
                             <h3 class="font-display font-bold text-white">{{ build.spec }}</h3>
-                            <p class="text-xs text-gray-400">{{ build.role }}</p>
+                            {% set role_class = 'role-' + build.role.split('/')[0]|lower %}
+                            <p class="text-xs px-2 py-0.5 rounded inline-block {{ role_class }}">{{ build.role }}</p>
                         </div>
                     </div>
                     <div class="flex items-center justify-between">
@@ -80,7 +94,8 @@
                         </div>
                         <div>
                             <h3 class="font-display font-bold text-white">{{ build.spec }}</h3>
-                            <p class="text-xs text-gray-400">{{ build.role }}</p>
+                            {% set role_class = 'role-' + build.role.split('/')[0]|lower %}
+                            <p class="text-xs px-2 py-0.5 rounded inline-block {{ role_class }}">{{ build.role }}</p>
                         </div>
                     </div>
                     <div class="flex items-center justify-between">
@@ -118,7 +133,8 @@
                         </div>
                         <div>
                             <h3 class="font-display font-bold text-white text-sm">{{ build.spec }}</h3>
-                            <p class="text-xs text-gray-400">{{ build.role }}</p>
+                            {% set role_class = 'role-' + build.role.split('/')[0]|lower %}
+                            <p class="text-xs px-2 py-0.5 rounded inline-block {{ role_class }}">{{ build.role }}</p>
                         </div>
                     </div>
                     <div class="flex items-center justify-between">
@@ -155,7 +171,8 @@
                         </div>
                         <div>
                             <h3 class="font-display font-bold text-white">{{ build.spec }}</h3>
-                            <p class="text-xs text-gray-400">{{ build.role }}</p>
+                            {% set role_class = 'role-' + build.role.split('/')[0]|lower %}
+                            <p class="text-xs px-2 py-0.5 rounded inline-block {{ role_class }}">{{ build.role }}</p>
                         </div>
                     </div>
                     <div class="flex items-center justify-between">

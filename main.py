@@ -630,6 +630,16 @@ async def analyze_evening_files(
         'specs_by_role': {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}},
         'total_players': 0
     }
+    # Enemy composition aggregation
+    enemy_composition = {
+        'spec_counts': {},
+        'role_counts': {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0},
+        'total': 0
+    }
+    # Top players tracking
+    player_stats = {}  # {player_name: {spec, kills, deaths, damage, appearances}}
+    # Map/zone tracking
+    map_counts = {}
     total_duration = 0
     victories = 0
     defeats = 0
@@ -689,6 +699,35 @@ async def analyze_evening_files(
                             aggregated_composition['specs_by_role'][role][spec] = aggregated_composition['specs_by_role'][role].get(spec, 0) + count
                     aggregated_composition['total_players'] += comp.get('total', 0)
                 
+                # Aggregate enemy composition
+                if players_data.get('enemy_composition'):
+                    enemy_comp = players_data['enemy_composition']
+                    for spec, count in enemy_comp.get('spec_counts', {}).items():
+                        enemy_composition['spec_counts'][spec] = enemy_composition['spec_counts'].get(spec, 0) + count
+                    for role, count in enemy_comp.get('role_counts', {}).items():
+                        enemy_composition['role_counts'][role] = enemy_composition['role_counts'].get(role, 0) + count
+                    enemy_composition['total'] += enemy_comp.get('total', 0)
+                
+                # Track player stats for top 10
+                for ally in players_data.get('allies', []):
+                    name = ally.get('name', 'Unknown')
+                    if name not in player_stats:
+                        player_stats[name] = {
+                            'spec': ally.get('elite_spec', ally.get('profession', 'Unknown')),
+                            'damage': 0,
+                            'kills': 0,
+                            'deaths': 0,
+                            'appearances': 0
+                        }
+                    player_stats[name]['damage'] += ally.get('dps', 0) * players_data.get('duration_sec', 0)
+                    player_stats[name]['kills'] += ally.get('kills', 0)
+                    player_stats[name]['deaths'] += ally.get('deaths', 0)
+                    player_stats[name]['appearances'] += 1
+                
+                # Track map/zone
+                fight_name = players_data.get('fight_name', 'Unknown')
+                map_counts[fight_name] = map_counts.get(fight_name, 0) + 1
+                
                 total_duration += players_data.get('duration_sec', 0)
                 
                 # Track wins/losses
@@ -724,10 +763,59 @@ async def analyze_evening_files(
         avg_players = 0
         avg_duration = 0
     
+    # Calculate top 10 players by damage
+    top_players = sorted(
+        [{'name': name, **stats} for name, stats in player_stats.items()],
+        key=lambda x: x['damage'],
+        reverse=True
+    )[:10]
+    
+    # Calculate most played build per class
+    class_to_specs = {}
+    for spec, count in aggregated_composition['spec_counts'].items():
+        # Map spec to base class
+        spec_to_class = {
+            'Firebrand': 'Guardian', 'Dragonhunter': 'Guardian', 'Willbender': 'Guardian',
+            'Scrapper': 'Engineer', 'Holosmith': 'Engineer', 'Mechanist': 'Engineer',
+            'Scourge': 'Necromancer', 'Reaper': 'Necromancer', 'Harbinger': 'Necromancer',
+            'Herald': 'Revenant', 'Renegade': 'Revenant', 'Vindicator': 'Revenant',
+            'Spellbreaker': 'Warrior', 'Berserker': 'Warrior', 'Bladesworn': 'Warrior',
+            'Tempest': 'Elementalist', 'Weaver': 'Elementalist', 'Catalyst': 'Elementalist',
+            'Chronomancer': 'Mesmer', 'Mirage': 'Mesmer', 'Virtuoso': 'Mesmer',
+            'Druid': 'Ranger', 'Soulbeast': 'Ranger', 'Untamed': 'Ranger',
+            'Daredevil': 'Thief', 'Deadeye': 'Thief', 'Specter': 'Thief'
+        }
+        base_class = spec_to_class.get(spec, spec)
+        if base_class not in class_to_specs:
+            class_to_specs[base_class] = {}
+        class_to_specs[base_class][spec] = count
+    
+    # Get most played spec per class
+    builds_by_class = {}
+    for base_class, specs in class_to_specs.items():
+        if specs:
+            top_spec = max(specs.items(), key=lambda x: x[1])
+            builds_by_class[base_class] = {'spec': top_spec[0], 'count': top_spec[1]}
+    
+    # Sort maps by frequency
+    sorted_maps = sorted(map_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    # Generate counter recommendation for next session
+    counter_recommendation = None
+    if enemy_composition['spec_counts']:
+        # Find dominant enemy spec
+        dominant_enemy = max(enemy_composition['spec_counts'].items(), key=lambda x: x[1])
+        counter_recommendation = {
+            'target': dominant_enemy[0],
+            'count': dominant_enemy[1],
+            'suggestion': f"Ramenez plus de Spellbreaker/Scourge pour strip leurs {dominant_enemy[0]}"
+        }
+    
     # Store session with real data
     sessions[session_id] = {
         "fights": fight_results,
         "composition": aggregated_composition,
+        "enemy_composition": enemy_composition,
         "stats": {
             "total_fights": num_fights,
             "total_duration_min": round(total_duration / 60, 1),
@@ -743,9 +831,14 @@ async def analyze_evening_files(
         "request": request,
         "fights": fight_results,
         "composition": aggregated_composition,
+        "enemy_composition": enemy_composition,
         "stats": sessions[session_id]["stats"],
         "session_id": session_id,
-        "file_count": len(files)
+        "file_count": len(files),
+        "top_players": top_players,
+        "builds_by_class": builds_by_class,
+        "map_counts": sorted_maps,
+        "counter_recommendation": counter_recommendation
     })
 
 
