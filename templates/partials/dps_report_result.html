@@ -400,15 +400,19 @@
         <!-- Recommended Builds -->
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
             {% for build in counter.recommended_builds[:9] %}
-            <div class="bg-gw2-darker rounded-xl p-3 border border-gw2-purple/20 hover:border-gw2-purple/50 transition-all">
+            <a href="{{ build.build_url|default('https://metabattle.com/wiki/WvW') }}" target="_blank" 
+               class="bg-gw2-darker rounded-xl p-3 border border-gw2-purple/20 hover:border-gw2-purple hover:bg-gw2-purple/10 transition-all block group cursor-pointer">
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="font-display font-bold text-white">{{ build.elite_spec }}</span>
+                    <span class="font-display font-bold text-white group-hover:text-gw2-purple transition-colors">{{ build.elite_spec }}</span>
                     <span class="px-2 py-0.5 rounded text-xs bg-gw2-purple/20 text-gw2-purple">
                         {{ build.role }}
                     </span>
+                    <svg class="w-4 h-4 text-gray-500 group-hover:text-gw2-purple ml-auto transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
                 </div>
                 <div class="text-xs text-gray-400">{{ build.reason }}</div>
-            </div>
+            </a>
             {% endfor %}
         </div>
         
