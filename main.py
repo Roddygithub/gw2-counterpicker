@@ -306,11 +306,23 @@ def extract_players_from_ei_json(data: dict) -> dict:
     # Primary stab providers (Guardian)
     STAB_SPECS = {'Firebrand', 'Luminary'}
     # Primary healers (various classes)
-    HEALER_SPECS = {'Druid', 'Troubadour', 'Specter', 'Vindicator'}
+    HEALER_SPECS = {'Druid', 'Troubadour', 'Specter', 'Vindicator', 'Tempest', 'Scrapper'}
     # Primary boon providers
     BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer', 'Paragon'}
     # DPS specs that commonly strip boons
     STRIP_DPS_SPECS = {'Spellbreaker', 'Chronomancer', 'Reaper', 'Harbinger', 'Scourge', 'Ritualist'}
+    
+    def estimate_role_from_profession(profession):
+        """Estimate enemy role based on profession name (no stats available)"""
+        if profession in STAB_SPECS:
+            return 'stab'
+        if profession in HEALER_SPECS:
+            return 'healer'
+        if profession in BOON_SPECS:
+            return 'boon'
+        if profession in STRIP_DPS_SPECS:
+            return 'dps_strip'
+        return 'dps'
     
     # Minimum fight duration for reliable role detection (seconds)
     MIN_DURATION_FOR_ROLE = 60
@@ -477,10 +489,13 @@ def extract_players_from_ei_json(data: dict) -> dict:
             damage_taken = safe_number(target.get('totalDamageTaken', 0))
             raw_name = target.get('name', 'Unknown')
             profession_guess = raw_name.split(' ')[0] if raw_name and ' ' in raw_name else 'Unknown'
+            # Estimate enemy role based on profession
+            enemy_role = estimate_role_from_profession(profession_guess)
             enemies.append({
                 'name': raw_name,
                 'profession': profession_guess,
                 'damage_taken': int(damage_taken),
+                'role': enemy_role,
             })
 
     enemies_sorted = sorted(enemies, key=lambda e: e['damage_taken'], reverse=True)[:20]
@@ -543,11 +558,21 @@ def extract_players_from_ei_json(data: dict) -> dict:
         else:
             fight_outcome = 'draw'
 
-    # Calculate enemy composition summary
+    # Calculate enemy composition summary with roles
     enemy_spec_counts = {}
+    enemy_role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    enemy_specs_by_role = {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}}
+    
     for e in enemies_sorted:
         spec = e.get('profession', 'Unknown')
+        role = e.get('role', 'dps')
         enemy_spec_counts[spec] = enemy_spec_counts.get(spec, 0) + 1
+        if role in enemy_role_counts:
+            enemy_role_counts[role] += 1
+            enemy_specs_by_role[role][spec] = enemy_specs_by_role[role].get(spec, 0) + 1
+        else:
+            enemy_role_counts['dps'] += 1
+            enemy_specs_by_role['dps'][spec] = enemy_specs_by_role['dps'].get(spec, 0) + 1
     
     # Sort enemy specs by count
     enemy_spec_counts_sorted = dict(sorted(enemy_spec_counts.items(), key=lambda x: x[1], reverse=True))
@@ -572,6 +597,8 @@ def extract_players_from_ei_json(data: dict) -> dict:
         },
         'enemy_composition': {
             'spec_counts': enemy_spec_counts_sorted,
+            'role_counts': enemy_role_counts,
+            'specs_by_role': enemy_specs_by_role,
             'total': len(enemies_sorted)
         }
     }

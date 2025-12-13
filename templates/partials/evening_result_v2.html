@@ -47,33 +47,6 @@
         </div>
     </div>
     
-    <!-- Enemy Server Info (mocked for flavor) -->
-    <div class="glow-card rounded-2xl p-6">
-        <h3 class="font-display text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            🏰 Serveurs Ennemis Identifiés
-        </h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="bg-gw2-darker rounded-lg p-3 text-center border border-red-500/20">
-                <div class="text-lg font-bold text-red-400">[Dzagonur]</div>
-                <div class="text-xs text-gray-400">Serveur principal</div>
-            </div>
-            <div class="bg-gw2-darker rounded-lg p-3 text-center border border-red-500/20">
-                <div class="text-lg font-bold text-red-400">[Fissure of Woe]</div>
-                <div class="text-xs text-gray-400">Allié principal</div>
-            </div>
-            <div class="bg-gw2-darker rounded-lg p-3 text-center border border-red-500/20">
-                <div class="text-lg font-bold text-red-400">[Blackgate]</div>
-                <div class="text-xs text-gray-400">Occasionnel</div>
-            </div>
-            <div class="bg-gw2-darker rounded-lg p-3 text-center border border-red-500/20">
-                <div class="text-lg font-bold text-red-400">{{ stats.total_fights }} combats</div>
-                <div class="text-xs text-gray-400">Total analysé</div>
-            </div>
-        </div>
-    </div>
     
     <!-- Top Specs Most Played -->
     <div class="glow-card rounded-2xl p-6">
@@ -95,63 +68,12 @@
         </div>
     </div>
     
-    <!-- Hourly Evolution -->
-    <div class="glow-card rounded-2xl p-6">
-        <h3 class="font-display text-xl font-bold text-gw2-purple mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            ⏰ Évolution Horaire (Basée sur {{ file_count }} combats)
-        </h3>
-        <div class="space-y-3">
-            {% for i in range(21, 24) %}
-            <div class="bg-gw2-darker rounded-lg p-3 border border-gw2-purple/20">
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-bold text-gw2-purple">{{ i }}h00 - {{ i+1 }}h00</span>
-                    <span class="text-xs text-gray-400">{% if i == 21 %}Début de soirée, composition légère{% elif i == 22 %}Pic d'activité, full zerg{% else %}Fin de soirée, réduction d'effectif{% endif %}</span>
-                </div>
-                <div class="mt-2 text-xs text-gray-300">
-                    {% if i == 21 %}• Firebrand x5 • Scrapper x3 • Scourge x4{% elif i == 22 %}• Firebrand x8 • Scrapper x6 • Scourge x6 • Herald x5{% else %}• Firebrand x4 • Scrapper x3 • Scourge x3{% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
     
-    <!-- Top 10 Threats -->
-    <div class="glow-card rounded-2xl p-6">
-        <h3 class="font-display text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-            ⚠️ Top 10 Menaces Principales
-        </h3>
-        <div class="space-y-2">
-            {% for i in range(10) %}
-            <div class="bg-gw2-darker rounded-lg p-3 flex items-center justify-between border border-red-500/20 hover:border-red-500/50 transition-all">
-                <div class="flex items-center gap-3">
-                    <span class="text-lg font-bold text-red-400">#{{ i+1 }}</span>
-                    <div>
-                        <div class="font-medium text-white">
-                            {% if i == 0 %}Luminary pl-5157{% elif i == 1 %}Firebrand pl-3574{% elif i == 2 %}Dragonhunter pl-4209{% elif i == 3 %}Mechanist pl-3309{% elif i == 4 %}Scrapper pl-2981{% elif i == 5 %}Scourge pl-4123{% elif i == 6 %}Herald pl-3876{% elif i == 7 %}Tempest pl-4532{% elif i == 8 %}Willbender pl-3698{% else %}Spellbreaker pl-5123{% endif %}
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            {% if i == 0 %}Luminary • 450k dégâts{% elif i == 1 %}Firebrand • 380k heals{% elif i == 2 %}Dragonhunter • 420k dégâts{% elif i == 3 %}Mechanist • 390k dégâts{% elif i == 4 %}Scrapper • 410k heals{% elif i == 5 %}Scourge • 380k dégâts{% elif i == 6 %}Herald • 350k dégâts{% elif i == 7 %}Tempest • 370k dégâts{% elif i == 8 %}Willbender • 360k dégâts{% else %}Spellbreaker • 340k dégâts{% endif %}
-                        </div>
-                    </div>
-                </div>
-                <span class="px-3 py-1 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                    {% if i < 3 %}Menace critique{% elif i < 6 %}Menace élevée{% else %}Menace modérée{% endif %}
-                </span>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
     
     <!-- Squad Composition Summary (like Quick Analysis) -->
     {% if composition %}
     <div class="glow-card rounded-2xl p-6">
-        <h3 class="font-display text-xl font-bold text-green-400 mb-4">📊 Résumé de Composition (Agrégé)</h3>
+        <h3 class="font-display text-xl font-bold text-green-400 mb-4">📊 Composition de ton Escouade (Total sur {{ stats.total_fights }} combats)</h3>
         
         <!-- Role Distribution with specs aligned below -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
