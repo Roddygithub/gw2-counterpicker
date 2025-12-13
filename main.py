@@ -601,6 +601,8 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'cleanses': condi_cleanse,
             'cleanses_self': condi_cleanse_self,
             'cleanses_per_sec': cleanses_per_sec,
+            'heal_only': healing,
+            'barrier': barrier,
             'healing': healing_total,
             'healing_per_sec': healing_per_sec,
             'boon_strips': boon_strips,

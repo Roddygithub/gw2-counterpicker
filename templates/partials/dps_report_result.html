@@ -251,8 +251,6 @@
                         <th class="pb-2">Classe</th>
                         <th class="pb-2">Rôle</th>
                         <th class="pb-2">Groupe</th>
-                        <th class="pb-2 text-right">Dégâts</th>
-                        <th class="pb-2 text-right">C/s</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -290,12 +288,6 @@
                             {% endif %}
                         </td>
                         <td class="py-2 text-gray-400">{{ player.group }}</td>
-                        <td class="py-2 text-right font-mono text-orange-400">
-                            {{ "{:,}".format(player.damage) }}
-                        </td>
-                        <td class="py-2 text-right font-mono text-cyan-400">
-                            {{ player.cleanses_per_sec|default(0) }}
-                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -357,108 +349,135 @@
                     class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">💀 Combat</button>
             <button @click="activeTab = 'support'" :class="activeTab === 'support' ? 'bg-green-500/20 text-green-400 border-green-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
                     class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">💚 Support</button>
-            <button @click="activeTab = 'defensive'" :class="activeTab === 'defensive' ? 'bg-red-500/20 text-red-400 border-red-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
-                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">🛡️ Défensif</button>
             <button @click="activeTab = 'boons'" :class="activeTab === 'boons' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
                     class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">✨ Boons</button>
+            <button @click="activeTab = 'defensive'" :class="activeTab === 'defensive' ? 'bg-red-500/20 text-red-400 border-red-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
+                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">🛡️ Défensif</button>
         </div>
         
         <!-- DAMAGE TAB -->
-        <div x-show="activeTab === 'damage'" class="overflow-x-auto">
+        <div x-show="activeTab === 'damage'">
+            <div class="flex flex-wrap gap-2 mb-3 text-xs">
+                <span class="text-gray-500">Trier:</span>
+                <button onclick="sortTableByAttr('damage-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Classe</button>
+                <button onclick="sortTableByAttr('damage-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Groupe</button>
+                <button onclick="sortTableByAttr('damage-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Rôle</button>
+            </div>
+            <div class="overflow-x-auto">
             <table class="w-full text-sm" id="damage-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('damage-table', 0)">Joueur</th>
                         <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('damage-table', 1)">Classe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 2, true)">Dmg Out</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 3, true)">DPS</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 4, true)">Dmg In</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 5, true)">Ratio</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 2, true)">Dégâts Infligés</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 3, true)" title="Dégâts par seconde">DPS</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 4, true)" title="Dégâts Out / Dégâts In">Ratio O/I</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for p in players.allies|sort(attribute='damage_out', reverse=true) %}
-                    <tr class="hover:bg-gw2-darker/50">
+                    <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
                         <td class="py-2 text-right font-mono text-orange-400">{{ "{:,}".format(p.damage_out|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-orange-300">{{ "{:,.0f}".format(p.dps|default(0)) }}</td>
-                        <td class="py-2 text-right font-mono text-red-400">{{ "{:,}".format(p.damage_in|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-yellow-400">{{ p.damage_ratio|default(0) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         
         <!-- COMBAT TAB -->
-        <div x-show="activeTab === 'combat'" class="overflow-x-auto">
+        <div x-show="activeTab === 'combat'">
+            <div class="flex flex-wrap gap-2 mb-3 text-xs">
+                <span class="text-gray-500">Trier:</span>
+                <button onclick="sortTableByAttr('combat-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Classe</button>
+                <button onclick="sortTableByAttr('combat-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Groupe</button>
+                <button onclick="sortTableByAttr('combat-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Rôle</button>
+            </div>
+            <div class="overflow-x-auto">
             <table class="w-full text-sm" id="combat-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2">Joueur</th>
                         <th class="pb-2">Classe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 2, true)">Down Contrib</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 3, true)">DC/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)">CC Out</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)">CC/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 6, true)">Deaths</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)">Downs</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 2, true)" title="Dégâts sur ennemis down">Down Contrib</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 3, true)" title="Down Contrib par seconde">DC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)" title="Crowd Control infligé">CC Out</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)" title="CC par seconde">CC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 6, true)" title="Boons retirés aux ennemis">Strips Out</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)" title="Strips par seconde">S/s</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for p in players.allies|sort(attribute='down_contrib', reverse=true) %}
-                    <tr class="hover:bg-gw2-darker/50">
+                    <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
                         <td class="py-2 text-right font-mono text-pink-400">{{ "{:,}".format(p.down_contrib|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-pink-300">{{ p.down_contrib_per_sec|default(0) }}</td>
                         <td class="py-2 text-right font-mono text-blue-400">{{ "{:,}".format(p.cc_out|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-blue-300">{{ p.cc_per_sec|default(0) }}</td>
-                        <td class="py-2 text-right font-mono text-red-400">{{ p.deaths|default(0) }}</td>
-                        <td class="py-2 text-right font-mono text-red-300">{{ p.downs|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-purple-400">{{ "{:,}".format(p.boon_strips|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-purple-300">{{ p.strips_per_sec|default(0) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         
         <!-- SUPPORT TAB -->
-        <div x-show="activeTab === 'support'" class="overflow-x-auto">
+        <div x-show="activeTab === 'support'">
+            <div class="flex flex-wrap gap-2 mb-3 text-xs">
+                <span class="text-gray-500">Trier:</span>
+                <button onclick="sortTableByAttr('support-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Classe</button>
+                <button onclick="sortTableByAttr('support-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Groupe</button>
+                <button onclick="sortTableByAttr('support-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Rôle</button>
+            </div>
+            <div class="overflow-x-auto">
             <table class="w-full text-sm" id="support-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
                         <th class="pb-2">Joueur</th>
                         <th class="pb-2">Classe</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 2, true)">Heal+Barrier</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 3, true)">HPS</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 4, true)">Cleanses</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 5, true)">C/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 6, true)">Strips</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 7, true)">S/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 8, true)">Rez</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 2, true)" title="Soins directs">Heal</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 3, true)" title="Barrier appliqué">Barrier</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 4, true)" title="Heal+Barrier par seconde">HPS</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 5, true)">Cleanses</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 6, true)" title="Cleanses par seconde">C/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 7, true)">Rez</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for p in players.allies|sort(attribute='healing', reverse=true) %}
-                    <tr class="hover:bg-gw2-darker/50">
+                    <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
-                        <td class="py-2 text-right font-mono text-green-400">{{ "{:,}".format(p.healing|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-green-400">{{ "{:,}".format(p.heal_only|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-blue-400">{{ "{:,}".format(p.barrier|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-green-300">{{ "{:,.0f}".format(p.healing_per_sec|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-cyan-400">{{ "{:,}".format(p.cleanses|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-cyan-300">{{ p.cleanses_per_sec|default(0) }}</td>
-                        <td class="py-2 text-right font-mono text-purple-400">{{ "{:,}".format(p.boon_strips|default(0)) }}</td>
-                        <td class="py-2 text-right font-mono text-purple-300">{{ p.strips_per_sec|default(0) }}</td>
                         <td class="py-2 text-right font-mono text-blue-400">{{ p.resurrects|default(0) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         
         <!-- DEFENSIVE TAB -->
-        <div x-show="activeTab === 'defensive'" class="overflow-x-auto">
+        <div x-show="activeTab === 'defensive'">
+            <div class="flex flex-wrap gap-2 mb-3 text-xs">
+                <span class="text-gray-500">Trier:</span>
+                <button onclick="sortTableByAttr('defensive-table', 'profession')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Classe</button>
+                <button onclick="sortTableByAttr('defensive-table', 'group')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Groupe</button>
+                <button onclick="sortTableByAttr('defensive-table', 'role')" class="px-2 py-1 rounded bg-gw2-darker border border-gray-700 hover:border-white text-gray-300">Rôle</button>
+            </div>
+            <div class="overflow-x-auto">
             <table class="w-full text-sm" id="defensive-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
@@ -473,7 +492,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for p in players.allies|sort(attribute='damage_in', reverse=true) %}
-                    <tr class="hover:bg-gw2-darker/50">
+                    <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
                         <td class="py-2 text-right font-mono text-red-400">{{ "{:,}".format(p.damage_in|default(0)) }}</td>
@@ -485,6 +504,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         
         <!-- BOONS TAB -->
@@ -946,6 +966,27 @@
                 return isAsc ? aNum - bNum : bNum - aNum;
             }
             return isAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        });
+        
+        rows.forEach(row => tbody.appendChild(row));
+    };
+    
+    // Sort table by data attribute (profession, group, role)
+    window.sortTableByAttr = function(tableId, attr) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        rows.sort((a, b) => {
+            const aVal = a.dataset[attr] || '';
+            const bVal = b.dataset[attr] || '';
+            
+            if (attr === 'group') {
+                return Number(aVal) - Number(bVal);
+            }
+            return aVal.localeCompare(bVal);
         });
         
         rows.forEach(row => tbody.appendChild(row));
