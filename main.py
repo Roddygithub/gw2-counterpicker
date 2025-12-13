@@ -172,6 +172,7 @@ async def analyze_single_evtc(
                             # Build enemy composition for counter generation
                             enemy_composition = build_composition_from_enemies(players_data['enemies'])
                             counter = counter_engine.generate_counter(enemy_composition)
+                            print(f"[EVTC] Counter generated: {len(counter.recommended_builds)} builds, enemies: {len(players_data['enemies'])}")
                             
                             return templates.TemplateResponse("partials/dps_report_result.html", {
                                 "request": request,
