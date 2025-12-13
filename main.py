@@ -305,49 +305,81 @@ def extract_players_from_ei_json(data: dict) -> dict:
     # Primary stab providers (Guardian)
     STAB_SPECS = {'Firebrand', 'Luminary'}
     # Primary healers (various classes)
-    HEALER_SPECS = {'Druid', 'Troubadour', 'Specter', 'Vindicator'}  # Troubadour = Mesmer heal
+    HEALER_SPECS = {'Druid', 'Troubadour', 'Specter', 'Vindicator'}
     # Primary boon providers
-    BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer', 'Paragon'}  # Paragon = Warrior boon
-    # Scrapper can be heal or DPS - detect by cleanses
+    BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer', 'Paragon'}
+    # DPS specs that commonly strip boons
+    STRIP_DPS_SPECS = {'Spellbreaker', 'Chronomancer', 'Reaper', 'Harbinger', 'Scourge', 'Ritualist'}
     
     # Minimum fight duration for reliable role detection (seconds)
     MIN_DURATION_FOR_ROLE = 60
     
-    def detect_role(profession, cleanses_per_sec, damage, fight_duration):
-        """Detect player role based on spec and stats (WvW meta)"""
-        # For short fights, rely only on spec-based detection
-        if fight_duration < MIN_DURATION_FOR_ROLE:
-            if profession in STAB_SPECS:
-                return 'stab'
-            if profession in HEALER_SPECS:
-                return 'healer'
-            if profession in BOON_SPECS:
-                return 'boon'
-            # Scrapper with any cleanses = healer
-            if profession == 'Scrapper' and cleanses_per_sec > 0:
-                return 'healer'
-            return 'dps'
+    def detect_role_advanced(profession, stats):
+        """
+        Advanced role detection using multiple stats:
+        - healing: total healing done
+        - stab_gen: stability generation %
+        - cleanses_per_sec: condition cleanses per second
+        - strips: boon strips count
+        - down_contrib: down contribution (damage to downed)
+        - barrier: barrier generated
+        - duration: fight duration in seconds
+        """
+        healing = stats.get('healing', 0)
+        stab_gen = stats.get('stab_gen', 0)
+        cleanses_per_sec = stats.get('cleanses_per_sec', 0)
+        strips = stats.get('strips', 0)
+        down_contrib = stats.get('down_contrib', 0)
+        barrier = stats.get('barrier', 0)
+        duration = stats.get('duration', 60)
         
-        # For longer fights, use stats-based detection
-        # Stab specs are almost always stab role
+        # Normalize stats per minute for comparison
+        strips_per_min = (strips / duration) * 60 if duration > 0 else 0
+        healing_per_sec = healing / duration if duration > 0 else 0
+        
+        # === HEALER DETECTION ===
+        # High healing output = healer (threshold ~1000 HPS for active healers)
+        if healing_per_sec >= 800:
+            return 'healer'
+        # Healer specs with moderate healing
+        if profession in HEALER_SPECS and healing_per_sec >= 300:
+            return 'healer'
+        # Scrapper/Tempest with good healing = healer
+        if profession in {'Scrapper', 'Tempest'} and healing_per_sec >= 500:
+            return 'healer'
+        
+        # === STAB DETECTION ===
+        # Stab specs are almost always stab
         if profession in STAB_SPECS:
             return 'stab'
-        # Healer specs with any cleanses = healer
-        if profession in HEALER_SPECS and cleanses_per_sec >= 0.2:
-            return 'healer'
-        # Scrapper: healer if cleanses >= 0.5, else DPS
-        if profession == 'Scrapper':
-            return 'healer' if cleanses_per_sec >= 0.5 else 'dps'
-        # Tempest: healer if cleanses >= 0.3, else DPS
-        if profession == 'Tempest':
-            return 'healer' if cleanses_per_sec >= 0.3 else 'dps'
-        # Boon specs = boon
+        # Any spec with high stability generation
+        if stab_gen >= 5.0:
+            return 'stab'
+        
+        # === BOON DETECTION ===
+        # Boon specs with some support activity
         if profession in BOON_SPECS:
             return 'boon'
-        # High cleanses from other specs = likely healer
-        if cleanses_per_sec >= 1.5:
+        
+        # === DPS DETECTION (with sub-roles) ===
+        # High strip count = strip DPS
+        if strips_per_min >= 10 and profession in STRIP_DPS_SPECS:
+            return 'dps_strip'
+        if strips_per_min >= 20:  # Very high strips from any class
+            return 'dps_strip'
+        
+        # High down contribution = effective DPS
+        if down_contrib >= 5000:
+            return 'dps'
+        
+        # === FALLBACK DETECTION ===
+        # Use cleanses as fallback for healer detection
+        if cleanses_per_sec >= 0.5 and profession in HEALER_SPECS:
             return 'healer'
-        # Default = DPS (includes Willbender, Mechanist, Reaper, Harbinger, etc.)
+        if profession in {'Scrapper', 'Tempest'} and cleanses_per_sec >= 0.3:
+            return 'healer'
+        
+        # Default = DPS
         return 'dps'
 
     players = []
@@ -364,11 +396,62 @@ def extract_players_from_ei_json(data: dict) -> dict:
         resurrects = support.get('resurrects', 0)
         boon_strips = support.get('boonStrips', 0)
         
+        # Extract healing stats (requires ArcDPS healing extension)
+        healing = 0
+        if 'extHealingStats' in player:
+            heal_stats = player['extHealingStats']
+            if 'outgoingHealing' in heal_stats:
+                oh = heal_stats['outgoingHealing']
+                if oh and isinstance(oh, list) and len(oh) > 0:
+                    if isinstance(oh[0], dict):
+                        healing = oh[0].get('healing', 0)
+                    elif isinstance(oh[0], (int, float)):
+                        healing = oh[0]
+        
+        # Extract barrier stats
+        barrier = 0
+        if 'extBarrierStats' in player:
+            barrier_stats = player['extBarrierStats']
+            if 'outgoingBarrier' in barrier_stats:
+                ob = barrier_stats['outgoingBarrier']
+                if ob and isinstance(ob, list) and len(ob) > 0:
+                    if isinstance(ob[0], dict):
+                        barrier = ob[0].get('barrier', 0)
+                    elif isinstance(ob[0], (int, float)):
+                        barrier = ob[0]
+        
+        # Extract down contribution and other stats
+        down_contrib = 0
+        stats_all = player.get('statsAll', [{}])
+        if stats_all and len(stats_all) > 0:
+            stats = stats_all[0] if isinstance(stats_all[0], dict) else {}
+            down_contrib = stats.get('downContribution', 0)
+        
+        # Extract stability generation from groupBuffs (buff id 1122)
+        stab_gen = 0
+        for buff in player.get('groupBuffs', []):
+            if buff.get('id') == 1122:  # Stability buff ID
+                buff_data = buff.get('buffData', [{}])
+                if buff_data and len(buff_data) > 0:
+                    stab_gen = buff_data[0].get('generation', 0)
+                break
+        
         # Calculate per-second values
         cleanses_per_sec = round(condi_cleanse / duration_sec, 2) if duration_sec > 0 else 0
         
         profession = player.get('profession', 'Unknown')
-        role = detect_role(profession, cleanses_per_sec, int(damage_value), duration_sec)
+        
+        # Use advanced role detection with all stats
+        role_stats = {
+            'healing': healing,
+            'stab_gen': stab_gen,
+            'cleanses_per_sec': cleanses_per_sec,
+            'strips': boon_strips,
+            'down_contrib': down_contrib,
+            'barrier': barrier,
+            'duration': duration_sec
+        }
+        role = detect_role_advanced(profession, role_stats)
         
         players.append({
             'name': player.get('name', 'Unknown'),
@@ -402,11 +485,15 @@ def extract_players_from_ei_json(data: dict) -> dict:
 
     # Calculate composition summary
     spec_counts = {}
-    role_counts = {'dps': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
     for p in players:
         spec = p['profession']
         spec_counts[spec] = spec_counts.get(spec, 0) + 1
-        role_counts[p['role']] += 1
+        role = p['role']
+        if role in role_counts:
+            role_counts[role] += 1
+        else:
+            role_counts['dps'] += 1  # Fallback
 
     return {
         'allies': players,
