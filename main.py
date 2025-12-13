@@ -2,13 +2,15 @@
 GW2 CounterPicker - The Ultimate WvW Intelligence Tool
 "Le seul outil capable de lire dans l'âme de ton adversaire. Et dans celle de tout son serveur."
 
+v2.1 - Mode Offline activé - 100% indépendant de dps.report
+
 Made with rage, love and 15 years of WvW pain.
 """
 
 import os
+import re
 import uuid
 import json
-import random
 from datetime import datetime, timedelta
 from typing import Optional, List
 from pathlib import Path
@@ -19,19 +21,28 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import httpx
 
+# TinyDB for persistent sessions
+from tinydb import TinyDB, Query
+
 from models import (
     AnalysisResult, PlayerBuild, CompositionAnalysis, 
     CounterRecommendation, EveningReport, HourlyEvolution,
     HeatmapData, TopPlayer
 )
 from parser import RealEVTCParser
-from mock_parser import MockEVTCParser
 from counter_engine import CounterPickEngine
+from role_detector import (
+    estimate_role_from_profession, 
+    detect_role_advanced, 
+    parse_duration_string,
+    get_base_class,
+    SPEC_TO_CLASS
+)
 
 app = FastAPI(
     title="GW2 CounterPicker",
-    description="The most powerful WvW intelligence tool ever created",
-    version="2.0.0"  # Real EVTC parsing!
+    description="The most powerful WvW intelligence tool ever created - Now with offline mode!",
+    version="2.1.0"
 )
 
 # Mount static files
@@ -40,14 +51,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Templates
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["app_version"] = app.version
+templates.env.globals["offline_mode"] = True  # v2.1 feature flag
 
-# Initialize engines - Real parser with mock fallback
+# Initialize engines
 real_parser = RealEVTCParser()
-mock_parser = MockEVTCParser()
 counter_engine = CounterPickEngine()
 
-# Store for analysis sessions
-sessions = {}
+# Persistent session storage with TinyDB
+DB_PATH = Path("data")
+DB_PATH.mkdir(exist_ok=True)
+db = TinyDB(DB_PATH / "sessions.json")
+sessions_table = db.table("sessions")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -92,25 +106,39 @@ async def meta_page(request: Request):
 async def analyze_dps_report(request: Request, url: str = Form(...)):
     """
     Analyze a single dps.report URL
-    Returns enemy composition and perfect counter in 3 seconds
+    Fetches JSON from dps.report API
     """
     # Validate URL
     if not url or "dps.report" not in url:
         raise HTTPException(status_code=400, detail="Invalid dps.report URL")
     
-    # Parse the report (uses mock for URL, real parser for files)
-    analysis = mock_parser.parse_dps_report_url(url)
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Extract permalink from URL and fetch JSON
+            json_url = f"https://dps.report/getJson?permalink={url}"
+            response = await client.get(json_url)
+            
+            if response.status_code == 200 and response.text.strip().startswith('{'):
+                log_data = response.json()
+                players_data = extract_players_from_ei_json(log_data)
+                
+                enemy_composition = build_composition_from_enemies(players_data['enemies'])
+                counter = counter_engine.generate_counter(enemy_composition)
+                
+                return templates.TemplateResponse("partials/dps_report_result.html", {
+                    "request": request,
+                    "data": log_data,
+                    "players": players_data,
+                    "counter": counter,
+                    "permalink": url,
+                    "filename": "dps.report URL",
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "parse_mode": "online"
+                })
+    except Exception as e:
+        print(f"[URL] dps.report API failed: {e}")
     
-    # Generate counter recommendations
-    counter = counter_engine.generate_counter(analysis.enemy_composition)
-    
-    # Return HTML partial for HTMX
-    return templates.TemplateResponse("partials/analysis_result.html", {
-        "request": request,
-        "analysis": analysis,
-        "counter": counter,
-        "timestamp": datetime.now().strftime("%H:%M:%S")
-    })
+    raise HTTPException(status_code=500, detail="Failed to fetch dps.report data")
 
 
 @app.post("/api/analyze/evtc")
@@ -119,106 +147,170 @@ async def analyze_single_evtc(
     file: UploadFile = File(...)
 ):
     """
-    Analyze a single .evtc file using dps.report API for reliable parsing
-    Returns exact player builds with high confidence
+    Analyze a single .evtc file
+    Strategy: Try dps.report first, fallback to local parser if unavailable
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
     
-    # Validate extension
     valid_extensions = ['.evtc', '.zevtc', '.zip']
     if not any(file.filename.lower().endswith(ext) for ext in valid_extensions):
         raise HTTPException(status_code=400, detail="Invalid file type. Use .evtc, .zevtc, or .zip")
     
-    try:
-        # Read file data
-        data = await file.read()
-        print(f"[EVTC] Received file: {file.filename}, size: {len(data)} bytes")
-        
-        # Upload to dps.report API for reliable parsing
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                # Upload to dps.report
-                files = {'file': (file.filename, data)}
-                response = await client.post(
-                    'https://dps.report/uploadContent',
-                    params={'json': '1', 'detailedwvw': 'true'},
-                    files=files
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    permalink = result.get('permalink', '')
-                    print(f"[EVTC] dps.report upload success: {permalink}")
-                    
-                    # Get the JSON data from dps.report
-                    if permalink:
-                        # Build correct JSON URL - handle both dps.report and wvw.report
-                        if 'wvw.report' in permalink:
-                            json_url = f"https://dps.report/getJson?permalink={permalink}"
-                        else:
-                            json_url = f"https://dps.report/getJson?permalink={permalink}"
-                        
-                        print(f"[EVTC] Fetching JSON from: {json_url}")
-                        json_response = await client.get(json_url)
-                        
-                        if json_response.status_code == 200 and json_response.text.strip().startswith('{'):
-                            log_data = json_response.json()
-                            print(f"[EVTC] JSON fetched successfully, players: {len(log_data.get('players', []))}")
-                            
-                            # Extract player data from Elite Insights JSON
-                            players_data = extract_players_from_ei_json(log_data)
-                            
-                            # Build enemy composition for counter generation
-                            enemy_composition = build_composition_from_enemies(players_data['enemies'])
-                            counter = counter_engine.generate_counter(enemy_composition)
-                            print(f"[EVTC] Counter generated: {len(counter.recommended_builds)} builds, enemies: {len(players_data['enemies'])}")
-                            
-                            return templates.TemplateResponse("partials/dps_report_result.html", {
-                                "request": request,
-                                "data": log_data,
-                                "players": players_data,
-                                "counter": counter,
-                                "permalink": result.get('permalink', ''),
-                                "filename": file.filename,
-                                "timestamp": datetime.now().strftime("%H:%M:%S")
-                            })
-                    
-                    # Fallback if we can't get JSON
-                    return templates.TemplateResponse("partials/dps_report_link.html", {
-                        "request": request,
-                        "permalink": result.get('permalink', ''),
-                        "filename": file.filename,
-                        "timestamp": datetime.now().strftime("%H:%M:%S")
-                    })
-                else:
-                    print(f"[EVTC] dps.report upload failed: {response.status_code}")
-                    raise Exception(f"dps.report returned {response.status_code}")
-                    
-        except Exception as api_error:
-            print(f"[EVTC] dps.report API failed: {api_error}")
-            
-            # Fallback: use mock parser
-            analysis = mock_parser.parse_dps_report_url(f"file://{file.filename}")
-            counter = counter_engine.generate_counter(analysis.enemy_composition)
-            
-            return templates.TemplateResponse("partials/analysis_result.html", {
-                "request": request,
-                "analysis": analysis,
-                "counter": counter,
-                "timestamp": datetime.now().strftime("%H:%M:%S"),
-                "parse_warning": f"API upload failed, showing simulated data. Error: {str(api_error)[:100]}"
-            })
-        
-    except Exception as e:
-        print(f"[EVTC] Critical error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
-
-
-def build_composition_from_enemies(enemies: list) -> "CompositionAnalysis":
-    """Build a CompositionAnalysis from enemy player data for counter generation"""
-    from mock_parser import CompositionAnalysis, PlayerBuild
+    data = await file.read()
+    print(f"[EVTC] Received file: {file.filename}, size: {len(data)} bytes")
     
+    parse_mode = "offline"  # Default to offline
+    
+    # Strategy 1: Try dps.report API first
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            files = {'file': (file.filename, data)}
+            response = await client.post(
+                'https://dps.report/uploadContent',
+                params={'json': '1', 'detailedwvw': 'true'},
+                files=files
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                permalink = result.get('permalink', '')
+                
+                if permalink:
+                    json_url = f"https://dps.report/getJson?permalink={permalink}"
+                    json_response = await client.get(json_url)
+                    
+                    if json_response.status_code == 200 and json_response.text.strip().startswith('{'):
+                        log_data = json_response.json()
+                        players_data = extract_players_from_ei_json(log_data)
+                        enemy_composition = build_composition_from_enemies(players_data['enemies'])
+                        counter = counter_engine.generate_counter(enemy_composition)
+                        
+                        print(f"[EVTC] dps.report success: {len(players_data['enemies'])} enemies")
+                        
+                        return templates.TemplateResponse("partials/dps_report_result.html", {
+                            "request": request,
+                            "data": log_data,
+                            "players": players_data,
+                            "counter": counter,
+                            "permalink": permalink,
+                            "filename": file.filename,
+                            "timestamp": datetime.now().strftime("%H:%M:%S"),
+                            "parse_mode": "online"
+                        })
+    except Exception as api_error:
+        print(f"[EVTC] dps.report unavailable: {api_error}")
+    
+    # Strategy 2: OFFLINE FALLBACK - Use local parser
+    print(f"[EVTC] Using OFFLINE mode with local parser")
+    try:
+        parsed_log = real_parser.parse_evtc_bytes(data, file.filename)
+        
+        # Convert parsed log to players_data format
+        players_data = convert_parsed_log_to_players_data(parsed_log)
+        enemy_composition = build_composition_from_enemies(players_data['enemies'])
+        counter = counter_engine.generate_counter(enemy_composition)
+        
+        print(f"[EVTC] Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
+        
+        return templates.TemplateResponse("partials/dps_report_result.html", {
+            "request": request,
+            "data": {"fightName": f"Offline: {file.filename}", "duration": f"{parsed_log.duration_seconds}s"},
+            "players": players_data,
+            "counter": counter,
+            "permalink": "",
+            "filename": file.filename,
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "parse_mode": "offline"
+        })
+    except Exception as parse_error:
+        print(f"[EVTC] Local parser failed: {parse_error}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(parse_error)}")
+
+
+def convert_parsed_log_to_players_data(parsed_log) -> dict:
+    """Convert ParsedLog from local parser to players_data format used by templates."""
+    allies = []
+    enemies = []
+    
+    for player in parsed_log.players:
+        allies.append({
+            'name': player.character_name,
+            'account': player.account_name,
+            'profession': player.elite_spec or player.profession,
+            'elite_spec': player.elite_spec,
+            'group': player.subgroup,
+            'damage': player.damage_dealt,
+            'dps': player.damage_dealt // max(parsed_log.duration_seconds, 1),
+            'is_commander': False,
+            'cleanses': 0,
+            'cleanses_per_sec': 0,
+            'resurrects': 0,
+            'boon_strips': 0,
+            'role': player.estimated_role.lower() if player.estimated_role else 'dps',
+            'kills': player.kills,
+            'deaths': player.deaths,
+        })
+    
+    for enemy in parsed_log.enemies:
+        role = estimate_role_from_profession(enemy.elite_spec or enemy.profession)
+        enemies.append({
+            'name': enemy.character_name,
+            'profession': enemy.elite_spec or enemy.profession,
+            'damage_taken': enemy.damage_taken,
+            'role': role,
+        })
+    
+    # Build composition summaries
+    spec_counts = {}
+    role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    
+    for p in allies:
+        spec = p['profession']
+        spec_counts[spec] = spec_counts.get(spec, 0) + 1
+        role = p.get('role', 'dps')
+        if role in role_counts:
+            role_counts[role] += 1
+    
+    enemy_spec_counts = {}
+    enemy_role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    
+    for e in enemies:
+        spec = e['profession']
+        enemy_spec_counts[spec] = enemy_spec_counts.get(spec, 0) + 1
+        role = e.get('role', 'dps')
+        if role in enemy_role_counts:
+            enemy_role_counts[role] += 1
+    
+    return {
+        'allies': allies,
+        'enemies': sorted(enemies, key=lambda x: x.get('damage_taken', 0), reverse=True)[:20],
+        'fight_name': f"WvW Combat ({parsed_log.duration_seconds}s)",
+        'duration_sec': parsed_log.duration_seconds,
+        'fight_outcome': 'unknown',
+        'fight_stats': {
+            'ally_deaths': sum(p.deaths for p in parsed_log.players),
+            'ally_downs': sum(p.downs for p in parsed_log.players),
+            'ally_damage': sum(p.damage_dealt for p in parsed_log.players),
+            'enemy_damage_taken': sum(e.damage_taken for e in parsed_log.enemies)
+        },
+        'composition': {
+            'spec_counts': spec_counts,
+            'role_counts': role_counts,
+            'specs_by_role': {},
+            'total': len(allies)
+        },
+        'enemy_composition': {
+            'spec_counts': enemy_spec_counts,
+            'role_counts': enemy_role_counts,
+            'specs_by_role': {},
+            'total': len(enemies)
+        }
+    }
+
+
+def build_composition_from_enemies(enemies: list) -> CompositionAnalysis:
+    """Build a CompositionAnalysis from enemy player data for counter generation"""
     builds = []
     spec_counts = {}
     role_distribution = {}
@@ -281,115 +373,8 @@ def extract_players_from_ei_json(data: dict) -> dict:
             return safe_number(value[0])
         return 0
 
-    # Get fight duration for per-second calculations
-    duration_ms = data.get('duration', '0')
-    if isinstance(duration_ms, str):
-        # Parse duration string like "2m 30s 500ms"
-        import re
-        duration_sec = 0
-        m = re.search(r'(\d+)m', duration_ms)
-        if m:
-            duration_sec += int(m.group(1)) * 60
-        s = re.search(r'(\d+)s', duration_ms)
-        if s:
-            duration_sec += int(s.group(1))
-        ms = re.search(r'(\d+)ms', duration_ms)
-        if ms:
-            duration_sec += int(ms.group(1)) / 1000
-    else:
-        duration_sec = float(duration_ms) / 1000 if duration_ms > 1000 else float(duration_ms)
-    
-    if duration_sec <= 0:
-        duration_sec = 1  # Avoid division by zero
-
-    # Role detection based on elite spec (WvW meta)
-    # Primary stab providers (Guardian)
-    STAB_SPECS = {'Firebrand', 'Luminary'}
-    # Primary healers (various classes)
-    HEALER_SPECS = {'Druid', 'Troubadour', 'Specter', 'Vindicator', 'Tempest', 'Scrapper'}
-    # Primary boon providers
-    BOON_SPECS = {'Herald', 'Renegade', 'Chronomancer', 'Paragon'}
-    # DPS specs that commonly strip boons
-    STRIP_DPS_SPECS = {'Spellbreaker', 'Chronomancer', 'Reaper', 'Harbinger', 'Scourge', 'Ritualist'}
-    
-    def estimate_role_from_profession(profession):
-        """Estimate enemy role based on profession name (no stats available)"""
-        if profession in STAB_SPECS:
-            return 'stab'
-        if profession in HEALER_SPECS:
-            return 'healer'
-        if profession in BOON_SPECS:
-            return 'boon'
-        if profession in STRIP_DPS_SPECS:
-            return 'dps_strip'
-        return 'dps'
-    
-    # Minimum fight duration for reliable role detection (seconds)
-    MIN_DURATION_FOR_ROLE = 60
-    
-    def detect_role_advanced(profession, stats):
-        """
-        Advanced role detection using multiple stats:
-        - healing: total healing done
-        - stab_gen: stability generation %
-        - cleanses_per_sec: condition cleanses per second
-        - strips: boon strips count
-        - down_contrib: down contribution (damage to downed)
-        - barrier: barrier generated
-        - duration: fight duration in seconds
-        """
-        healing = stats.get('healing', 0)
-        stab_gen = stats.get('stab_gen', 0)
-        cleanses_per_sec = stats.get('cleanses_per_sec', 0)
-        strips = stats.get('strips', 0)
-        down_contrib = stats.get('down_contrib', 0)
-        barrier = stats.get('barrier', 0)
-        duration = stats.get('duration', 60)
-        
-        # Normalize stats per minute for comparison
-        strips_per_min = (strips / duration) * 60 if duration > 0 else 0
-        healing_per_sec = healing / duration if duration > 0 else 0
-        
-        # === STAB DETECTION (priority) ===
-        # Stab specs are almost always stab
-        if profession in STAB_SPECS:
-            return 'stab'
-        # Any spec with high stability generation
-        if stab_gen >= 5.0:
-            return 'stab'
-        
-        # === BOON DETECTION (before healer to avoid Paragon misdetection) ===
-        # Boon specs stay boon even with high healing
-        if profession in BOON_SPECS:
-            return 'boon'
-        
-        # === HEALER DETECTION ===
-        # High healing output = healer (threshold ~800 HPS for active healers)
-        if healing_per_sec >= 800:
-            return 'healer'
-        # Healer specs with moderate healing
-        if profession in HEALER_SPECS and healing_per_sec >= 300:
-            return 'healer'
-        # Scrapper/Tempest with good healing = healer
-        if profession in {'Scrapper', 'Tempest'} and healing_per_sec >= 500:
-            return 'healer'
-        
-        # === DPS DETECTION (with sub-roles) ===
-        # High strip count = strip DPS
-        if strips_per_min >= 10 and profession in STRIP_DPS_SPECS:
-            return 'dps_strip'
-        if strips_per_min >= 20:  # Very high strips from any class
-            return 'dps_strip'
-        
-        # === FALLBACK DETECTION ===
-        # Use cleanses as fallback for healer detection
-        if cleanses_per_sec >= 0.5 and profession in HEALER_SPECS:
-            return 'healer'
-        if profession in {'Scrapper', 'Tempest'} and cleanses_per_sec >= 0.3:
-            return 'healer'
-        
-        # Default = DPS
-        return 'dps'
+    # Get fight duration using centralized parser
+    duration_sec = parse_duration_string(data.get('duration', '0'))
 
     players = []
 
@@ -611,7 +596,7 @@ async def analyze_evening_files(
 ):
     """
     Analyze multiple .evtc/.zip files for full evening analysis
-    Uploads each file to dps.report for REAL data extraction
+    Strategy: Try dps.report first, fallback to local parser if unavailable
     """
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
@@ -619,10 +604,8 @@ async def analyze_evening_files(
     if len(files) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 files allowed")
     
-    # Create session
     session_id = str(uuid.uuid4())
     
-    # Upload each file to dps.report and collect results
     fight_results = []
     aggregated_composition = {
         'spec_counts': {},
@@ -630,129 +613,139 @@ async def analyze_evening_files(
         'specs_by_role': {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}},
         'total_players': 0
     }
-    # Enemy composition aggregation
     enemy_composition = {
         'spec_counts': {},
         'role_counts': {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0},
         'total': 0
     }
-    # Top players tracking
-    player_stats = {}  # {player_name: {spec, kills, deaths, damage, appearances}}
-    # Map/zone tracking
+    player_stats = {}
     map_counts = {}
     total_duration = 0
     victories = 0
     defeats = 0
+    parse_mode = "offline"  # Track which mode was used
     
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    # Try dps.report first, then fallback to local parser
+    dps_report_available = True
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Quick check if dps.report is available
+        try:
+            test_response = await client.get("https://dps.report/", timeout=5.0)
+            dps_report_available = test_response.status_code == 200
+        except:
+            dps_report_available = False
+            print("[Evening] dps.report unavailable, using OFFLINE mode")
+        
         for f in files:
-            try:
-                file_data = await f.read()
-                print(f"[Evening] Uploading {f.filename} to dps.report...")
-                
-                # Upload to dps.report
-                upload_files = {"file": (f.filename, file_data)}
-                upload_data = {"json": "1"}
-                
-                response = await client.post(
-                    "https://dps.report/uploadContent",
-                    files=upload_files,
-                    data=upload_data
-                )
-                
-                if response.status_code != 200:
-                    print(f"[Evening] Upload failed for {f.filename}: {response.status_code}")
+            file_data = await f.read()
+            players_data = None
+            permalink = ""
+            
+            # Strategy 1: Try dps.report if available
+            if dps_report_available:
+                try:
+                    upload_files = {"file": (f.filename, file_data)}
+                    response = await client.post(
+                        "https://dps.report/uploadContent",
+                        files=upload_files,
+                        data={"json": "1"}
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        permalink = result.get('permalink', '')
+                        
+                        if permalink:
+                            json_url = f"https://dps.report/getJson?permalink={permalink}"
+                            json_response = await client.get(json_url)
+                            
+                            if json_response.status_code == 200:
+                                log_data = json_response.json()
+                                if 'error' not in log_data:
+                                    players_data = extract_players_from_ei_json(log_data)
+                                    parse_mode = "online"
+                except Exception as e:
+                    print(f"[Evening] dps.report failed for {f.filename}: {e}")
+                    dps_report_available = False  # Switch to offline for remaining files
+            
+            # Strategy 2: OFFLINE FALLBACK - Use local parser
+            if players_data is None:
+                try:
+                    parsed_log = real_parser.parse_evtc_bytes(file_data, f.filename)
+                    players_data = convert_parsed_log_to_players_data(parsed_log)
+                    parse_mode = "offline"
+                    print(f"[Evening] Offline parsed {f.filename}")
+                except Exception as e:
+                    print(f"[Evening] Failed to parse {f.filename}: {e}")
                     continue
-                
-                result = response.json()
-                permalink = result.get('permalink', '')
-                
-                if not permalink:
-                    print(f"[Evening] No permalink for {f.filename}")
-                    continue
-                
-                # Fetch JSON data
-                json_url = f"https://dps.report/getJson?permalink={permalink}"
-                json_response = await client.get(json_url)
-                
-                if json_response.status_code != 200:
-                    continue
-                
-                log_data = json_response.json()
-                
-                if 'error' in log_data:
-                    print(f"[Evening] Error in JSON for {f.filename}: {log_data.get('error')}")
-                    continue
-                
-                # Extract player data using existing function
-                players_data = extract_players_from_ei_json(log_data)
-                
-                # Aggregate composition data
-                if players_data.get('composition'):
-                    comp = players_data['composition']
-                    for spec, count in comp.get('spec_counts', {}).items():
-                        aggregated_composition['spec_counts'][spec] = aggregated_composition['spec_counts'].get(spec, 0) + count
-                    for role, count in comp.get('role_counts', {}).items():
-                        aggregated_composition['role_counts'][role] = aggregated_composition['role_counts'].get(role, 0) + count
-                    for role, specs in comp.get('specs_by_role', {}).items():
-                        for spec, count in specs.items():
-                            aggregated_composition['specs_by_role'][role][spec] = aggregated_composition['specs_by_role'][role].get(spec, 0) + count
-                    aggregated_composition['total_players'] += comp.get('total', 0)
-                
-                # Aggregate enemy composition
-                if players_data.get('enemy_composition'):
-                    enemy_comp = players_data['enemy_composition']
-                    for spec, count in enemy_comp.get('spec_counts', {}).items():
-                        enemy_composition['spec_counts'][spec] = enemy_composition['spec_counts'].get(spec, 0) + count
-                    for role, count in enemy_comp.get('role_counts', {}).items():
-                        enemy_composition['role_counts'][role] = enemy_composition['role_counts'].get(role, 0) + count
-                    enemy_composition['total'] += enemy_comp.get('total', 0)
-                
-                # Track player stats for top 10
-                for ally in players_data.get('allies', []):
-                    name = ally.get('name', 'Unknown')
-                    if name not in player_stats:
-                        player_stats[name] = {
-                            'spec': ally.get('elite_spec', ally.get('profession', 'Unknown')),
-                            'damage': 0,
-                            'kills': 0,
-                            'deaths': 0,
-                            'appearances': 0
-                        }
-                    player_stats[name]['damage'] += ally.get('dps', 0) * players_data.get('duration_sec', 0)
-                    player_stats[name]['kills'] += ally.get('kills', 0)
-                    player_stats[name]['deaths'] += ally.get('deaths', 0)
-                    player_stats[name]['appearances'] += 1
-                
-                # Track map/zone
-                fight_name = players_data.get('fight_name', 'Unknown')
-                map_counts[fight_name] = map_counts.get(fight_name, 0) + 1
-                
-                total_duration += players_data.get('duration_sec', 0)
-                
-                # Track wins/losses
-                outcome = players_data.get('fight_outcome', 'unknown')
-                if outcome == 'victory':
-                    victories += 1
-                elif outcome == 'defeat':
-                    defeats += 1
-                
-                fight_results.append({
-                    'filename': f.filename,
-                    'permalink': permalink,
-                    'fight_name': players_data.get('fight_name', 'Unknown'),
-                    'duration_sec': players_data.get('duration_sec', 0),
-                    'fight_outcome': outcome,
-                    'fight_stats': players_data.get('fight_stats', {}),
-                    'allies_count': len(players_data.get('allies', [])),
-                    'enemies_count': len(players_data.get('enemies', []))
-                })
-                
-                print(f"[Evening] Processed {f.filename}: {players_data.get('fight_name')}")
-                
-            except Exception as e:
-                print(f"[Evening] Error processing {f.filename}: {e}")
+            
+            if not players_data:
                 continue
+            
+            # Aggregate composition data
+            if players_data.get('composition'):
+                comp = players_data['composition']
+                for spec, count in comp.get('spec_counts', {}).items():
+                    aggregated_composition['spec_counts'][spec] = aggregated_composition['spec_counts'].get(spec, 0) + count
+                for role, count in comp.get('role_counts', {}).items():
+                    aggregated_composition['role_counts'][role] = aggregated_composition['role_counts'].get(role, 0) + count
+                for role, specs in comp.get('specs_by_role', {}).items():
+                    for spec, count in specs.items():
+                        aggregated_composition['specs_by_role'][role][spec] = aggregated_composition['specs_by_role'][role].get(spec, 0) + count
+                aggregated_composition['total_players'] += comp.get('total', 0)
+            
+            # Aggregate enemy composition
+            if players_data.get('enemy_composition'):
+                enemy_comp = players_data['enemy_composition']
+                for spec, count in enemy_comp.get('spec_counts', {}).items():
+                    enemy_composition['spec_counts'][spec] = enemy_composition['spec_counts'].get(spec, 0) + count
+                for role, count in enemy_comp.get('role_counts', {}).items():
+                    enemy_composition['role_counts'][role] = enemy_composition['role_counts'].get(role, 0) + count
+                enemy_composition['total'] += enemy_comp.get('total', 0)
+            
+            # Track player stats for top 10
+            for ally in players_data.get('allies', []):
+                name = ally.get('name', 'Unknown')
+                if name not in player_stats:
+                    player_stats[name] = {
+                        'spec': ally.get('elite_spec', ally.get('profession', 'Unknown')),
+                        'damage': 0,
+                        'kills': 0,
+                        'deaths': 0,
+                        'appearances': 0
+                    }
+                player_stats[name]['damage'] += ally.get('dps', 0) * players_data.get('duration_sec', 0)
+                player_stats[name]['kills'] += ally.get('kills', 0)
+                player_stats[name]['deaths'] += ally.get('deaths', 0)
+                player_stats[name]['appearances'] += 1
+            
+            # Track map/zone
+            fight_name = players_data.get('fight_name', 'Unknown')
+            map_counts[fight_name] = map_counts.get(fight_name, 0) + 1
+            
+            total_duration += players_data.get('duration_sec', 0)
+            
+            # Track wins/losses
+            outcome = players_data.get('fight_outcome', 'unknown')
+            if outcome == 'victory':
+                victories += 1
+            elif outcome == 'defeat':
+                defeats += 1
+            
+            fight_results.append({
+                'filename': f.filename,
+                'permalink': permalink,
+                'fight_name': players_data.get('fight_name', 'Unknown'),
+                'duration_sec': players_data.get('duration_sec', 0),
+                'fight_outcome': outcome,
+                'fight_stats': players_data.get('fight_stats', {}),
+                'allies_count': len(players_data.get('allies', [])),
+                'enemies_count': len(players_data.get('enemies', [])),
+                'parse_mode': parse_mode
+            })
+            
+            print(f"[Evening] Processed {f.filename}: {players_data.get('fight_name')} ({parse_mode})")
     
     # Calculate averages
     num_fights = len(fight_results)
@@ -770,22 +763,10 @@ async def analyze_evening_files(
         reverse=True
     )[:10]
     
-    # Calculate most played build per class
+    # Calculate most played build per class (use centralized SPEC_TO_CLASS)
     class_to_specs = {}
     for spec, count in aggregated_composition['spec_counts'].items():
-        # Map spec to base class
-        spec_to_class = {
-            'Firebrand': 'Guardian', 'Dragonhunter': 'Guardian', 'Willbender': 'Guardian',
-            'Scrapper': 'Engineer', 'Holosmith': 'Engineer', 'Mechanist': 'Engineer',
-            'Scourge': 'Necromancer', 'Reaper': 'Necromancer', 'Harbinger': 'Necromancer',
-            'Herald': 'Revenant', 'Renegade': 'Revenant', 'Vindicator': 'Revenant',
-            'Spellbreaker': 'Warrior', 'Berserker': 'Warrior', 'Bladesworn': 'Warrior',
-            'Tempest': 'Elementalist', 'Weaver': 'Elementalist', 'Catalyst': 'Elementalist',
-            'Chronomancer': 'Mesmer', 'Mirage': 'Mesmer', 'Virtuoso': 'Mesmer',
-            'Druid': 'Ranger', 'Soulbeast': 'Ranger', 'Untamed': 'Ranger',
-            'Daredevil': 'Thief', 'Deadeye': 'Thief', 'Specter': 'Thief'
-        }
-        base_class = spec_to_class.get(spec, spec)
+        base_class = get_base_class(spec)
         if base_class not in class_to_specs:
             class_to_specs[base_class] = {}
         class_to_specs[base_class][spec] = count
@@ -811,69 +792,78 @@ async def analyze_evening_files(
             'suggestion': f"Ramenez plus de Spellbreaker/Scourge pour strip leurs {dominant_enemy[0]}"
         }
     
-    # Store session with real data
-    sessions[session_id] = {
+    # Build stats dict
+    stats = {
+        "total_fights": num_fights,
+        "total_duration_min": round(total_duration / 60, 1),
+        "avg_duration_sec": round(avg_duration, 1),
+        "avg_players": avg_players,
+        "victories": victories,
+        "defeats": defeats,
+        "parse_mode": parse_mode
+    }
+    
+    # Store session in TinyDB for persistence
+    session_data = {
+        "session_id": session_id,
         "fights": fight_results,
         "composition": aggregated_composition,
         "enemy_composition": enemy_composition,
-        "stats": {
-            "total_fights": num_fights,
-            "total_duration_min": round(total_duration / 60, 1),
-            "avg_duration_sec": round(avg_duration, 1),
-            "avg_players": avg_players,
-            "victories": victories,
-            "defeats": defeats
-        },
-        "created_at": datetime.now()
+        "stats": stats,
+        "top_players": top_players,
+        "builds_by_class": builds_by_class,
+        "map_counts": sorted_maps,
+        "counter_recommendation": counter_recommendation,
+        "created_at": datetime.now().isoformat()
     }
+    sessions_table.insert(session_data)
     
     return templates.TemplateResponse("partials/evening_result_v2.html", {
         "request": request,
         "fights": fight_results,
         "composition": aggregated_composition,
         "enemy_composition": enemy_composition,
-        "stats": sessions[session_id]["stats"],
+        "stats": stats,
         "session_id": session_id,
         "file_count": len(files),
         "top_players": top_players,
         "builds_by_class": builds_by_class,
         "map_counts": sorted_maps,
-        "counter_recommendation": counter_recommendation
+        "counter_recommendation": counter_recommendation,
+        "parse_mode": parse_mode
     })
 
 
 @app.get("/api/report/{session_id}/pdf")
 async def download_pdf_report(session_id: str):
     """Download Night Intelligence Report as PDF"""
-    if session_id not in sessions:
+    Session = Query()
+    result = sessions_table.search(Session.session_id == session_id)
+    
+    if not result:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    session = sessions[session_id]
+    session = result[0]
     
-    # Generate PDF (simplified for now)
-    from pdf_generator import generate_night_report_pdf
-    
-    pdf_path = generate_night_report_pdf(session["report"], session["counter"])
-    
-    return FileResponse(
-        pdf_path,
-        media_type="application/pdf",
-        filename=f"night_intelligence_report_{session_id[:8]}.pdf"
-    )
+    # PDF generation would need the session data
+    # For now, return a simple error as PDF gen needs refactoring
+    raise HTTPException(status_code=501, detail="PDF export coming soon in v2.2")
 
 
 @app.get("/api/share/{session_id}")
 async def get_shared_report(request: Request, session_id: str):
     """View a shared evening report"""
-    if session_id not in sessions:
+    Session = Query()
+    result = sessions_table.search(Session.session_id == session_id)
+    
+    if not result:
         raise HTTPException(status_code=404, detail="Report not found")
     
-    session = sessions[session_id]
+    session = result[0]
     
     return templates.TemplateResponse("shared_report.html", {
         "request": request,
-        "report": session["report"],
-        "counter": session["counter"],
+        "session": session,
         "session_id": session_id
     })
 

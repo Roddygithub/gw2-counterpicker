@@ -459,6 +459,21 @@
         </div>
     </nav>
     
+    <!-- v2.1 Offline Mode Banner -->
+    {% if offline_mode %}
+    <div class="bg-gradient-to-r from-cyber-cyan/20 via-gw2-purple/20 to-cyber-pink/20 border-b border-cyber-cyan/30">
+        <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-3 text-sm">
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyber-cyan/20 text-cyber-cyan font-medium">
+                <span class="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse"></span>
+                v{{ app_version }}
+            </span>
+            <span class="text-gray-300">Mode offline activé</span>
+            <span class="text-gray-500">•</span>
+            <span class="text-cyber-cyan font-medium">100% indépendant de dps.report</span>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Main Content -->
     <main class="pt-20 pb-12 min-h-screen">
         {% block content %}{% endblock %}

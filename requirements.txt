@@ -22,3 +22,6 @@ reportlab>=4.0.0
 
 # Utilities
 python-dotenv>=1.0.0
+
+# Database (lightweight persistence)
+tinydb>=4.8.0
