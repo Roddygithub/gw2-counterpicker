@@ -459,19 +459,31 @@
         </div>
     </nav>
     
-    <!-- v2.1 Offline Mode Banner -->
-    {% if offline_mode %}
-    <div class="bg-gradient-to-r from-cyber-cyan/20 via-gw2-purple/20 to-cyber-pink/20 border-b border-cyber-cyan/30">
+    <!-- v3.0 IA VIVANTE Banner -->
+    {% if ai_mode %}
+    <div class="bg-gradient-to-r from-red-900/30 via-orange-900/20 to-red-900/30 border-b border-red-500/30">
         <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-3 text-sm">
-            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyber-cyan/20 text-cyber-cyan font-medium">
-                <span class="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse"></span>
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                 v{{ app_version }}
             </span>
-            <span class="text-gray-300">Mode offline activé</span>
+            <span class="text-red-400 font-bold">⚡ IA VIVANTE</span>
             <span class="text-gray-500">•</span>
-            <span class="text-cyber-cyan font-medium">100% indépendant de dps.report</span>
+            <span class="text-gray-300">Entraînée sur <span class="text-white font-medium" id="fights-count">X</span> fights réels</span>
+            <span class="text-gray-500">•</span>
+            <span class="text-orange-400 font-medium">Évolue à chaque upload</span>
         </div>
     </div>
+    <script>
+    // Fetch AI status to update fights count
+    fetch('/api/ai/status')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('fights-count');
+            if (el) el.textContent = data.total_fights || 0;
+        })
+        .catch(() => {});
+    </script>
     {% endif %}
     
     <!-- Main Content -->

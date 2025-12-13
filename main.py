@@ -2,7 +2,8 @@
 GW2 CounterPicker - The Ultimate WvW Intelligence Tool
 "Le seul outil capable de lire dans l'âme de ton adversaire. Et dans celle de tout son serveur."
 
-v2.1 - Mode Offline activé - 100% indépendant de dps.report
+v3.0 - IA VIVANTE - Apprend de chaque fight uploadé
+Powered by Llama 3.2 8B via Ollama
 
 Made with rage, love and 15 years of WvW pain.
 """
@@ -30,7 +31,6 @@ from models import (
     HeatmapData, TopPlayer
 )
 from parser import RealEVTCParser
-from counter_engine import CounterPickEngine
 from role_detector import (
     estimate_role_from_profession, 
     detect_role_advanced, 
@@ -38,11 +38,17 @@ from role_detector import (
     get_base_class,
     SPEC_TO_CLASS
 )
+from counter_ai import (
+    record_fight_for_learning,
+    get_ai_counter,
+    get_ai_status,
+    counter_ai
+)
 
 app = FastAPI(
     title="GW2 CounterPicker",
-    description="The most powerful WvW intelligence tool ever created - Now with offline mode!",
-    version="2.1.0"
+    description="The most powerful WvW intelligence tool ever created - IA VIVANTE powered by Llama 3.2",
+    version="3.0.0"
 )
 
 # Mount static files
@@ -51,11 +57,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Templates
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["app_version"] = app.version
-templates.env.globals["offline_mode"] = True  # v2.1 feature flag
+templates.env.globals["offline_mode"] = True
+templates.env.globals["ai_mode"] = True  # v3.0 IA VIVANTE
 
 # Initialize engines
 real_parser = RealEVTCParser()
-counter_engine = CounterPickEngine()
 
 # Persistent session storage with TinyDB
 DB_PATH = Path("data")
@@ -93,12 +99,23 @@ async def evening_page(request: Request):
 
 @app.get("/meta", response_class=HTMLResponse)
 async def meta_page(request: Request):
-    """Meta 2025 page - Current trending builds"""
-    meta_data = counter_engine.get_current_meta()
+    """Meta 2025 page - Current trending builds with AI status"""
+    # Load meta data from static file (no more counter_engine dependency)
+    meta_file = Path("data/meta_2025.json")
+    if meta_file.exists():
+        with open(meta_file) as f:
+            meta_data = json.load(f)
+    else:
+        meta_data = get_default_meta_data()
+    
+    # Add AI learning status
+    ai_status = get_ai_status()
+    
     return templates.TemplateResponse("meta.html", {
         "request": request,
         "title": "Meta 2025",
-        "meta_data": meta_data
+        "meta_data": meta_data,
+        "ai_status": ai_status
     })
 
 
@@ -123,13 +140,21 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
                 players_data = extract_players_from_ei_json(log_data)
                 
                 enemy_composition = build_composition_from_enemies(players_data['enemies'])
-                counter = counter_engine.generate_counter(enemy_composition)
+                
+                # Record fight for AI learning
+                players_data['source'] = 'dps_report'
+                players_data['source_name'] = url
+                record_fight_for_learning(players_data)
+                
+                # Generate AI counter
+                enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
+                ai_counter = await get_ai_counter(enemy_spec_counts)
                 
                 return templates.TemplateResponse("partials/dps_report_result.html", {
                     "request": request,
                     "data": log_data,
                     "players": players_data,
-                    "counter": counter,
+                    "ai_counter": ai_counter,
                     "permalink": url,
                     "filename": "dps.report URL",
                     "timestamp": datetime.now().strftime("%H:%M:%S"),
@@ -184,7 +209,15 @@ async def analyze_single_evtc(
                         log_data = json_response.json()
                         players_data = extract_players_from_ei_json(log_data)
                         enemy_composition = build_composition_from_enemies(players_data['enemies'])
-                        counter = counter_engine.generate_counter(enemy_composition)
+                        
+                        # Record fight for AI learning
+                        players_data['source'] = 'dps_report'
+                        players_data['source_name'] = permalink
+                        record_fight_for_learning(players_data)
+                        
+                        # Generate AI counter
+                        enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
+                        ai_counter = await get_ai_counter(enemy_spec_counts)
                         
                         print(f"[EVTC] dps.report success: {len(players_data['enemies'])} enemies")
                         
@@ -192,7 +225,7 @@ async def analyze_single_evtc(
                             "request": request,
                             "data": log_data,
                             "players": players_data,
-                            "counter": counter,
+                            "ai_counter": ai_counter,
                             "permalink": permalink,
                             "filename": file.filename,
                             "timestamp": datetime.now().strftime("%H:%M:%S"),
@@ -209,7 +242,15 @@ async def analyze_single_evtc(
         # Convert parsed log to players_data format
         players_data = convert_parsed_log_to_players_data(parsed_log)
         enemy_composition = build_composition_from_enemies(players_data['enemies'])
-        counter = counter_engine.generate_counter(enemy_composition)
+        
+        # Record fight for AI learning
+        players_data['source'] = 'evtc'
+        players_data['source_name'] = file.filename
+        record_fight_for_learning(players_data)
+        
+        # Generate AI counter
+        enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
+        ai_counter = await get_ai_counter(enemy_spec_counts)
         
         print(f"[EVTC] Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
         
@@ -217,7 +258,7 @@ async def analyze_single_evtc(
             "request": request,
             "data": {"fightName": f"Offline: {file.filename}", "duration": f"{parsed_log.duration_seconds}s"},
             "players": players_data,
-            "counter": counter,
+            "ai_counter": ai_counter,
             "permalink": "",
             "filename": file.filename,
             "timestamp": datetime.now().strftime("%H:%M:%S"),
@@ -871,7 +912,45 @@ async def get_shared_report(request: Request, session_id: str):
 @app.get("/health")
 async def health_check():
     """Health check endpoint for deployment"""
-    return {"status": "operational", "message": "GW2 CounterPicker is ready for war"}
+    ai_status = get_ai_status()
+    return {
+        "status": "operational", 
+        "message": "GW2 CounterPicker v3.0 - IA VIVANTE",
+        "ai_status": ai_status
+    }
+
+
+@app.get("/api/ai/status")
+async def ai_status_endpoint():
+    """Get AI learning status"""
+    return get_ai_status()
+
+
+def get_default_meta_data() -> dict:
+    """Default meta data when no file exists"""
+    return {
+        "last_updated": "Décembre 2025",
+        "tier_s": [
+            {"name": "Firebrand", "role": "stab", "description": "Stabilité + Aegis + Quickness", "icon": "firebrand"},
+            {"name": "Scrapper", "role": "heal", "description": "Heal + Superspeed + Barrier", "icon": "scrapper"},
+            {"name": "Spellbreaker", "role": "strip", "description": "Full Counter + Boon Strip", "icon": "spellbreaker"}
+        ],
+        "tier_a": [
+            {"name": "Scourge", "role": "dps", "description": "Condi Pressure + Corrupt", "icon": "scourge"},
+            {"name": "Herald", "role": "boon", "description": "Boons + Facet of Nature", "icon": "herald"},
+            {"name": "Tempest", "role": "heal", "description": "Aura Share + Heal", "icon": "tempest"}
+        ],
+        "tier_b": [
+            {"name": "Reaper", "role": "dps", "description": "Power Burst + Shroud", "icon": "reaper"},
+            {"name": "Chronomancer", "role": "strip", "description": "Gravity Well + Strip", "icon": "chronomancer"},
+            {"name": "Vindicator", "role": "boon", "description": "Alliance Stance + Leap", "icon": "vindicator"}
+        ],
+        "tier_c": [
+            {"name": "Harbinger", "role": "dps", "description": "Elixir + Shroud DPS", "icon": "harbinger"},
+            {"name": "Willbender", "role": "dps", "description": "Roamer + Burst", "icon": "willbender"},
+            {"name": "Druid", "role": "heal", "description": "Spirits + Heal", "icon": "druid"}
+        ]
+    }
 
 
 if __name__ == "__main__":

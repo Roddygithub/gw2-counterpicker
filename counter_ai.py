@@ -1,0 +1,375 @@
+"""
+GW2 CounterPicker v3.0 - IA VIVANTE
+Système d'apprentissage automatique des counters WvW
+Powered by Llama 3.2 8B via Ollama
+"""
+
+import json
+import httpx
+from datetime import datetime, timedelta
+from typing import Optional, Dict, List, Any
+from dataclasses import dataclass, asdict
+from pathlib import Path
+
+from tinydb import TinyDB, Query
+
+# === CONFIGURATION ===
+OLLAMA_URL = "http://localhost:11434"
+MODEL_NAME = "llama3.2:8b-instruct-q5_K_M"
+FIGHTS_DB_PATH = Path("data/fights.db")
+
+# Ensure data directory exists
+FIGHTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+# Initialize TinyDB for fight history
+fights_db = TinyDB(str(FIGHTS_DB_PATH))
+fights_table = fights_db.table('fights')
+stats_table = fights_db.table('stats')
+
+
+@dataclass
+class FightRecord:
+    """Record of a single fight for learning"""
+    fight_id: str
+    timestamp: str
+    source: str  # 'evtc' or 'dps_report'
+    source_name: str  # filename or permalink
+    
+    # Compositions
+    enemy_composition: Dict[str, int]  # {spec: count}
+    ally_composition: Dict[str, int]
+    
+    # Outcome
+    outcome: str  # 'victory', 'defeat', 'draw'
+    duration_sec: float
+    ally_deaths: int
+    enemy_deaths: int
+    
+    # Stats
+    total_ally_damage: int
+    total_enemy_damage: int
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> 'FightRecord':
+        return cls(**data)
+
+
+class CounterAI:
+    """
+    IA Vivante - Learns from every fight uploaded
+    Uses Llama 3.2 8B to generate counter recommendations
+    """
+    
+    def __init__(self):
+        self.ollama_available = False
+        self._check_ollama()
+    
+    def _check_ollama(self) -> bool:
+        """Check if Ollama is running and model is available"""
+        try:
+            response = httpx.get(f"{OLLAMA_URL}/api/tags", timeout=5.0)
+            if response.status_code == 200:
+                models = response.json().get('models', [])
+                model_names = [m.get('name', '') for m in models]
+                self.ollama_available = any(MODEL_NAME in name for name in model_names)
+                if not self.ollama_available:
+                    print(f"[CounterAI] Model {MODEL_NAME} not found. Available: {model_names}")
+                else:
+                    print(f"[CounterAI] ✓ Ollama ready with {MODEL_NAME}")
+                return self.ollama_available
+        except Exception as e:
+            print(f"[CounterAI] Ollama not available: {e}")
+            self.ollama_available = False
+        return False
+    
+    def record_fight(self, fight_data: dict) -> str:
+        """
+        Record a fight for learning
+        Called automatically after each analysis
+        Returns the fight_id
+        """
+        fight_id = f"fight_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(fights_table)}"
+        
+        # Extract compositions from fight data
+        enemy_comp = {}
+        ally_comp = {}
+        
+        # From enemy_composition
+        if 'enemy_composition' in fight_data:
+            enemy_comp = fight_data['enemy_composition'].get('spec_counts', {})
+        
+        # From composition (allies)
+        if 'composition' in fight_data:
+            ally_comp = fight_data['composition'].get('spec_counts', {})
+        
+        # Determine outcome
+        outcome = fight_data.get('fight_outcome', 'unknown')
+        if outcome == 'unknown':
+            # Calculate from stats
+            ally_deaths = fight_data.get('fight_stats', {}).get('ally_deaths', 0)
+            enemy_deaths = len(fight_data.get('enemies', []))
+            if ally_deaths <= 2 and enemy_deaths >= 5:
+                outcome = 'victory'
+            elif ally_deaths >= 5:
+                outcome = 'defeat'
+            else:
+                outcome = 'draw'
+        
+        record = FightRecord(
+            fight_id=fight_id,
+            timestamp=datetime.now().isoformat(),
+            source=fight_data.get('source', 'evtc'),
+            source_name=fight_data.get('source_name', 'unknown'),
+            enemy_composition=enemy_comp,
+            ally_composition=ally_comp,
+            outcome=outcome,
+            duration_sec=fight_data.get('duration_sec', 0),
+            ally_deaths=fight_data.get('fight_stats', {}).get('ally_deaths', 0),
+            enemy_deaths=fight_data.get('fight_stats', {}).get('enemy_deaths', 0),
+            total_ally_damage=fight_data.get('fight_stats', {}).get('ally_damage', 0),
+            total_enemy_damage=fight_data.get('fight_stats', {}).get('enemy_damage_taken', 0)
+        )
+        
+        fights_table.insert(record.to_dict())
+        self._update_stats()
+        
+        print(f"[CounterAI] Recorded fight {fight_id}: {outcome} vs {list(enemy_comp.keys())[:3]}...")
+        return fight_id
+    
+    def _update_stats(self):
+        """Update global stats"""
+        total_fights = len(fights_table)
+        victories = len(fights_table.search(Query().outcome == 'victory'))
+        
+        stats_table.truncate()
+        stats_table.insert({
+            'total_fights': total_fights,
+            'victories': victories,
+            'win_rate': round((victories / total_fights * 100) if total_fights > 0 else 0, 1),
+            'last_updated': datetime.now().isoformat()
+        })
+    
+    def get_stats(self) -> dict:
+        """Get current learning stats"""
+        stats = stats_table.all()
+        if stats:
+            return stats[0]
+        return {
+            'total_fights': 0,
+            'victories': 0,
+            'win_rate': 0,
+            'last_updated': None
+        }
+    
+    def _find_similar_fights(self, enemy_comp: Dict[str, int], limit: int = 30) -> List[dict]:
+        """Find fights with similar enemy compositions"""
+        all_fights = fights_table.all()
+        
+        # Score each fight by composition similarity
+        scored_fights = []
+        enemy_specs = set(enemy_comp.keys())
+        
+        for fight in all_fights:
+            fight_enemy_specs = set(fight.get('enemy_composition', {}).keys())
+            
+            # Jaccard similarity
+            intersection = len(enemy_specs & fight_enemy_specs)
+            union = len(enemy_specs | fight_enemy_specs)
+            similarity = intersection / union if union > 0 else 0
+            
+            if similarity > 0.3:  # At least 30% similar
+                scored_fights.append({
+                    'fight': fight,
+                    'similarity': similarity
+                })
+        
+        # Sort by similarity and return top N
+        scored_fights.sort(key=lambda x: x['similarity'], reverse=True)
+        return [sf['fight'] for sf in scored_fights[:limit]]
+    
+    def _format_fights_summary(self, fights: List[dict]) -> str:
+        """Format fight history for the prompt"""
+        if not fights:
+            return "Aucun fight similaire enregistré."
+        
+        summary_lines = []
+        for i, fight in enumerate(fights[:30], 1):
+            enemy = fight.get('enemy_composition', {})
+            ally = fight.get('ally_composition', {})
+            outcome = fight.get('outcome', 'unknown')
+            
+            # Top 3 enemy specs
+            top_enemy = sorted(enemy.items(), key=lambda x: x[1], reverse=True)[:3]
+            enemy_str = ", ".join([f"{count}x {spec}" for spec, count in top_enemy])
+            
+            # Top 3 ally specs
+            top_ally = sorted(ally.items(), key=lambda x: x[1], reverse=True)[:3]
+            ally_str = ", ".join([f"{count}x {spec}" for spec, count in top_ally])
+            
+            result_emoji = "✓" if outcome == 'victory' else "✗" if outcome == 'defeat' else "~"
+            summary_lines.append(f"{result_emoji} Ennemi: {enemy_str} | Nous: {ally_str}")
+        
+        return "\n".join(summary_lines)
+    
+    def _format_enemy_comp(self, enemy_comp: Dict[str, int]) -> str:
+        """Format enemy composition for display"""
+        sorted_comp = sorted(enemy_comp.items(), key=lambda x: x[1], reverse=True)
+        return " + ".join([f"{count} {spec}" for spec, count in sorted_comp])
+    
+    async def generate_counter(self, enemy_comp: Dict[str, int]) -> dict:
+        """
+        Generate counter recommendation using Llama 3.2 8B
+        Returns dict with recommendation and metadata
+        """
+        stats = self.get_stats()
+        similar_fights = self._find_similar_fights(enemy_comp)
+        fights_summary = self._format_fights_summary(similar_fights)
+        enemy_str = self._format_enemy_comp(enemy_comp)
+        
+        # Check Ollama availability
+        if not self.ollama_available:
+            self._check_ollama()
+        
+        if not self.ollama_available:
+            return self._fallback_counter(enemy_comp, stats)
+        
+        # THE PROMPT - Exactly as specified
+        prompt = f"""Tu es le meilleur commandant WvW EU de l'histoire. Tu as analysé plus de 10 000 fights réels.
+Composition ennemie actuelle : {enemy_str}
+Voici les 30 derniers fights similaires que nous avons joués :
+{fights_summary}
+
+Donne-moi en 4 lignes maximum le counter parfait à jouer avec un groupe de 15-50 joueurs.
+Sois brutal, précis, et donne les priorités cibles.
+Réponds UNIQUEMENT le counter, rien d'autre."""
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{OLLAMA_URL}/api/generate",
+                    json={
+                        "model": MODEL_NAME,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.7,
+                            "top_p": 0.9,
+                            "num_predict": 256
+                        }
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    counter_text = result.get('response', '').strip()
+                    
+                    # Calculate precision based on similar fights win rate
+                    if similar_fights:
+                        wins = sum(1 for f in similar_fights if f.get('outcome') == 'victory')
+                        precision = round((wins / len(similar_fights)) * 100, 1)
+                    else:
+                        precision = 85.0  # Default for new compositions
+                    
+                    return {
+                        'success': True,
+                        'counter': counter_text,
+                        'precision': precision,
+                        'fights_analyzed': stats['total_fights'],
+                        'similar_fights': len(similar_fights),
+                        'model': MODEL_NAME,
+                        'enemy_composition': enemy_str,
+                        'generated_at': datetime.now().isoformat()
+                    }
+                else:
+                    print(f"[CounterAI] Ollama error: {response.status_code}")
+                    return self._fallback_counter(enemy_comp, stats)
+                    
+        except Exception as e:
+            print(f"[CounterAI] Generation error: {e}")
+            return self._fallback_counter(enemy_comp, stats)
+    
+    def _fallback_counter(self, enemy_comp: Dict[str, int], stats: dict) -> dict:
+        """Fallback counter when Ollama is not available"""
+        enemy_str = self._format_enemy_comp(enemy_comp)
+        
+        # Basic rule-based counter
+        counter_lines = []
+        
+        # Analyze enemy composition
+        has_fb = any('Firebrand' in spec for spec in enemy_comp.keys())
+        has_scrapper = any('Scrapper' in spec for spec in enemy_comp.keys())
+        has_scourge = any('Scourge' in spec for spec in enemy_comp.keys())
+        has_herald = any('Herald' in spec or 'Vindicator' in spec for spec in enemy_comp.keys())
+        
+        if has_fb:
+            counter_lines.append("→ 2-3 Spellbreaker full strip pour neutraliser les Firebrand")
+        if has_scrapper:
+            counter_lines.append("→ Reaper/Harbinger burst pour percer le barrier Scrapper")
+        if has_scourge:
+            counter_lines.append("→ Burst power coordonné, éviter les fights prolongés")
+        if has_herald:
+            counter_lines.append("→ Focus les Herald en premier, ils feed les boons")
+        
+        if not counter_lines:
+            counter_lines = [
+                "→ Composition standard: 2 Spellbreaker + 2 Scourge + supports",
+                "→ Focus les healers en priorité",
+                "→ Burst coordonné sur le tag ennemi"
+            ]
+        
+        # Add priority targets
+        top_enemy = sorted(enemy_comp.items(), key=lambda x: x[1], reverse=True)[:3]
+        priority = " > ".join([spec for spec, _ in top_enemy])
+        counter_lines.append(f"Priorité: {priority}")
+        
+        return {
+            'success': True,
+            'counter': "\n".join(counter_lines[:4]),
+            'precision': 75.0,  # Lower precision for fallback
+            'fights_analyzed': stats['total_fights'],
+            'similar_fights': 0,
+            'model': 'fallback_rules',
+            'enemy_composition': enemy_str,
+            'generated_at': datetime.now().isoformat(),
+            'fallback': True
+        }
+    
+    def get_learning_status(self) -> dict:
+        """Get current learning status for display"""
+        stats = self.get_stats()
+        
+        # Check Ollama
+        self._check_ollama()
+        
+        return {
+            'ollama_available': self.ollama_available,
+            'model': MODEL_NAME if self.ollama_available else 'fallback_rules',
+            'total_fights': stats['total_fights'],
+            'win_rate': stats['win_rate'],
+            'last_updated': stats.get('last_updated'),
+            'status': 'active' if self.ollama_available else 'fallback'
+        }
+
+
+# Global instance
+counter_ai = CounterAI()
+
+
+# === API Functions ===
+
+def record_fight_for_learning(fight_data: dict) -> str:
+    """Record a fight for AI learning"""
+    return counter_ai.record_fight(fight_data)
+
+
+async def get_ai_counter(enemy_composition: Dict[str, int]) -> dict:
+    """Get AI-generated counter recommendation"""
+    return await counter_ai.generate_counter(enemy_composition)
+
+
+def get_ai_status() -> dict:
+    """Get AI learning status"""
+    return counter_ai.get_learning_status()
