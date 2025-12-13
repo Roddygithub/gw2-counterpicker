@@ -542,6 +542,15 @@ def extract_players_from_ei_json(data: dict) -> dict:
         else:
             fight_outcome = 'draw'
 
+    # Calculate enemy composition summary
+    enemy_spec_counts = {}
+    for e in enemies_sorted:
+        spec = e.get('profession', 'Unknown')
+        enemy_spec_counts[spec] = enemy_spec_counts.get(spec, 0) + 1
+    
+    # Sort enemy specs by count
+    enemy_spec_counts_sorted = dict(sorted(enemy_spec_counts.items(), key=lambda x: x[1], reverse=True))
+
     return {
         'allies': players,
         'enemies': enemies_sorted,
@@ -559,6 +568,10 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'role_counts': role_counts,
             'specs_by_role': specs_by_role,
             'total': len(players)
+        },
+        'enemy_composition': {
+            'spec_counts': enemy_spec_counts_sorted,
+            'total': len(enemies_sorted)
         }
     }
 
