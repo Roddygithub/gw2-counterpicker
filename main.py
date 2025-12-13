@@ -394,7 +394,7 @@ def build_composition_from_enemies(enemies: list) -> CompositionAnalysis:
 
 
 def extract_players_from_ei_json(data: dict) -> dict:
-    """Extract player information from Elite Insights JSON"""
+    """Extract player information from Elite Insights JSON with comprehensive stats"""
 
     def safe_number(value):
         """Convert nested EI values (lists/dicts) to a numeric scalar"""
@@ -414,10 +414,22 @@ def extract_players_from_ei_json(data: dict) -> dict:
             return safe_number(value[0])
         return 0
 
+    # Boon IDs for tracking
+    BOON_IDS = {
+        'quickness': 1187,
+        'protection': 717,
+        'vigor': 726,
+        'aegis': 743,
+        'stability': 1122,
+        'resistance': 26980,
+        'superspeed': 5974
+    }
+
     # Get fight duration using centralized parser
     duration_sec = parse_duration_string(data.get('duration', '0'))
 
     players = []
+    group_boon_uptimes = {}  # {group_num: {boon_name: uptime %}}
 
     for player in data.get('players', []):
         # Filter out non-squad allies (names like "Profession pl-XXXX")
@@ -425,10 +437,18 @@ def extract_players_from_ei_json(data: dict) -> dict:
         if ' pl-' in player_name:
             continue  # Skip non-squad allies
         
+        # === DAMAGE OUT ===
         dps_entries = player.get('dpsAll', [])
-        damage_value = safe_number(dps_entries)
+        damage_out = safe_number(dps_entries)
         
-        # Extract support stats (cleanses, resurrects, boon strips)
+        # === DAMAGE IN ===
+        damage_in = 0
+        defenses = player.get('defenses', [{}])
+        if defenses and len(defenses) > 0:
+            d = defenses[0] if isinstance(defenses[0], dict) else {}
+            damage_in = d.get('damageTaken', 0)
+        
+        # === SUPPORT STATS ===
         support_data = player.get('support', [{}])
         support = support_data[0] if support_data else {}
         condi_cleanse = support.get('condiCleanse', 0)
@@ -436,7 +456,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
         resurrects = support.get('resurrects', 0)
         boon_strips = support.get('boonStrips', 0)
         
-        # Extract healing stats (requires ArcDPS healing extension)
+        # === HEALING OUT (includes barrier) ===
         healing = 0
         if 'extHealingStats' in player:
             heal_stats = player['extHealingStats']
@@ -448,7 +468,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
                     elif isinstance(oh[0], (int, float)):
                         healing = oh[0]
         
-        # Extract barrier stats
+        # === BARRIER OUT ===
         barrier = 0
         if 'extBarrierStats' in player:
             barrier_stats = player['extBarrierStats']
@@ -460,31 +480,96 @@ def extract_players_from_ei_json(data: dict) -> dict:
                     elif isinstance(ob[0], (int, float)):
                         barrier = ob[0]
         
-        # Extract down contribution and other stats
+        healing_total = healing + barrier
+        
+        # === DOWN CONTRIBUTION & CC OUT ===
         down_contrib = 0
+        cc_out = 0
+        deaths = 0
+        downs = 0
         stats_all = player.get('statsAll', [{}])
         if stats_all and len(stats_all) > 0:
             stats = stats_all[0] if isinstance(stats_all[0], dict) else {}
             down_contrib = stats.get('downContribution', 0)
+            cc_out = stats.get('interrupts', 0) + stats.get('knockdowns', 0)
         
-        # Extract stability generation from groupBuffs (buff id 1122)
-        stab_gen = 0
-        for buff in player.get('groupBuffs', []):
-            if buff.get('id') == 1122:  # Stability buff ID
-                buff_data = buff.get('buffData', [{}])
-                if buff_data and len(buff_data) > 0:
-                    stab_gen = buff_data[0].get('generation', 0)
-                break
+        if defenses and len(defenses) > 0:
+            d = defenses[0] if isinstance(defenses[0], dict) else {}
+            deaths = d.get('deadCount', 0)
+            downs = d.get('downCount', 0)
+            # CC received (stuns, knockdowns, etc.)
         
-        # Calculate per-second values
-        cleanses_per_sec = round(condi_cleanse / duration_sec, 2) if duration_sec > 0 else 0
+        # === BOON STRIP IN (received from enemies) ===
+        boon_strip_in = 0
+        if defenses and len(defenses) > 0:
+            d = defenses[0] if isinstance(defenses[0], dict) else {}
+            boon_strip_in = d.get('boonStrips', 0)
+        
+        # === BOON GENERATION ===
+        boon_gen = {}
+        for boon_name, boon_id in BOON_IDS.items():
+            for buff in player.get('groupBuffs', []):
+                if buff.get('id') == boon_id:
+                    buff_data = buff.get('buffData', [{}])
+                    if buff_data and len(buff_data) > 0:
+                        boon_gen[boon_name] = buff_data[0].get('generation', 0)
+                    break
+            if boon_name not in boon_gen:
+                boon_gen[boon_name] = 0
+        
+        # === BOON UPTIME (received) ===
+        boon_uptime = {}
+        for boon_name, boon_id in BOON_IDS.items():
+            for buff in player.get('buffUptimes', []):
+                if buff.get('id') == boon_id:
+                    boon_uptime[boon_name] = buff.get('buffData', [{}])[0].get('uptime', 0) if buff.get('buffData') else 0
+                    break
+            if boon_name not in boon_uptime:
+                boon_uptime[boon_name] = 0
+        
+        # === SKILL USAGE ===
+        skill_usage = []
+        for rotation in player.get('rotation', []):
+            skill_id = rotation.get('id', 0)
+            skill_name = rotation.get('skill', f'Skill_{skill_id}')
+            casts = len(rotation.get('skills', []))
+            if duration_sec > 0:
+                casts_per_min = round(casts / (duration_sec / 60), 2)
+            else:
+                casts_per_min = 0
+            skill_usage.append({
+                'id': skill_id,
+                'name': skill_name,
+                'casts': casts,
+                'casts_per_min': casts_per_min
+            })
+        
+        # === PER-SECOND VALUES ===
+        if duration_sec > 0:
+            dps = round(damage_out / duration_sec, 1)
+            cleanses_per_sec = round(condi_cleanse / duration_sec, 2)
+            down_contrib_per_sec = round(down_contrib / duration_sec, 2)
+            cc_per_sec = round(cc_out / duration_sec, 2)
+            healing_per_sec = round(healing_total / duration_sec, 1)
+            strips_per_sec = round(boon_strips / duration_sec, 2)
+            strip_in_per_sec = round(boon_strip_in / duration_sec, 2)
+        else:
+            dps = cleanses_per_sec = down_contrib_per_sec = cc_per_sec = 0
+            healing_per_sec = strips_per_sec = strip_in_per_sec = 0
         
         profession = player.get('profession', 'Unknown')
+        group = player.get('group', 0)
+        
+        # Track group boon uptimes
+        if group not in group_boon_uptimes:
+            group_boon_uptimes[group] = {b: [] for b in BOON_IDS.keys()}
+        for boon_name, uptime in boon_uptime.items():
+            group_boon_uptimes[group][boon_name].append(uptime)
         
         # Use advanced role detection with all stats
         role_stats = {
             'healing': healing,
-            'stab_gen': stab_gen,
+            'stab_gen': boon_gen.get('stability', 0),
             'cleanses_per_sec': cleanses_per_sec,
             'strips': boon_strips,
             'down_contrib': down_contrib,
@@ -497,15 +582,40 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'name': player.get('name', 'Unknown'),
             'account': player.get('account', ''),
             'profession': profession,
-            'group': player.get('group', 0),
-            'damage': int(damage_value),
+            'group': group,
             'is_commander': player.get('hasCommanderTag', False),
+            'role': role,
+            # Damage
+            'damage_out': int(damage_out),
+            'damage_in': int(damage_in),
+            'dps': dps,
+            'damage_ratio': round(damage_out / damage_in, 2) if damage_in > 0 else 999,
+            # Combat stats
+            'down_contrib': down_contrib,
+            'down_contrib_per_sec': down_contrib_per_sec,
+            'cc_out': cc_out,
+            'cc_per_sec': cc_per_sec,
+            'deaths': deaths,
+            'downs': downs,
+            # Support stats
             'cleanses': condi_cleanse,
             'cleanses_self': condi_cleanse_self,
             'cleanses_per_sec': cleanses_per_sec,
-            'resurrects': resurrects,
+            'healing': healing_total,
+            'healing_per_sec': healing_per_sec,
             'boon_strips': boon_strips,
-            'role': role,
+            'strips_per_sec': strips_per_sec,
+            'resurrects': resurrects,
+            # Defensive
+            'boon_strip_in': boon_strip_in,
+            'strip_in_per_sec': strip_in_per_sec,
+            # Boons
+            'boon_gen': boon_gen,
+            'boon_uptime': boon_uptime,
+            # Skills
+            'skill_usage': sorted(skill_usage, key=lambda x: x['casts'], reverse=True)[:20],
+            # Legacy compatibility
+            'damage': int(damage_out),
         })
 
     # Get targets (enemies in WvW)
@@ -603,6 +713,26 @@ def extract_players_from_ei_json(data: dict) -> dict:
     # Sort enemy specs by count
     enemy_spec_counts_sorted = dict(sorted(enemy_spec_counts.items(), key=lambda x: x[1], reverse=True))
 
+    # Calculate average boon uptimes per group
+    group_boon_avg = {}
+    for group, boons in group_boon_uptimes.items():
+        group_boon_avg[group] = {}
+        for boon_name, uptimes in boons.items():
+            group_boon_avg[group][boon_name] = round(sum(uptimes) / len(uptimes), 1) if uptimes else 0
+    
+    # Calculate squad totals
+    squad_totals = {
+        'damage_out': sum(p.get('damage_out', 0) for p in players),
+        'damage_in': sum(p.get('damage_in', 0) for p in players),
+        'healing': sum(p.get('healing', 0) for p in players),
+        'cleanses': sum(p.get('cleanses', 0) for p in players),
+        'boon_strips': sum(p.get('boon_strips', 0) for p in players),
+        'down_contrib': sum(p.get('down_contrib', 0) for p in players),
+        'cc_out': sum(p.get('cc_out', 0) for p in players),
+        'resurrects': sum(p.get('resurrects', 0) for p in players),
+    }
+    squad_totals['damage_ratio'] = round(squad_totals['damage_out'] / squad_totals['damage_in'], 2) if squad_totals['damage_in'] > 0 else 999
+
     return {
         'allies': players,
         'enemies': enemies_sorted,
@@ -615,6 +745,8 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'ally_damage': total_ally_damage,
             'enemy_damage_taken': total_enemy_damage_taken
         },
+        'squad_totals': squad_totals,
+        'group_boon_uptimes': group_boon_avg,
         'composition': {
             'spec_counts': spec_counts,
             'role_counts': role_counts,

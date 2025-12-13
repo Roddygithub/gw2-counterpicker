@@ -15,7 +15,7 @@ from tinydb import TinyDB, Query
 
 # === CONFIGURATION ===
 OLLAMA_URL = "http://localhost:11434"
-MODEL_NAME = "llama3.2:8b-instruct-q5_K_M"
+MODEL_NAME = "llama3.2"
 FIGHTS_DB_PATH = Path("data/fights.db")
 
 # Ensure data directory exists
@@ -25,6 +25,33 @@ FIGHTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 fights_db = TinyDB(str(FIGHTS_DB_PATH))
 fights_table = fights_db.table('fights')
 stats_table = fights_db.table('stats')
+
+
+@dataclass
+class AllyBuildRecord:
+    """Detailed build information for an ally player"""
+    player_name: str
+    account: str
+    profession: str
+    elite_spec: str
+    role: str
+    group: int
+    
+    # Performance stats
+    damage_out: int
+    damage_in: int
+    dps: float
+    healing: int
+    cleanses: int
+    boon_strips: int
+    down_contrib: int
+    deaths: int
+    
+    # Boon generation
+    boon_gen: Dict[str, float]  # {boon_name: generation %}
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 @dataclass
@@ -38,6 +65,9 @@ class FightRecord:
     # Compositions
     enemy_composition: Dict[str, int]  # {spec: count}
     ally_composition: Dict[str, int]
+    
+    # Detailed ally builds (NEW)
+    ally_builds: List[Dict[str, Any]]  # List of AllyBuildRecord dicts
     
     # Outcome
     outcome: str  # 'victory', 'defeat', 'draw'
@@ -87,7 +117,7 @@ class CounterAI:
     
     def record_fight(self, fight_data: dict) -> str:
         """
-        Record a fight for learning
+        Record a fight for learning with detailed ally build information
         Called automatically after each analysis
         Returns the fight_id
         """
@@ -104,6 +134,28 @@ class CounterAI:
         # From composition (allies)
         if 'composition' in fight_data:
             ally_comp = fight_data['composition'].get('spec_counts', {})
+        
+        # Extract detailed ally builds (NEW)
+        ally_builds = []
+        for ally in fight_data.get('allies', []):
+            build_record = AllyBuildRecord(
+                player_name=ally.get('name', 'Unknown'),
+                account=ally.get('account', ''),
+                profession=ally.get('profession', 'Unknown'),
+                elite_spec=ally.get('profession', 'Unknown'),  # Same as profession in WvW
+                role=ally.get('role', 'dps'),
+                group=ally.get('group', 0),
+                damage_out=ally.get('damage_out', ally.get('damage', 0)),
+                damage_in=ally.get('damage_in', 0),
+                dps=ally.get('dps', 0),
+                healing=ally.get('healing', 0),
+                cleanses=ally.get('cleanses', 0),
+                boon_strips=ally.get('boon_strips', 0),
+                down_contrib=ally.get('down_contrib', 0),
+                deaths=ally.get('deaths', 0),
+                boon_gen=ally.get('boon_gen', {})
+            )
+            ally_builds.append(build_record.to_dict())
         
         # Determine outcome
         outcome = fight_data.get('fight_outcome', 'unknown')
@@ -125,6 +177,7 @@ class CounterAI:
             source_name=fight_data.get('source_name', 'unknown'),
             enemy_composition=enemy_comp,
             ally_composition=ally_comp,
+            ally_builds=ally_builds,
             outcome=outcome,
             duration_sec=fight_data.get('duration_sec', 0),
             ally_deaths=fight_data.get('fight_stats', {}).get('ally_deaths', 0),
@@ -136,8 +189,62 @@ class CounterAI:
         fights_table.insert(record.to_dict())
         self._update_stats()
         
-        print(f"[CounterAI] Recorded fight {fight_id}: {outcome} vs {list(enemy_comp.keys())[:3]}...")
+        # Also store builds in a separate table for quick lookups
+        self._store_build_performance(ally_builds, enemy_comp, outcome)
+        
+        print(f"[CounterAI] Recorded fight {fight_id}: {outcome} vs {list(enemy_comp.keys())[:3]}... ({len(ally_builds)} builds)")
         return fight_id
+    
+    def _store_build_performance(self, ally_builds: List[dict], enemy_comp: Dict[str, int], outcome: str):
+        """Store individual build performance against specific enemy compositions"""
+        builds_table = fights_db.table('builds')
+        
+        for build in ally_builds:
+            # Create a unique build signature
+            spec = build.get('elite_spec', build.get('profession', 'Unknown'))
+            role = build.get('role', 'dps')
+            
+            # Calculate performance score
+            dps = build.get('dps', 0)
+            healing = build.get('healing', 0)
+            down_contrib = build.get('down_contrib', 0)
+            deaths = build.get('deaths', 0)
+            
+            # Performance score based on role
+            if role == 'healer':
+                score = healing + (build.get('cleanses', 0) * 10)
+            elif role == 'stab':
+                score = sum(build.get('boon_gen', {}).values()) * 100
+            elif role == 'dps_strip':
+                score = build.get('boon_strips', 0) * 50 + dps
+            else:
+                score = dps + (down_contrib * 2)
+            
+            # Penalize deaths
+            score = max(0, score - (deaths * 5000))
+            
+            builds_table.insert({
+                'spec': spec,
+                'role': role,
+                'enemy_comp_hash': self._hash_composition(enemy_comp),
+                'enemy_comp': enemy_comp,
+                'outcome': outcome,
+                'performance_score': score,
+                'dps': dps,
+                'healing': healing,
+                'cleanses': build.get('cleanses', 0),
+                'boon_strips': build.get('boon_strips', 0),
+                'down_contrib': down_contrib,
+                'deaths': deaths,
+                'boon_gen': build.get('boon_gen', {}),
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    def _hash_composition(self, comp: Dict[str, int]) -> str:
+        """Create a hash for an enemy composition for quick lookups"""
+        # Sort by spec name and create a deterministic string
+        sorted_comp = sorted(comp.items())
+        return "-".join([f"{spec}:{count}" for spec, count in sorted_comp])
     
     def _update_stats(self):
         """Update global stats"""
@@ -219,6 +326,96 @@ class CounterAI:
         sorted_comp = sorted(enemy_comp.items(), key=lambda x: x[1], reverse=True)
         return " + ".join([f"{count} {spec}" for spec, count in sorted_comp])
     
+    def get_best_builds_against(self, enemy_comp: Dict[str, int]) -> Dict[str, dict]:
+        """
+        Find the best performing builds against a similar enemy composition
+        Returns dict of {role: best_build_info} for each role
+        """
+        builds_table = fights_db.table('builds')
+        all_builds = builds_table.all()
+        
+        if not all_builds:
+            return {}
+        
+        # Find builds from winning fights against similar compositions
+        enemy_specs = set(enemy_comp.keys())
+        
+        # Group builds by spec and role, track win rates
+        build_stats = {}  # {(spec, role): {'wins': 0, 'total': 0, 'avg_score': 0, 'scores': []}}
+        
+        for build in all_builds:
+            build_enemy_specs = set(build.get('enemy_comp', {}).keys())
+            
+            # Calculate similarity
+            intersection = len(enemy_specs & build_enemy_specs)
+            union = len(enemy_specs | build_enemy_specs)
+            similarity = intersection / union if union > 0 else 0
+            
+            if similarity < 0.3:  # Skip dissimilar fights
+                continue
+            
+            spec = build.get('spec', 'Unknown')
+            role = build.get('role', 'dps')
+            key = (spec, role)
+            
+            if key not in build_stats:
+                build_stats[key] = {
+                    'spec': spec,
+                    'role': role,
+                    'wins': 0,
+                    'total': 0,
+                    'scores': [],
+                    'avg_dps': [],
+                    'avg_healing': [],
+                    'avg_strips': [],
+                    'avg_cleanses': []
+                }
+            
+            build_stats[key]['total'] += 1
+            build_stats[key]['scores'].append(build.get('performance_score', 0))
+            build_stats[key]['avg_dps'].append(build.get('dps', 0))
+            build_stats[key]['avg_healing'].append(build.get('healing', 0))
+            build_stats[key]['avg_strips'].append(build.get('boon_strips', 0))
+            build_stats[key]['avg_cleanses'].append(build.get('cleanses', 0))
+            
+            if build.get('outcome') == 'victory':
+                build_stats[key]['wins'] += 1
+        
+        # Calculate win rates and averages
+        best_by_role = {}
+        
+        for key, stats in build_stats.items():
+            spec, role = key
+            total = stats['total']
+            
+            if total < 2:  # Need at least 2 samples
+                continue
+            
+            win_rate = round((stats['wins'] / total) * 100, 1)
+            avg_score = sum(stats['scores']) / len(stats['scores']) if stats['scores'] else 0
+            
+            build_info = {
+                'spec': spec,
+                'role': role,
+                'win_rate': win_rate,
+                'fights_played': total,
+                'avg_score': round(avg_score, 0),
+                'avg_dps': round(sum(stats['avg_dps']) / len(stats['avg_dps']), 0) if stats['avg_dps'] else 0,
+                'avg_healing': round(sum(stats['avg_healing']) / len(stats['avg_healing']), 0) if stats['avg_healing'] else 0,
+                'avg_strips': round(sum(stats['avg_strips']) / len(stats['avg_strips']), 1) if stats['avg_strips'] else 0,
+                'avg_cleanses': round(sum(stats['avg_cleanses']) / len(stats['avg_cleanses']), 1) if stats['avg_cleanses'] else 0
+            }
+            
+            # Track best for each role
+            if role not in best_by_role or build_info['win_rate'] > best_by_role[role]['win_rate']:
+                best_by_role[role] = build_info
+            elif build_info['win_rate'] == best_by_role[role]['win_rate']:
+                # Tie-breaker: use avg_score
+                if build_info['avg_score'] > best_by_role[role]['avg_score']:
+                    best_by_role[role] = build_info
+        
+        return best_by_role
+    
     async def generate_counter(self, enemy_comp: Dict[str, int]) -> dict:
         """
         Generate counter recommendation using Llama 3.2 8B
@@ -273,6 +470,9 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
                     else:
                         precision = 85.0  # Default for new compositions
                     
+                    # Get best builds that won against this comp
+                    best_builds = self.get_best_builds_against(enemy_comp)
+                    
                     return {
                         'success': True,
                         'counter': counter_text,
@@ -281,6 +481,7 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
                         'similar_fights': len(similar_fights),
                         'model': MODEL_NAME,
                         'enemy_composition': enemy_str,
+                        'best_builds': best_builds,
                         'generated_at': datetime.now().isoformat()
                     }
                 else:
@@ -325,6 +526,9 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
         priority = " > ".join([spec for spec, _ in top_enemy])
         counter_lines.append(f"Priorité: {priority}")
         
+        # Still try to get best builds from historical data
+        best_builds = self.get_best_builds_against(enemy_comp)
+        
         return {
             'success': True,
             'counter': "\n".join(counter_lines[:4]),
@@ -333,6 +537,7 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
             'similar_fights': 0,
             'model': 'fallback_rules',
             'enemy_composition': enemy_str,
+            'best_builds': best_builds,
             'generated_at': datetime.now().isoformat(),
             'fallback': True
         }

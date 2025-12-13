@@ -304,6 +304,270 @@
     </div>
     {% endif %}
     
+    <!-- DETAILED SQUAD STATISTICS -->
+    {% if players.allies %}
+    <div class="glow-card rounded-2xl p-6" x-data="{ activeTab: 'damage' }">
+        <h3 class="font-display text-xl font-bold text-cyber-cyan mb-4 flex items-center gap-2">
+            📊 Statistiques Détaillées de l'Escouade
+        </h3>
+        
+        <!-- Squad Totals Summary -->
+        {% if players.squad_totals %}
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-orange-500/20">
+                <div class="text-lg font-bold text-orange-400">{{ "{:,}".format(players.squad_totals.damage_out|default(0)) }}</div>
+                <div class="text-xs text-gray-400">Dégâts Out</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-red-500/20">
+                <div class="text-lg font-bold text-red-400">{{ "{:,}".format(players.squad_totals.damage_in|default(0)) }}</div>
+                <div class="text-xs text-gray-400">Dégâts In</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-yellow-500/20">
+                <div class="text-lg font-bold text-yellow-400">{{ players.squad_totals.damage_ratio|default(0) }}</div>
+                <div class="text-xs text-gray-400">Ratio Out/In</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-green-500/20">
+                <div class="text-lg font-bold text-green-400">{{ "{:,}".format(players.squad_totals.healing|default(0)) }}</div>
+                <div class="text-xs text-gray-400">Heal + Barrier</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-cyan-500/20">
+                <div class="text-lg font-bold text-cyan-400">{{ "{:,}".format(players.squad_totals.cleanses|default(0)) }}</div>
+                <div class="text-xs text-gray-400">Cleanses</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-purple-500/20">
+                <div class="text-lg font-bold text-purple-400">{{ "{:,}".format(players.squad_totals.boon_strips|default(0)) }}</div>
+                <div class="text-xs text-gray-400">Boon Strips</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-pink-500/20">
+                <div class="text-lg font-bold text-pink-400">{{ "{:,}".format(players.squad_totals.down_contrib|default(0)) }}</div>
+                <div class="text-xs text-gray-400">Down Contrib</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center border border-blue-500/20">
+                <div class="text-lg font-bold text-blue-400">{{ players.squad_totals.resurrects|default(0) }}</div>
+                <div class="text-xs text-gray-400">Resurrects</div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Tab Navigation -->
+        <div class="flex flex-wrap gap-2 mb-4 border-b border-gray-700 pb-3">
+            <button @click="activeTab = 'damage'" :class="activeTab === 'damage' ? 'bg-orange-500/20 text-orange-400 border-orange-500' : 'bg-gw2-darker text-gray-400 border-gray-700'" 
+                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">⚔️ Dégâts</button>
+            <button @click="activeTab = 'combat'" :class="activeTab === 'combat' ? 'bg-pink-500/20 text-pink-400 border-pink-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
+                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">💀 Combat</button>
+            <button @click="activeTab = 'support'" :class="activeTab === 'support' ? 'bg-green-500/20 text-green-400 border-green-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
+                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">💚 Support</button>
+            <button @click="activeTab = 'defensive'" :class="activeTab === 'defensive' ? 'bg-red-500/20 text-red-400 border-red-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
+                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">🛡️ Défensif</button>
+            <button @click="activeTab = 'boons'" :class="activeTab === 'boons' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
+                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">✨ Boons</button>
+        </div>
+        
+        <!-- DAMAGE TAB -->
+        <div x-show="activeTab === 'damage'" class="overflow-x-auto">
+            <table class="w-full text-sm" id="damage-table">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('damage-table', 0)">Joueur</th>
+                        <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('damage-table', 1)">Classe</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 2, true)">Dmg Out</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 3, true)">DPS</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 4, true)">Dmg In</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 5, true)">Ratio</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for p in players.allies|sort(attribute='damage_out', reverse=true) %}
+                    <tr class="hover:bg-gw2-darker/50">
+                        <td class="py-2 font-medium text-white">{{ p.name }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-right font-mono text-orange-400">{{ "{:,}".format(p.damage_out|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-orange-300">{{ "{:,.0f}".format(p.dps|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-red-400">{{ "{:,}".format(p.damage_in|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-yellow-400">{{ p.damage_ratio|default(0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- COMBAT TAB -->
+        <div x-show="activeTab === 'combat'" class="overflow-x-auto">
+            <table class="w-full text-sm" id="combat-table">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">Joueur</th>
+                        <th class="pb-2">Classe</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 2, true)">Down Contrib</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 3, true)">DC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)">CC Out</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)">CC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 6, true)">Deaths</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)">Downs</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for p in players.allies|sort(attribute='down_contrib', reverse=true) %}
+                    <tr class="hover:bg-gw2-darker/50">
+                        <td class="py-2 font-medium text-white">{{ p.name }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-right font-mono text-pink-400">{{ "{:,}".format(p.down_contrib|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-pink-300">{{ p.down_contrib_per_sec|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-blue-400">{{ "{:,}".format(p.cc_out|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-blue-300">{{ p.cc_per_sec|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-red-400">{{ p.deaths|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-red-300">{{ p.downs|default(0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- SUPPORT TAB -->
+        <div x-show="activeTab === 'support'" class="overflow-x-auto">
+            <table class="w-full text-sm" id="support-table">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">Joueur</th>
+                        <th class="pb-2">Classe</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 2, true)">Heal+Barrier</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 3, true)">HPS</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 4, true)">Cleanses</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 5, true)">C/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 6, true)">Strips</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 7, true)">S/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('support-table', 8, true)">Rez</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for p in players.allies|sort(attribute='healing', reverse=true) %}
+                    <tr class="hover:bg-gw2-darker/50">
+                        <td class="py-2 font-medium text-white">{{ p.name }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-right font-mono text-green-400">{{ "{:,}".format(p.healing|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-green-300">{{ "{:,.0f}".format(p.healing_per_sec|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-cyan-400">{{ "{:,}".format(p.cleanses|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-cyan-300">{{ p.cleanses_per_sec|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-purple-400">{{ "{:,}".format(p.boon_strips|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-purple-300">{{ p.strips_per_sec|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-blue-400">{{ p.resurrects|default(0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- DEFENSIVE TAB -->
+        <div x-show="activeTab === 'defensive'" class="overflow-x-auto">
+            <table class="w-full text-sm" id="defensive-table">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">Joueur</th>
+                        <th class="pb-2">Classe</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 2, true)">Dmg In</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 3, true)">Strips In</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 4, true)">Strips/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 5, true)">Deaths</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 6, true)">Downs</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for p in players.allies|sort(attribute='damage_in', reverse=true) %}
+                    <tr class="hover:bg-gw2-darker/50">
+                        <td class="py-2 font-medium text-white">{{ p.name }}</td>
+                        <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                        <td class="py-2 text-right font-mono text-red-400">{{ "{:,}".format(p.damage_in|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-purple-400">{{ "{:,}".format(p.boon_strip_in|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-purple-300">{{ p.strip_in_per_sec|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-red-500">{{ p.deaths|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-red-300">{{ p.downs|default(0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- BOONS TAB -->
+        <div x-show="activeTab === 'boons'" class="space-y-6">
+            <!-- Group Boon Uptimes -->
+            {% if players.group_boon_uptimes %}
+            <div>
+                <h4 class="font-display font-bold text-cyan-400 mb-3">📊 Boon Uptime par Groupe</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-gray-400 border-b border-gray-700">
+                                <th class="pb-2">Groupe</th>
+                                <th class="pb-2 text-center">⚡ Quick</th>
+                                <th class="pb-2 text-center">🛡️ Prot</th>
+                                <th class="pb-2 text-center">💨 Vigor</th>
+                                <th class="pb-2 text-center">🔵 Aegis</th>
+                                <th class="pb-2 text-center">⚖️ Stab</th>
+                                <th class="pb-2 text-center">🔴 Resist</th>
+                                <th class="pb-2 text-center">🏃 Speed</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            {% for group, boons in players.group_boon_uptimes.items()|sort %}
+                            <tr class="hover:bg-gw2-darker/50">
+                                <td class="py-2 font-bold text-white">Groupe {{ group }}</td>
+                                <td class="py-2 text-center font-mono {% if boons.quickness|default(0) >= 80 %}text-green-400{% elif boons.quickness|default(0) >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.quickness|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono {% if boons.protection|default(0) >= 80 %}text-green-400{% elif boons.protection|default(0) >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.protection|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono {% if boons.vigor|default(0) >= 80 %}text-green-400{% elif boons.vigor|default(0) >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.vigor|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono {% if boons.aegis|default(0) >= 50 %}text-green-400{% elif boons.aegis|default(0) >= 25 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.aegis|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono {% if boons.stability|default(0) >= 50 %}text-green-400{% elif boons.stability|default(0) >= 25 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.stability|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono {% if boons.resistance|default(0) >= 50 %}text-green-400{% elif boons.resistance|default(0) >= 25 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.resistance|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono {% if boons.superspeed|default(0) >= 30 %}text-green-400{% elif boons.superspeed|default(0) >= 15 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.superspeed|default(0) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Individual Boon Generation -->
+            <div>
+                <h4 class="font-display font-bold text-cyan-400 mb-3">✨ Boon Generation par Joueur</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm" id="boon-gen-table">
+                        <thead>
+                            <tr class="text-left text-gray-400 border-b border-gray-700">
+                                <th class="pb-2">Joueur</th>
+                                <th class="pb-2">Classe</th>
+                                <th class="pb-2 text-center">⚡ Quick</th>
+                                <th class="pb-2 text-center">🛡️ Prot</th>
+                                <th class="pb-2 text-center">💨 Vigor</th>
+                                <th class="pb-2 text-center">🔵 Aegis</th>
+                                <th class="pb-2 text-center">⚖️ Stab</th>
+                                <th class="pb-2 text-center">🔴 Resist</th>
+                                <th class="pb-2 text-center">🏃 Speed</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            {% for p in players.allies %}
+                            {% if p.boon_gen %}
+                            <tr class="hover:bg-gw2-darker/50">
+                                <td class="py-2 font-medium text-white">{{ p.name }}</td>
+                                <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
+                                <td class="py-2 text-center font-mono text-gray-300">{{ p.boon_gen.quickness|default(0)|round(1) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300">{{ p.boon_gen.protection|default(0)|round(1) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300">{{ p.boon_gen.vigor|default(0)|round(1) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300">{{ p.boon_gen.aegis|default(0)|round(1) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300">{{ p.boon_gen.stability|default(0)|round(1) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300">{{ p.boon_gen.resistance|default(0)|round(1) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300">{{ p.boon_gen.superspeed|default(0)|round(1) }}%</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Enemy Composition Summary with Roles -->
     {% if players.enemy_composition and players.enemy_composition.total > 0 %}
     <div class="glow-card rounded-2xl p-6">
@@ -520,6 +784,79 @@
         </div>
         {% endif %}
         
+        <!-- BEST BUILDS AGAINST THIS COMP -->
+        {% if ai_counter.best_builds %}
+        <div class="mt-6 pt-6 border-t border-red-500/20">
+            <h4 class="font-display text-lg font-bold text-orange-400 mb-4 flex items-center gap-2">
+                🏆 MEILLEURS BUILDS RÉELS CONTRE CETTE COMP
+            </h4>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for role, build in ai_counter.best_builds.items() %}
+                <div class="bg-gw2-darker rounded-xl p-4 border border-orange-500/30 hover:border-orange-500 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-display font-bold text-white text-lg">{{ build.spec }}</span>
+                        <span class="px-2 py-1 rounded text-xs 
+                            {% if role == 'healer' %}bg-green-500/20 text-green-400 border border-green-500/30
+                            {% elif role == 'stab' %}bg-yellow-500/20 text-yellow-400 border border-yellow-500/30
+                            {% elif role == 'dps_strip' %}bg-purple-500/20 text-purple-400 border border-purple-500/30
+                            {% elif role == 'boon' %}bg-cyan-500/20 text-cyan-400 border border-cyan-500/30
+                            {% else %}bg-orange-500/20 text-orange-400 border border-orange-500/30{% endif %}">
+                            {{ role }}
+                        </span>
+                    </div>
+                    
+                    <!-- Win Rate -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full {% if build.win_rate >= 80 %}bg-green-500{% elif build.win_rate >= 60 %}bg-yellow-500{% else %}bg-red-500{% endif %}" 
+                                 style="width: {{ build.win_rate }}%"></div>
+                        </div>
+                        <span class="text-sm font-bold {% if build.win_rate >= 80 %}text-green-400{% elif build.win_rate >= 60 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                            {{ build.win_rate }}%
+                        </span>
+                    </div>
+                    
+                    <div class="text-xs text-gray-400 mb-2">
+                        Sur <span class="text-white font-medium">{{ build.fights_played }}</span> fights réels
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        {% if build.avg_dps > 0 %}
+                        <div class="bg-gw2-darker/50 rounded p-2">
+                            <div class="text-orange-400 font-mono">{{ "{:,.0f}".format(build.avg_dps) }}</div>
+                            <div class="text-gray-500">DPS moy.</div>
+                        </div>
+                        {% endif %}
+                        {% if build.avg_healing > 0 %}
+                        <div class="bg-gw2-darker/50 rounded p-2">
+                            <div class="text-green-400 font-mono">{{ "{:,.0f}".format(build.avg_healing) }}</div>
+                            <div class="text-gray-500">Heal moy.</div>
+                        </div>
+                        {% endif %}
+                        {% if build.avg_strips > 0 %}
+                        <div class="bg-gw2-darker/50 rounded p-2">
+                            <div class="text-purple-400 font-mono">{{ build.avg_strips }}</div>
+                            <div class="text-gray-500">Strips moy.</div>
+                        </div>
+                        {% endif %}
+                        {% if build.avg_cleanses > 0 %}
+                        <div class="bg-gw2-darker/50 rounded p-2">
+                            <div class="text-cyan-400 font-mono">{{ build.avg_cleanses }}</div>
+                            <div class="text-gray-500">Cleanses moy.</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <p class="mt-4 text-xs text-gray-500 italic text-center">
+                Ces builds ont historiquement gagné contre des compositions similaires
+            </p>
+        </div>
+        {% endif %}
+        
         <!-- Powered By Badge -->
         <div class="mt-4 flex justify-center">
             <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gw2-darker border border-gray-700 text-xs text-gray-400">
@@ -585,5 +922,33 @@
 
     // Initialize immediately since this script is in the HTMX-loaded content
     initSortingControls();
+    
+    // Generic table sorting function for detailed stats
+    window.sortTable = function(tableId, colIndex, isNumeric = false) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        // Determine current sort direction
+        const header = table.querySelectorAll('th')[colIndex];
+        const isAsc = header.dataset.sortDir === 'asc';
+        header.dataset.sortDir = isAsc ? 'desc' : 'asc';
+        
+        rows.sort((a, b) => {
+            const aVal = a.cells[colIndex]?.textContent.trim().replace(/[,%]/g, '') || '';
+            const bVal = b.cells[colIndex]?.textContent.trim().replace(/[,%]/g, '') || '';
+            
+            if (isNumeric) {
+                const aNum = parseFloat(aVal) || 0;
+                const bNum = parseFloat(bVal) || 0;
+                return isAsc ? aNum - bNum : bNum - aNum;
+            }
+            return isAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        });
+        
+        rows.forEach(row => tbody.appendChild(row));
+    };
 })();
 </script>
