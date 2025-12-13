@@ -88,10 +88,22 @@
         </div>
         
         <!-- Fight Info -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
             <div class="bg-gw2-darker rounded-xl p-3 text-center">
                 <div class="text-xl font-display font-bold text-gw2-purple">{{ players.fight_name }}</div>
                 <div class="text-xs text-gray-400">Combat</div>
+            </div>
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                {% if players.fight_outcome == 'victory' %}
+                <div class="text-xl font-display font-bold text-green-400">🏆 Victoire</div>
+                {% elif players.fight_outcome == 'defeat' %}
+                <div class="text-xl font-display font-bold text-red-400">💀 Défaite</div>
+                {% elif players.fight_outcome == 'draw' %}
+                <div class="text-xl font-display font-bold text-yellow-400">⚔️ Match nul</div>
+                {% else %}
+                <div class="text-xl font-display font-bold text-gray-400">❓ Inconnu</div>
+                {% endif %}
+                <div class="text-xs text-gray-400">{{ players.fight_stats.ally_deaths|default(0) }} morts • {{ players.fight_stats.ally_downs|default(0) }} downs</div>
             </div>
             <div class="bg-gw2-darker rounded-xl p-3 text-center">
                 <div class="text-xl font-display font-bold text-white">

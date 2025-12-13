@@ -500,11 +500,60 @@ def extract_players_from_ei_json(data: dict) -> dict:
             role_counts['dps'] += 1
             specs_by_role['dps'][spec] = specs_by_role['dps'].get(spec, 0) + 1
 
+    # Calculate fight outcome metrics
+    total_ally_deaths = 0
+    total_ally_downs = 0
+    total_ally_damage = 0
+    for p in players:
+        total_ally_damage += p.get('damage', 0)
+    
+    # Get ally deaths/downs from original data
+    for player in data.get('players', []):
+        player_name = player.get('name', '')
+        if ' pl-' in player_name:
+            continue
+        defenses = player.get('defenses', [{}])
+        d = defenses[0] if defenses else {}
+        total_ally_deaths += d.get('deadCount', 0)
+        total_ally_downs += d.get('downCount', 0)
+    
+    # Calculate enemy damage taken (approximate kills)
+    total_enemy_damage_taken = sum(e.get('damage_taken', 0) for e in enemies_sorted)
+    
+    # Determine fight outcome based on metrics
+    # Win if: more damage dealt than deaths * 100k (rough heuristic)
+    # Or if enemy damage taken is significantly higher than ally deaths
+    if len(players) == 0:
+        fight_outcome = 'unknown'
+    elif total_ally_deaths == 0 and total_enemy_damage_taken > 0:
+        fight_outcome = 'victory'
+    elif total_ally_deaths <= 2 and total_enemy_damage_taken > total_ally_damage * 0.3:
+        fight_outcome = 'victory'
+    elif total_ally_deaths >= len(players) * 0.5:
+        fight_outcome = 'defeat'
+    elif total_ally_deaths >= 5 and total_enemy_damage_taken < total_ally_damage * 0.2:
+        fight_outcome = 'defeat'
+    else:
+        # Close fight - use ratio
+        if total_enemy_damage_taken > 0 and total_ally_deaths < 3:
+            fight_outcome = 'victory'
+        elif total_ally_deaths > 3:
+            fight_outcome = 'defeat'
+        else:
+            fight_outcome = 'draw'
+
     return {
         'allies': players,
         'enemies': enemies_sorted,
         'fight_name': data.get('fightName', data.get('name', 'Unknown')),
         'duration_sec': round(duration_sec, 1),
+        'fight_outcome': fight_outcome,
+        'fight_stats': {
+            'ally_deaths': total_ally_deaths,
+            'ally_downs': total_ally_downs,
+            'ally_damage': total_ally_damage,
+            'enemy_damage_taken': total_enemy_damage_taken
+        },
         'composition': {
             'spec_counts': spec_counts,
             'role_counts': role_counts,
