@@ -48,15 +48,25 @@ async def upload_to_dps_report(file_path: Path) -> dict:
         return {'success': False, 'error': str(e)}
 
 async def fetch_ei_json(permalink: str) -> dict:
-    """Fetch the Elite Insights JSON from dps.report"""
+    """Fetch the Elite Insights JSON from dps.report or wvw.report"""
     try:
-        # Get the JSON URL from permalink
-        json_url = permalink.replace('https://dps.report/', 'https://dps.report/getJson?permalink=')
+        # Handle both dps.report and wvw.report URLs
+        if 'wvw.report' in permalink:
+            # wvw.report uses different API format
+            # Extract the ID from permalink like https://wvw.report/tVBG-20251205-233553_wvw
+            # Remove the _wvw suffix for the JSON API
+            report_id = permalink.split('/')[-1].replace('_wvw', '')
+            json_url = f"https://dps.report/getJson?id={report_id}"
+        else:
+            json_url = permalink.replace('https://dps.report/', 'https://dps.report/getJson?permalink=')
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.get(json_url)
             if response.status_code == 200:
-                return {'success': True, 'data': response.json()}
+                data = response.json()
+                if 'error' in data:
+                    return {'success': False, 'error': data['error']}
+                return {'success': True, 'data': data}
             else:
                 return {'success': False, 'error': f'HTTP {response.status_code}'}
     except Exception as e:
@@ -126,8 +136,8 @@ async def main():
         print(f"Error: Folder not found: {folder_path}")
         sys.exit(1)
     
-    # Find all log files
-    log_files = list(folder_path.glob("*.zevtc")) + list(folder_path.glob("*.evtc"))
+    # Find all log files (recursively in subfolders)
+    log_files = list(folder_path.rglob("*.zevtc")) + list(folder_path.rglob("*.evtc"))
     
     if not log_files:
         print(f"No .zevtc or .evtc files found in {folder_path}")

@@ -342,6 +342,7 @@ class CounterAI:
         
         # Group builds by spec and role, track win rates
         build_stats = {}  # {(spec, role): {'wins': 0, 'total': 0, 'avg_score': 0, 'scores': []}}
+        winning_fight_comps = {}  # {fight_id: {(spec, role): count}} - track winning compositions
         
         for build in all_builds:
             build_enemy_specs = set(build.get('enemy_comp', {}).keys())
@@ -357,6 +358,7 @@ class CounterAI:
             spec = build.get('spec', 'Unknown')
             role = build.get('role', 'dps')
             key = (spec, role)
+            fight_id = build.get('fight_id', '')
             
             if key not in build_stats:
                 build_stats[key] = {
@@ -368,7 +370,8 @@ class CounterAI:
                     'avg_dps': [],
                     'avg_healing': [],
                     'avg_strips': [],
-                    'avg_cleanses': []
+                    'avg_cleanses': [],
+                    'counts_in_wins': []  # Track how many of this spec were in each winning fight
                 }
             
             build_stats[key]['total'] += 1
@@ -380,6 +383,19 @@ class CounterAI:
             
             if build.get('outcome') == 'victory':
                 build_stats[key]['wins'] += 1
+                # Track composition in winning fights
+                if fight_id:
+                    if fight_id not in winning_fight_comps:
+                        winning_fight_comps[fight_id] = {}
+                    if key not in winning_fight_comps[fight_id]:
+                        winning_fight_comps[fight_id][key] = 0
+                    winning_fight_comps[fight_id][key] += 1
+        
+        # Calculate average count per winning fight for each spec/role
+        for fight_id, comp in winning_fight_comps.items():
+            for key, count in comp.items():
+                if key in build_stats:
+                    build_stats[key]['counts_in_wins'].append(count)
         
         # Calculate win rates and averages
         best_by_role = {}
@@ -394,6 +410,11 @@ class CounterAI:
             win_rate = round((stats['wins'] / total) * 100, 1)
             avg_score = sum(stats['scores']) / len(stats['scores']) if stats['scores'] else 0
             
+            # Calculate recommended count (average in winning fights, rounded up)
+            counts = stats.get('counts_in_wins', [])
+            recommended_count = round(sum(counts) / len(counts)) if counts else 1
+            recommended_count = max(1, recommended_count)  # At least 1
+            
             build_info = {
                 'spec': spec,
                 'role': role,
@@ -403,7 +424,8 @@ class CounterAI:
                 'avg_dps': round(sum(stats['avg_dps']) / len(stats['avg_dps']), 0) if stats['avg_dps'] else 0,
                 'avg_healing': round(sum(stats['avg_healing']) / len(stats['avg_healing']), 0) if stats['avg_healing'] else 0,
                 'avg_strips': round(sum(stats['avg_strips']) / len(stats['avg_strips']), 1) if stats['avg_strips'] else 0,
-                'avg_cleanses': round(sum(stats['avg_cleanses']) / len(stats['avg_cleanses']), 1) if stats['avg_cleanses'] else 0
+                'avg_cleanses': round(sum(stats['avg_cleanses']) / len(stats['avg_cleanses']), 1) if stats['avg_cleanses'] else 0,
+                'recommended_count': recommended_count
             }
             
             # Track best for each role

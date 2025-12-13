@@ -814,7 +814,10 @@
                 {% for role, build in ai_counter.best_builds.items() %}
                 <div class="bg-gw2-darker rounded-xl p-4 border border-orange-500/30 hover:border-orange-500 transition-all">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="font-display font-bold text-white text-lg">{{ build.spec }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded-lg bg-orange-500/30 text-orange-300 font-bold text-lg">{{ build.recommended_count|default(1) }}x</span>
+                            <span class="font-display font-bold text-white text-lg">{{ build.spec }}</span>
+                        </div>
                         <span class="px-2 py-1 rounded text-xs 
                             {% if role == 'healer' %}bg-green-500/20 text-green-400 border border-green-500/30
                             {% elif role == 'stab' %}bg-yellow-500/20 text-yellow-400 border border-yellow-500/30
