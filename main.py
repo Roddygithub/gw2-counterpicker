@@ -242,112 +242,120 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
 
 
 @app.post("/api/analyze/evtc")
-async def analyze_single_evtc(
+async def analyze_evtc_files(
     request: Request,
-    file: UploadFile = File(...)
+    files: List[UploadFile] = File(...)
 ):
     """
-    Analyze a single .evtc file
+    Unified endpoint: Analyze single or multiple .evtc files
     Strategy: Try dps.report first, fallback to local parser if unavailable
     """
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
     
-    valid_extensions = ['.evtc', '.zevtc', '.zip']
-    if not any(file.filename.lower().endswith(ext) for ext in valid_extensions):
-        raise HTTPException(status_code=400, detail="Invalid file type. Use .evtc, .zevtc, or .zip")
-    
-    data = await file.read()
-    print(f"[EVTC] Received file: {file.filename}, size: {len(data)} bytes")
-    
-    parse_mode = "offline"  # Default to offline
-    
-    # Strategy 1: Try dps.report API first
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            files = {'file': (file.filename, data)}
-            response = await client.post(
-                'https://dps.report/uploadContent',
-                params={'json': '1', 'detailedwvw': 'true'},
-                files=files
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                permalink = result.get('permalink', '')
+    # Single file mode
+    if len(files) == 1:
+        file = files[0]
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No file provided")
+        
+        valid_extensions = ['.evtc', '.zevtc', '.zip']
+        if not any(file.filename.lower().endswith(ext) for ext in valid_extensions):
+            raise HTTPException(status_code=400, detail="Invalid file type. Use .evtc, .zevtc, or .zip")
+        
+        data = await file.read()
+        print(f"[EVTC] Received file: {file.filename}, size: {len(data)} bytes")
+        
+        parse_mode = "offline"
+        
+        # Strategy 1: Try dps.report API first
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                upload_files = {'file': (file.filename, data)}
+                response = await client.post(
+                    'https://dps.report/uploadContent',
+                    params={'json': '1', 'detailedwvw': 'true'},
+                    files=upload_files
+                )
                 
-                if permalink:
-                    json_url = f"https://dps.report/getJson?permalink={permalink}"
-                    json_response = await client.get(json_url)
+                if response.status_code == 200:
+                    result = response.json()
+                    permalink = result.get('permalink', '')
                     
-                    if json_response.status_code == 200 and json_response.text.strip().startswith('{'):
-                        log_data = json_response.json()
-                        players_data = extract_players_from_ei_json(log_data)
-                        enemy_composition = build_composition_from_enemies(players_data['enemies'])
+                    if permalink:
+                        json_url = f"https://dps.report/getJson?permalink={permalink}"
+                        json_response = await client.get(json_url)
                         
-                        # Record fight for AI learning
-                        players_data['source'] = 'dps_report'
-                        players_data['source_name'] = permalink
-                        record_fight_for_learning(players_data)
-                        
-                        # Generate AI counter
-                        enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-                        ai_counter = await get_ai_counter(enemy_spec_counts)
-                        
-                        print(f"[EVTC] dps.report success: {len(players_data['enemies'])} enemies")
-                        
-                        lang = get_lang(request)
-                        return templates.TemplateResponse("partials/dps_report_result.html", {
-                            "request": request,
-                            "data": log_data,
-                            "players": players_data,
-                            "ai_counter": ai_counter,
-                            "permalink": permalink,
-                            "filename": file.filename,
-                            "timestamp": datetime.now().strftime("%H:%M:%S"),
-                            "parse_mode": "online",
-                            "lang": lang,
-                            "t": get_all_translations(lang)
-                        })
-    except Exception as api_error:
-        print(f"[EVTC] dps.report unavailable: {api_error}")
+                        if json_response.status_code == 200 and json_response.text.strip().startswith('{'):
+                            log_data = json_response.json()
+                            players_data = extract_players_from_ei_json(log_data)
+                            
+                            # Record fight for AI learning
+                            players_data['source'] = 'dps_report'
+                            players_data['source_name'] = permalink
+                            record_fight_for_learning(players_data)
+                            
+                            # Generate AI counter
+                            enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
+                            ai_counter = await get_ai_counter(enemy_spec_counts)
+                            
+                            print(f"[EVTC] dps.report success: {len(players_data['enemies'])} enemies")
+                            
+                            lang = get_lang(request)
+                            return templates.TemplateResponse("partials/dps_report_result.html", {
+                                "request": request,
+                                "data": log_data,
+                                "players": players_data,
+                                "ai_counter": ai_counter,
+                                "permalink": permalink,
+                                "filename": file.filename,
+                                "timestamp": datetime.now().strftime("%H:%M:%S"),
+                                "parse_mode": "online",
+                                "lang": lang,
+                                "t": get_all_translations(lang)
+                            })
+        except Exception as api_error:
+            print(f"[EVTC] dps.report unavailable: {api_error}")
+        
+        # Strategy 2: OFFLINE FALLBACK - Use local parser
+        print(f"[EVTC] Using OFFLINE mode with local parser")
+        try:
+            parsed_log = real_parser.parse_evtc_bytes(data, file.filename)
+            
+            # Convert parsed log to players_data format
+            players_data = convert_parsed_log_to_players_data(parsed_log)
+            
+            # Record fight for AI learning (with deduplication)
+            players_data['source'] = 'evtc'
+            players_data['source_name'] = file.filename
+            record_fight_for_learning(players_data, filename=file.filename, filesize=file.size)
+            
+            # Generate AI counter
+            enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
+            ai_counter = await get_ai_counter(enemy_spec_counts)
+            
+            print(f"[EVTC] Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
+            
+            lang = get_lang(request)
+            return templates.TemplateResponse("partials/dps_report_result.html", {
+                "request": request,
+                "data": {"fightName": f"Offline: {file.filename}", "duration": f"{parsed_log.duration_seconds}s"},
+                "players": players_data,
+                "ai_counter": ai_counter,
+                "permalink": "",
+                "filename": file.filename,
+                "timestamp": datetime.now().strftime("%H:%M:%S"),
+                "parse_mode": "offline",
+                "lang": lang,
+                "t": get_all_translations(lang)
+            })
+        except Exception as parse_error:
+            print(f"[EVTC] Local parser failed: {parse_error}")
+            raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(parse_error)}")
     
-    # Strategy 2: OFFLINE FALLBACK - Use local parser
-    print(f"[EVTC] Using OFFLINE mode with local parser")
-    try:
-        parsed_log = real_parser.parse_evtc_bytes(data, file.filename)
-        
-        # Convert parsed log to players_data format
-        players_data = convert_parsed_log_to_players_data(parsed_log)
-        enemy_composition = build_composition_from_enemies(players_data['enemies'])
-        
-        # Record fight for AI learning (with deduplication)
-        players_data['source'] = 'evtc'
-        players_data['source_name'] = file.filename
-        record_fight_for_learning(players_data, filename=file.filename, filesize=file.size)
-        
-        # Generate AI counter
-        enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-        ai_counter = await get_ai_counter(enemy_spec_counts)
-        
-        print(f"[EVTC] Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
-        
-        lang = get_lang(request)
-        return templates.TemplateResponse("partials/dps_report_result.html", {
-            "request": request,
-            "data": {"fightName": f"Offline: {file.filename}", "duration": f"{parsed_log.duration_seconds}s"},
-            "players": players_data,
-            "ai_counter": ai_counter,
-            "permalink": "",
-            "filename": file.filename,
-            "timestamp": datetime.now().strftime("%H:%M:%S"),
-            "parse_mode": "offline",
-            "lang": lang,
-            "t": get_all_translations(lang)
-        })
-    except Exception as parse_error:
-        print(f"[EVTC] Local parser failed: {parse_error}")
-        raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(parse_error)}")
+    # Multiple files mode - redirect to evening analysis
+    else:
+        return await analyze_evening_files(request, files)
 
 
 def is_player_afk(player) -> bool:
