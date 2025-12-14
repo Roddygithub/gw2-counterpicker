@@ -64,6 +64,13 @@
     border-color: #ffffff;
     color: #ffffff;
 }
+
+/* Group colors for squad display */
+.group-1 { background-color: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; }
+.group-2 { background-color: rgba(34, 197, 94, 0.1); border-left: 3px solid #22C55E; }
+.group-3 { background-color: rgba(234, 179, 8, 0.1); border-left: 3px solid #EAB308; }
+.group-4 { background-color: rgba(249, 115, 22, 0.1); border-left: 3px solid #F97316; }
+.group-5 { background-color: rgba(168, 85, 247, 0.1); border-left: 3px solid #A855F7; }
 </style>
 <div class="space-y-6 animate-slide-up">
     <!-- Success Header -->
@@ -255,7 +262,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for player in players.allies %}
-                    <tr class="hover:bg-gw2-darker/50"
+                    <tr class="hover:bg-gw2-darker/50 group-{{ player.group }}"
                         data-profession="{{ player.profession|lower }}"
                         data-group="{{ player.group }}"
                         data-damage="{{ player.damage }}"
