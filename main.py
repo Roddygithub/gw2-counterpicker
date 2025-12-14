@@ -46,6 +46,9 @@ from counter_ai import (
 )
 from translations import get_all_translations
 from scheduler import setup_scheduled_tasks
+from rate_limiter import check_upload_rate_limit
+import zipfile
+import io
 
 app = FastAPI(
     title="GW2 CounterPicker",
@@ -101,6 +104,100 @@ sessions_table = db.table("sessions")
 def get_lang(request: Request) -> str:
     """Get language from cookie or default to French"""
     return request.cookies.get("lang", "fr")
+
+
+# Security constants
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+ALLOWED_EXTENSIONS = {'.evtc', '.zevtc', '.zip'}
+ALLOWED_MIME_TYPES = {
+    'application/octet-stream',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/x-evtc'
+}
+
+
+async def validate_upload_file(file: UploadFile) -> bytes:
+    """
+    Validate uploaded file for security
+    
+    Args:
+        file: Uploaded file
+        
+    Returns:
+        File content as bytes
+        
+    Raises:
+        HTTPException: If validation fails
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+    
+    # Check file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Read file content
+    content = await file.read()
+    file_size = len(content)
+    
+    # Check file size
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
+        )
+    
+    if file_size == 0:
+        raise HTTPException(status_code=400, detail="Empty file")
+    
+    # Validate ZIP files
+    if file_ext == '.zip':
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as zf:
+                # Check for zip bombs (too many files or nested zips)
+                if len(zf.namelist()) > 100:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="ZIP contains too many files (max 100)"
+                    )
+                
+                # Check for dangerous files
+                for name in zf.namelist():
+                    if name.startswith('/') or '..' in name:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="ZIP contains invalid file paths"
+                        )
+                    
+                    # Check file extension in ZIP
+                    zip_ext = Path(name).suffix.lower()
+                    if zip_ext not in {'.evtc', '.zevtc'}:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"ZIP must only contain .evtc or .zevtc files"
+                        )
+                
+                # Check total uncompressed size
+                total_size = sum(info.file_size for info in zf.infolist())
+                if total_size > MAX_FILE_SIZE * 2:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="ZIP uncompressed size too large"
+                    )
+        except zipfile.BadZipFile:
+            raise HTTPException(status_code=400, detail="Invalid or corrupted ZIP file")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"ZIP validation error: {str(e)}")
+    
+    return content
+
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -244,21 +341,21 @@ async def analyze_evtc_files(
     """
     Unified endpoint: Analyze single or multiple .evtc files
     Strategy: Try dps.report first, fallback to local parser if unavailable
+    
+    Security: Rate limited to 10 uploads/min, max 50MB per file, ZIP validation
     """
+    # Rate limiting check
+    await check_upload_rate_limit(request)
+    
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
     
     # Single file mode
     if len(files) == 1:
         file = files[0]
-        if not file.filename:
-            raise HTTPException(status_code=400, detail="No file provided")
         
-        valid_extensions = ['.evtc', '.zevtc', '.zip']
-        if not any(file.filename.lower().endswith(ext) for ext in valid_extensions):
-            raise HTTPException(status_code=400, detail="Invalid file type. Use .evtc, .zevtc, or .zip")
-        
-        data = await file.read()
+        # Validate and read file securely
+        data = await validate_upload_file(file)
         print(f"[EVTC] Received file: {file.filename}, size: {len(data)} bytes")
         
         parse_mode = "offline"
@@ -922,12 +1019,29 @@ async def analyze_evening_files(
     """
     Analyze multiple .evtc/.zip files for full evening analysis
     Strategy: Try dps.report first, fallback to local parser if unavailable
+    
+    Security: Rate limited to 10 uploads/min, max 50MB per file, ZIP validation
     """
+    # Rate limiting check
+    await check_upload_rate_limit(request)
+    
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
     
     if len(files) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 files allowed")
+    
+    # Validate all files before processing
+    validated_files = []
+    for file in files:
+        try:
+            content = await validate_upload_file(file)
+            validated_files.append((file.filename, content))
+        except HTTPException as e:
+            raise HTTPException(
+                status_code=e.status_code,
+                detail=f"File '{file.filename}': {e.detail}"
+            )
     
     session_id = str(uuid.uuid4())
     
@@ -963,15 +1077,14 @@ async def analyze_evening_files(
             dps_report_available = False
             print("[Evening] dps.report unavailable, using OFFLINE mode")
         
-        for f in files:
-            file_data = await f.read()
+        for filename, file_data in validated_files:
             players_data = None
             permalink = ""
             
             # Strategy 1: Try dps.report if available
             if dps_report_available:
                 try:
-                    upload_files = {"file": (f.filename, file_data)}
+                    upload_files = {"file": (filename, file_data)}
                     response = await client.post(
                         "https://dps.report/uploadContent",
                         files=upload_files,
@@ -992,18 +1105,18 @@ async def analyze_evening_files(
                                     players_data = extract_players_from_ei_json(log_data)
                                     parse_mode = "online"
                 except Exception as e:
-                    print(f"[Evening] dps.report failed for {f.filename}: {e}")
+                    print(f"[Evening] dps.report failed for {filename}: {e}")
                     dps_report_available = False  # Switch to offline for remaining files
             
             # Strategy 2: OFFLINE FALLBACK - Use local parser
             if players_data is None:
                 try:
-                    parsed_log = real_parser.parse_evtc_bytes(file_data, f.filename)
+                    parsed_log = real_parser.parse_evtc_bytes(file_data, filename)
                     players_data = convert_parsed_log_to_players_data(parsed_log)
                     parse_mode = "offline"
-                    print(f"[Evening] Offline parsed {f.filename}")
+                    print(f"[Evening] Offline parsed {filename}")
                 except Exception as e:
-                    print(f"[Evening] Failed to parse {f.filename}: {e}")
+                    print(f"[Evening] Failed to parse {filename}: {e}")
                     continue
             
             if not players_data:
@@ -1062,7 +1175,7 @@ async def analyze_evening_files(
                 draws += 1
             
             fight_results.append({
-                'filename': f.filename,
+                'filename': filename,
                 'permalink': permalink,
                 'fight_name': players_data.get('fight_name', 'Unknown'),
                 'duration_sec': players_data.get('duration_sec', 0),
@@ -1073,7 +1186,7 @@ async def analyze_evening_files(
                 'parse_mode': parse_mode
             })
             
-            print(f"[Evening] Processed {f.filename}: {players_data.get('fight_name')} ({parse_mode})")
+            print(f"[Evening] Processed {filename}: {players_data.get('fight_name')} ({parse_mode})")
     
     # Calculate averages
     num_fights = len(fight_results)
