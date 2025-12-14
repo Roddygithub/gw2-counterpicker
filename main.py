@@ -68,11 +68,14 @@ real_parser = RealEVTCParser()
 # Initialize scheduled tasks (fingerprint cleanup on Fridays at 18h55)
 setup_scheduled_tasks()
 
+# Auto-deployment system active - Changes sync to GitHub and server automatically
+
 # Import fight data if available (for deployment)
 def import_deployed_data():
     """Import fight data from export file if database is empty"""
     from pathlib import Path
     import json
+    from counter_ai import fights_table  # Import manquant
     
     # Check if we need to import data
     fights = fights_table.all()
