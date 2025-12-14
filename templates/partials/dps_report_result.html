@@ -639,7 +639,17 @@
         </div>
         
         <!-- BOONS TAB -->
-        <div x-show="activeTab === 'boons'" class="space-y-6">
+        <div x-show="activeTab === 'boons'" class="space-y-6" x-data="{ showSecondaryBoons: false }">
+            <!-- Toggle for secondary boons -->
+            <div class="flex justify-end mb-3">
+                <button @click="showSecondaryBoons = !showSecondaryBoons" 
+                        class="px-4 py-2 rounded-lg text-sm font-medium border transition-all"
+                        :class="showSecondaryBoons ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-gw2-darker text-gray-400 border-gray-700'">
+                    <span x-show="!showSecondaryBoons">➕ {% if lang == 'en' %}Show secondary boons{% else %}Afficher boons secondaires{% endif %}</span>
+                    <span x-show="showSecondaryBoons">➖ {% if lang == 'en' %}Hide secondary boons{% else %}Masquer boons secondaires{% endif %}</span>
+                </button>
+            </div>
+            
             <!-- Group Boon Uptimes -->
             {% if players.group_boon_uptimes %}
             <div>
@@ -653,9 +663,15 @@
                                 <th class="pb-2 text-center" title="Resistance - Priorité #2"><img src="/static/img/boons/resistance.png" class="w-5 h-5 inline" alt="Resist"> Resist</th>
                                 <th class="pb-2 text-center" title="Aegis - Priorité #3"><img src="/static/img/boons/aegis.png" class="w-5 h-5 inline" alt="Aegis"> Aegis</th>
                                 <th class="pb-2 text-center" title="Superspeed - Priorité #4"><img src="/static/img/boons/superspeed.png" class="w-5 h-5 inline" alt="Superspeed"> Speed</th>
-                                <th class="pb-2 text-center"><img src="/static/img/boons/stability.png" class="w-5 h-5 inline" alt="Stab"> Stab</th>
+                                <th class="pb-2 text-center"><img src="/static/img/boons/stability.png" class="w-5 h-5 inline" alt="Stab"> Stab (stacks)</th>
                                 <th class="pb-2 text-center"><img src="/static/img/boons/protection.png" class="w-5 h-5 inline" alt="Prot"> Prot</th>
-                                <th class="pb-2 text-center"><img src="/static/img/boons/vigor.png" class="w-5 h-5 inline" alt="Vigor"> Vigor</th>
+                                <th class="pb-2 text-center" x-show="showSecondaryBoons"><img src="/static/img/boons/vigor.png" class="w-5 h-5 inline" alt="Vigor"> Vigor</th>
+                                <th class="pb-2 text-center" x-show="showSecondaryBoons"><img src="/static/img/boons/might.png" class="w-5 h-5 inline" alt="Might"> Might</th>
+                                <th class="pb-2 text-center" x-show="showSecondaryBoons"><img src="/static/img/boons/fury.png" class="w-5 h-5 inline" alt="Fury"> Fury</th>
+                                <th class="pb-2 text-center" x-show="showSecondaryBoons"><img src="/static/img/boons/regeneration.png" class="w-5 h-5 inline" alt="Regen"> Regen</th>
+                                <th class="pb-2 text-center" x-show="showSecondaryBoons"><img src="/static/img/boons/resolution.png" class="w-5 h-5 inline" alt="Resolution"> Resolution</th>
+                                <th class="pb-2 text-center" x-show="showSecondaryBoons"><img src="/static/img/boons/swiftness.png" class="w-5 h-5 inline" alt="Swiftness"> Swiftness</th>
+                                <th class="pb-2 text-center" x-show="showSecondaryBoons"><img src="/static/img/boons/alacrity.png" class="w-5 h-5 inline" alt="Alacrity"> Alacrity</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-800">
@@ -666,9 +682,15 @@
                                 <td class="py-2 text-center font-mono {% if boons.resistance|default(0) >= 50 %}text-green-400{% elif boons.resistance|default(0) >= 25 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.resistance|default(0) }}%</td>
                                 <td class="py-2 text-center font-mono {% if boons.aegis|default(0) >= 50 %}text-green-400{% elif boons.aegis|default(0) >= 25 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.aegis|default(0) }}%</td>
                                 <td class="py-2 text-center font-mono {% if boons.superspeed|default(0) >= 30 %}text-green-400{% elif boons.superspeed|default(0) >= 15 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.superspeed|default(0) }}%</td>
-                                <td class="py-2 text-center font-mono {% if boons.stability|default(0) >= 50 %}text-green-400{% elif boons.stability|default(0) >= 25 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.stability|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono text-yellow-400">{{ boons.stability_stacks|default(boons.stability|default(0))|round(0)|int }}</td>
                                 <td class="py-2 text-center font-mono {% if boons.protection|default(0) >= 80 %}text-green-400{% elif boons.protection|default(0) >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.protection|default(0) }}%</td>
-                                <td class="py-2 text-center font-mono {% if boons.vigor|default(0) >= 80 %}text-green-400{% elif boons.vigor|default(0) >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ boons.vigor|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300" x-show="showSecondaryBoons">{{ boons.vigor|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300" x-show="showSecondaryBoons">{{ boons.might|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300" x-show="showSecondaryBoons">{{ boons.fury|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300" x-show="showSecondaryBoons">{{ boons.regeneration|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300" x-show="showSecondaryBoons">{{ boons.resolution|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300" x-show="showSecondaryBoons">{{ boons.swiftness|default(0) }}%</td>
+                                <td class="py-2 text-center font-mono text-gray-300" x-show="showSecondaryBoons">{{ boons.alacrity|default(0) }}%</td>
                             </tr>
                             {% endfor %}
                         </tbody>
