@@ -519,6 +519,64 @@
     </footer>
     
     <script src="/static/js/app.js?v={{ app_version }}"></script>
+    
+    <script>
+    // Fonction pour trier les tableaux
+    function sortTable(tableId, columnIndex, isNumeric = false) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        // Vérifier si on doit inverser le tri (alternance)
+        const th = table.querySelectorAll('th')[columnIndex];
+        const isCurrentlyAsc = th.classList.contains('sort-asc');
+        const isCurrentlyDesc = th.classList.contains('sort-desc');
+        
+        // Déterminer la direction du tri
+        let sortDirection = 'asc';
+        if (isCurrentlyAsc) {
+            sortDirection = 'desc';
+        } else if (isCurrentlyDesc) {
+            sortDirection = 'asc';
+        }
+        
+        // Nettoyer les classes de tri sur tous les en-têtes
+        table.querySelectorAll('th').forEach(header => {
+            header.classList.remove('sort-asc', 'sort-desc');
+        });
+        
+        // Ajouter la classe de tri appropriée
+        th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        
+        // Trier les lignes
+        rows.sort((a, b) => {
+            let aValue = a.cells[columnIndex].textContent.trim();
+            let bValue = b.cells[columnIndex].textContent.trim();
+            
+            if (isNumeric) {
+                // Extraire les nombres des valeurs (pour les colonnes avec des nombres formatés)
+                aValue = parseFloat(aValue.replace(/[^0-9.-]/g, '')) || 0;
+                bValue = parseFloat(bValue.replace(/[^0-9.-]/g, '')) || 0;
+            } else {
+                // Tri alphabétique insensible à la casse
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+            
+            if (sortDirection === 'asc') {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+        
+        // Réinsérer les lignes triées
+        rows.forEach(row => tbody.appendChild(row));
+    }
+    </script>
+    
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

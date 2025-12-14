@@ -224,16 +224,16 @@
     <div class="glow-card rounded-2xl p-6">
         <h3 class="font-display text-xl font-bold text-cyber-pink mb-4">🏅 Top 10 Joueurs (par dégâts totaux)</h3>
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm" id="top-players-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
-                        <th class="pb-3 pr-4">#</th>
-                        <th class="pb-3 pr-4">Joueur</th>
-                        <th class="pb-3 pr-4">Build</th>
-                        <th class="pb-3 pr-4">Dégâts totaux</th>
-                        <th class="pb-3 pr-4">Kills</th>
-                        <th class="pb-3 pr-4">Deaths</th>
-                        <th class="pb-3">Apparitions</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 0)"># ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 1)">Joueur ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 2)">Build ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 3, true)">Dégâts totaux ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 4, true)">Kills ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 5, true)">Deaths ↕</th>
+                        <th class="pb-3 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 6, true)">Apparitions ↕</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -298,16 +298,16 @@
         <h3 class="font-display text-xl font-bold text-white mb-4">⚔️ Détail des Combats</h3>
         
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-sm" id="fights-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
-                        <th class="pb-3 pr-4">Fichier</th>
-                        <th class="pb-3 pr-4">Combat</th>
-                        <th class="pb-3 pr-4">Résultat</th>
-                        <th class="pb-3 pr-4">Durée</th>
-                        <th class="pb-3 pr-4">Alliés</th>
-                        <th class="pb-3 pr-4">Stats</th>
-                        <th class="pb-3">Lien</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 0)">Fichier ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 1)">Combat ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 2)">Résultat ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 3, true)">Durée ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 4, true)">Alliés ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 5)">Stats ↕</th>
+                        <th class="pb-3 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 6)">Lien ↕</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
