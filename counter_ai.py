@@ -7,11 +7,15 @@ Powered by Llama 3.2 8B via Ollama
 import json
 import httpx
 from datetime import datetime, timedelta
-from typing import Optional, Dict, List, Any
-from dataclasses import dataclass, asdict
+from typing import Dict, List, Optional
+import httpx
+import json
 from pathlib import Path
-
 from tinydb import TinyDB, Query
+from logger import get_logger
+
+# Setup logger
+logger = get_logger('counter_ai')
 
 # === CONFIGURATION ===
 OLLAMA_URL = "http://localhost:11434"
@@ -108,12 +112,12 @@ class CounterAI:
                 model_names = [m.get('name', '') for m in models]
                 self.ollama_available = any(MODEL_NAME in name for name in model_names)
                 if not self.ollama_available:
-                    print(f"[CounterAI] Model {MODEL_NAME} not found. Available: {model_names}")
+                    logger.warning(f"Model {MODEL_NAME} not found. Available: {model_names}")
                 else:
-                    print(f"[CounterAI] ✓ Ollama ready with {MODEL_NAME}")
+                    logger.info(f"✓ Ollama ready with {MODEL_NAME}")
                 return self.ollama_available
         except Exception as e:
-            print(f"[CounterAI] Ollama not available: {e}")
+            logger.warning(f"Ollama not available: {e}")
             self.ollama_available = False
         return False
     
@@ -201,7 +205,7 @@ class CounterAI:
         FpQuery = Query()
         removed = fingerprints_table.remove(FpQuery.created_at < cutoff_str)
         if removed:
-            print(f"[CounterAI] Cleaned up {len(removed)} old fingerprints")
+            logger.info(f"Cleaned up {len(removed)} old fingerprints")
     
     def record_fight(self, fight_data: dict, filename: str = None, filesize: int = None) -> str:
         """
@@ -212,13 +216,13 @@ class CounterAI:
         # Check for duplicate file (same uploader)
         if filename and filesize:
             if self.is_file_already_analyzed(filename, filesize):
-                print(f"[CounterAI] Skipping duplicate file: {filename} ({filesize} bytes)")
+                logger.debug(f"Skipping duplicate file: {filename} ({filesize} bytes)")
                 return None
         
         # Check for duplicate fight (different uploaders, same fight)
         fingerprint = self.generate_fight_fingerprint(fight_data)
         if self.is_fight_duplicate(fingerprint):
-            print(f"[CounterAI] Skipping duplicate fight (fingerprint: {fingerprint})")
+            logger.debug(f"Skipping duplicate fight (fingerprint: {fingerprint})")
             # Still mark file as analyzed so same person doesn't re-upload
             if filename and filesize:
                 self.mark_file_as_analyzed(filename, filesize, f"duplicate_{fingerprint}")
@@ -227,7 +231,7 @@ class CounterAI:
         # Skip fights shorter than 60 seconds (not meaningful for analysis)
         duration_sec = fight_data.get('duration_sec', 0)
         if duration_sec < 60:
-            print(f"[CounterAI] Skipping short fight ({duration_sec}s) - minimum 60s required")
+            logger.debug(f"Skipping short fight ({duration_sec}s) - minimum 60s required")
             if filename and filesize:
                 self.mark_file_as_analyzed(filename, filesize, f"short_{duration_sec}s")
             return None
@@ -327,7 +331,7 @@ class CounterAI:
         # Also store builds in a separate table for quick lookups
         self._store_build_performance(ally_builds, enemy_comp, outcome)
         
-        print(f"[CounterAI] Recorded fight {fight_id}: {outcome} vs {list(enemy_comp.keys())[:3]}... ({len(ally_builds)} builds)")
+        logger.info(f"Recorded fight {fight_id}: {outcome} vs {list(enemy_comp.keys())[:3]}... ({len(ally_builds)} builds)")
         
         # Mark file as analyzed to prevent duplicates
         if filename and filesize:
@@ -650,11 +654,11 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
                         'generated_at': datetime.now().isoformat()
                     }
                 else:
-                    print(f"[CounterAI] Ollama error: {response.status_code}")
+                    logger.error(f"Ollama error: {response.status_code}")
                     return self._fallback_counter(enemy_comp, stats)
                     
         except Exception as e:
-            print(f"[CounterAI] Generation error: {e}")
+            logger.error(f"Generation error: {e}")
             return self._fallback_counter(enemy_comp, stats)
     
     def _fallback_counter(self, enemy_comp: Dict[str, int], stats: dict) -> dict:

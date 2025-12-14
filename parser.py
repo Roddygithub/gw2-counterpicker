@@ -14,6 +14,10 @@ from typing import List, Dict, Optional, Tuple, BinaryIO
 from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
+from logger import get_logger
+
+# Setup logger
+logger = get_logger('parser')
 
 from models import (
     AnalysisResult, PlayerBuild, CompositionAnalysis,
@@ -1217,7 +1221,7 @@ class RealEVTCParser:
                 all_logs.append(log)
                 all_enemies.extend(log.enemies)
             except Exception as e:
-                print(f"Error parsing file: {e}")
+                logger.error(f"Error parsing file: {e}")
                 continue
         
         # If no logs parsed, return mock data

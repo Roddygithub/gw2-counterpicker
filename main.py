@@ -47,8 +47,12 @@ from counter_ai import (
 from translations import get_all_translations
 from scheduler import setup_scheduled_tasks
 from rate_limiter import check_upload_rate_limit
+from logger import get_logger
 import zipfile
 import io
+
+# Setup logger
+logger = get_logger('main')
 
 app = FastAPI(
     title="GW2 CounterPicker",
@@ -85,11 +89,11 @@ def import_deployed_data():
     if not fights:
         export_file = Path("data/export/fights_export.json")
         if export_file.exists():
-            print(f"[Main] Importing {export_file.stat().st_size} bytes of fight data...")
+            logger.info(f"Importing {export_file.stat().st_size} bytes of fight data...")
             with open(export_file) as f:
                 fights_data = json.load(f)
             fights_table.insert_multiple(fights_data)
-            print(f"[Main] Imported {len(fights_data)} fights to database")
+            logger.info(f"Imported {len(fights_data)} fights to database")
 
 # Import data on startup
 import_deployed_data()
@@ -328,7 +332,7 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
                     "t": get_all_translations(lang)
                 })
     except Exception as e:
-        print(f"[URL] dps.report API failed: {e}")
+        logger.error(f"dps.report API failed: {e}")
     
     raise HTTPException(status_code=500, detail="Failed to fetch dps.report data")
 
@@ -356,7 +360,7 @@ async def analyze_evtc_files(
         
         # Validate and read file securely
         data = await validate_upload_file(file)
-        print(f"[EVTC] Received file: {file.filename}, size: {len(data)} bytes")
+        logger.info(f"Received file: {file.filename}, size: {len(data)} bytes")
         
         parse_mode = "offline"
         
@@ -391,7 +395,7 @@ async def analyze_evtc_files(
                             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
                             ai_counter = await get_ai_counter(enemy_spec_counts)
                             
-                            print(f"[EVTC] dps.report success: {len(players_data['enemies'])} enemies")
+                            logger.info(f"dps.report success: {len(players_data['enemies'])} enemies")
                             
                             lang = get_lang(request)
                             return templates.TemplateResponse("partials/dps_report_result.html", {
@@ -407,10 +411,10 @@ async def analyze_evtc_files(
                                 "t": get_all_translations(lang)
                             })
         except Exception as api_error:
-            print(f"[EVTC] dps.report unavailable: {api_error}")
+            logger.warning(f"dps.report unavailable: {api_error}")
         
         # Strategy 2: OFFLINE FALLBACK - Use local parser
-        print(f"[EVTC] Using OFFLINE mode with local parser")
+        logger.info("Using OFFLINE mode with local parser")
         try:
             parsed_log = real_parser.parse_evtc_bytes(data, file.filename)
             
@@ -426,7 +430,7 @@ async def analyze_evtc_files(
             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
             ai_counter = await get_ai_counter(enemy_spec_counts)
             
-            print(f"[EVTC] Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
+            logger.info(f"Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
             
             lang = get_lang(request)
             return templates.TemplateResponse("partials/dps_report_result.html", {
@@ -442,7 +446,7 @@ async def analyze_evtc_files(
                 "t": get_all_translations(lang)
             })
         except Exception as parse_error:
-            print(f"[EVTC] Local parser failed: {parse_error}")
+            logger.error(f"Local parser failed: {parse_error}")
             raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(parse_error)}")
     
     # Multiple files mode - redirect to evening analysis
@@ -1075,7 +1079,7 @@ async def analyze_evening_files(
             dps_report_available = test_response.status_code == 200
         except:
             dps_report_available = False
-            print("[Evening] dps.report unavailable, using OFFLINE mode")
+            logger.info("dps.report unavailable, using OFFLINE mode")
         
         for filename, file_data in validated_files:
             players_data = None
@@ -1105,7 +1109,7 @@ async def analyze_evening_files(
                                     players_data = extract_players_from_ei_json(log_data)
                                     parse_mode = "online"
                 except Exception as e:
-                    print(f"[Evening] dps.report failed for {filename}: {e}")
+                    logger.warning(f"dps.report failed for {filename}: {e}")
                     dps_report_available = False  # Switch to offline for remaining files
             
             # Strategy 2: OFFLINE FALLBACK - Use local parser
@@ -1114,9 +1118,9 @@ async def analyze_evening_files(
                     parsed_log = real_parser.parse_evtc_bytes(file_data, filename)
                     players_data = convert_parsed_log_to_players_data(parsed_log)
                     parse_mode = "offline"
-                    print(f"[Evening] Offline parsed {filename}")
+                    logger.info(f"Offline parsed {filename}")
                 except Exception as e:
-                    print(f"[Evening] Failed to parse {filename}: {e}")
+                    logger.error(f"Failed to parse {filename}: {e}")
                     continue
             
             if not players_data:
@@ -1186,7 +1190,7 @@ async def analyze_evening_files(
                 'parse_mode': parse_mode
             })
             
-            print(f"[Evening] Processed {filename}: {players_data.get('fight_name')} ({parse_mode})")
+            logger.info(f"Processed {filename}: {players_data.get('fight_name')} ({parse_mode})")
     
     # Calculate averages
     num_fights = len(fight_results)
