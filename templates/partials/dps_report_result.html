@@ -937,20 +937,36 @@
         </div>
         
         <!-- Enemy Composition Analyzed -->
-        <div class="bg-gw2-darker/80 rounded-xl p-4 mb-4 border border-emerald-500/20">
-            <div class="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                {% if lang == 'en' %}Enemy composition analyzed{% else %}Composition ennemie analysée{% endif %}
+        <div class="bg-red-900/20 rounded-xl p-4 mb-4 border-2 border-red-500/40">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-2xl">👹</span>
+                <div>
+                    <div class="text-sm font-bold text-red-400 uppercase tracking-wide">
+                        {% if lang == 'en' %}Enemy composition detected{% else %}Composition ennemie détectée{% endif %}
+                    </div>
+                    <div class="text-xs text-gray-400">
+                        {% if lang == 'en' %}What the enemy is playing{% else %}Ce que l'ennemi joue{% endif %}
+                    </div>
+                </div>
             </div>
-            <div class="text-white font-medium text-sm">{{ ai_counter.enemy_composition }}</div>
+            <div class="text-white font-medium text-sm bg-gw2-darker/50 rounded-lg p-3">{{ ai_counter.enemy_composition }}</div>
         </div>
         
         <!-- AI Counter Recommendation - RESTRUCTURED -->
-        <div class="bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 rounded-xl p-5 border border-emerald-500/30 mb-4">
-            <div class="text-xs text-emerald-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                {% if lang == 'en' %}Recommended counter-composition (by role){% else %}Contre-composition recommandée (par rôle){% endif %}
+        <div class="bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 rounded-xl p-5 border-2 border-emerald-500/50 mb-4">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-2xl">⚔️</span>
+                <div>
+                    <div class="text-sm font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        {% if lang == 'en' %}Recommended counter-composition{% else %}Contre-composition recommandée{% endif %}
+                    </div>
+                    <div class="text-xs text-gray-400">
+                        {% if lang == 'en' %}What YOU should play to counter them{% else %}Ce que TOI tu dois jouer pour les counter{% endif %}
+                    </div>
+                </div>
             </div>
-            <div class="text-white leading-relaxed whitespace-pre-line">{{ ai_counter.counter }}</div>
+            <div class="text-white leading-relaxed whitespace-pre-line bg-gw2-darker/50 rounded-lg p-3">{{ ai_counter.counter }}</div>
         </div>
         
         <!-- IMPORTANT: Limitations Warning -->
