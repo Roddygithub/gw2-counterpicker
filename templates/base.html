@@ -357,14 +357,14 @@
     lang: localStorage.getItem('lang') || 'fr',
     translations: {
         fr: {
-            nav: { home: 'Accueil', meta: 'Méta', analyze: 'Analyser', evening: 'Soirée' },
+            nav: { home: 'Accueil', meta: 'Méta', analyze: 'Analyser', about: 'À propos', feedback: 'Feedback' },
             home: { title: 'GW2 CounterPicker', subtitle: 'Analysez vos logs WvW', quick: 'Analyse Rapide', evening: 'Soirée Complète' },
             analyze: { title: 'Analyse de Combat', drop: 'Glissez vos fichiers .evtc ou .zip ici', or: 'ou', select: 'Sélectionner des fichiers' },
             evening: { title: 'Analyse de Soirée', drop: 'Glissez plusieurs fichiers .evtc/.zip', info: 'Analysez jusqu\'à 100 fichiers pour un rapport complet' },
             footer: { credits: 'Créé et hébergé par', github: 'GitHub' }
         },
         en: {
-            nav: { home: 'Home', meta: 'Meta', analyze: 'Analyze', evening: 'Evening' },
+            nav: { home: 'Home', meta: 'Meta', analyze: 'Analyze', about: 'About', feedback: 'Feedback' },
             home: { title: 'GW2 CounterPicker', subtitle: 'Analyze your WvW logs', quick: 'Quick Analysis', evening: 'Full Evening' },
             analyze: { title: 'Combat Analysis', drop: 'Drop your .evtc or .zip files here', or: 'or', select: 'Select files' },
             evening: { title: 'Evening Analysis', drop: 'Drop multiple .evtc/.zip files', info: 'Analyze up to 100 files for a complete report' },
@@ -437,8 +437,8 @@
                     <a href="/" class="nav-link" x-text="t('nav.home')"></a>
                     <a href="/meta" class="nav-link" x-text="t('nav.meta')"></a>
                     <a href="/analyze" class="nav-link" x-text="t('nav.analyze')"></a>
-                    <a href="/evening" class="nav-link" x-text="t('nav.evening')"></a>
-                    <a href="/about" class="nav-link">{% if lang == 'en' %}About{% else %}À propos{% endif %}</a>
+                    <a href="/about" class="nav-link" x-text="t('nav.about')"></a>
+                    <a href="mailto:feedback@gw2counterpicker.com?subject=Feedback%20GW2%20CounterPicker" class="nav-link" x-text="t('nav.feedback')"></a>
                 </div>
                 
                 <!-- Language Toggle -->

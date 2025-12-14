@@ -140,26 +140,21 @@ async def about_page(request: Request):
 
 @app.get("/analyze", response_class=HTMLResponse)
 async def analyze_page(request: Request):
-    """Single report analysis page"""
+    """Unified analysis page - supports single or multiple files"""
     lang = get_lang(request)
     return templates.TemplateResponse("analyze.html", {
         "request": request,
-        "title": "Quick Analysis",
+        "title": "Analyse",
         "lang": lang,
         "t": get_all_translations(lang)
     })
 
 
 @app.get("/evening", response_class=HTMLResponse)
-async def evening_page(request: Request):
-    """Full evening analysis page"""
-    lang = get_lang(request)
-    return templates.TemplateResponse("evening.html", {
-        "request": request,
-        "title": "Soirée Complète",
-        "lang": lang,
-        "t": get_all_translations(lang)
-    })
+async def evening_page_redirect(request: Request):
+    """Redirect to unified analyze page"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/analyze", status_code=301)
 
 
 @app.get("/meta", response_class=HTMLResponse)

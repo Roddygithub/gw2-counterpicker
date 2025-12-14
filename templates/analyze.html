@@ -1,36 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}Quick Analysis - GW2 CounterPicker{% endblock %}
+{% block title %}Analyse - GW2 CounterPicker{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="{
     mode: 'file',
-    selectedFile: null,
+    selectedFiles: [],
     isDragging: false,
     
     handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (file) {
-            this.selectedFile = file;
-        }
+        this.selectedFiles = Array.from(event.target.files);
     },
     
     handleDrop(event) {
         this.isDragging = false;
-        const file = event.dataTransfer.files[0];
-        if (file) {
-            this.selectedFile = file;
-            const input = document.getElementById('evtc-file');
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            input.files = dataTransfer.files;
-        }
+        this.selectedFiles = Array.from(event.dataTransfer.files);
+        const input = document.getElementById('evtc-file');
+        const dataTransfer = new DataTransfer();
+        this.selectedFiles.forEach(file => dataTransfer.items.add(file));
+        input.files = dataTransfer.files;
     },
     
-    clearFile() {
-        this.selectedFile = null;
+    clearFiles() {
+        this.selectedFiles = [];
         const input = document.getElementById('evtc-file');
         if (input) input.value = '';
+    },
+    
+    removeFile(index) {
+        this.selectedFiles.splice(index, 1);
+        const input = document.getElementById('evtc-file');
+        const dataTransfer = new DataTransfer();
+        this.selectedFiles.forEach(file => dataTransfer.items.add(file));
+        input.files = dataTransfer.files;
     },
     
     formatFileSize(bytes) {
@@ -44,11 +46,11 @@
     <div class="text-center mb-12">
         <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
             <span class="bg-gradient-to-r from-gw2-purple to-cyber-pink bg-clip-text text-transparent">
-                ⚡ Quick Analysis
+                ⚡ Analyse
             </span>
         </h1>
         <p class="text-xl text-gray-400">
-            {% if lang == 'en' %}Drop your .evtc/.zevtc file or paste a dps.report link{% else %}Glisse ton fichier .evtc/.zevtc ou colle un lien dps.report{% endif %}
+            {% if lang == 'en' %}Drop one or multiple .evtc/.zevtc files or paste a dps.report link{% else %}Glisse un ou plusieurs fichiers .evtc/.zevtc ou colle un lien dps.report{% endif %}
         </p>
     </div>
     
@@ -92,57 +94,71 @@
                 <input type="file" 
                        x-ref="fileInput"
                        id="evtc-file" 
-                       name="file" 
+                       name="files" 
                        accept=".evtc,.zevtc,.zip"
+                       multiple
                        @change="handleFileSelect($event)"
                        class="hidden">
                 
                 <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all"
-                     :class="isDragging ? 'border-gw2-purple bg-gw2-purple/10' : (selectedFile ? 'border-green-500 bg-green-500/10' : 'border-gray-600')">
+                     :class="isDragging ? 'border-gw2-purple bg-gw2-purple/10' : (selectedFiles.length > 0 ? 'border-green-500 bg-green-500/10' : 'border-gray-600')">
                     
-                    <!-- No file selected -->
-                    <div x-show="!selectedFile">
+                    <!-- No files selected -->
+                    <div x-show="selectedFiles.length === 0">
                         <div class="w-16 h-16 rounded-full bg-gw2-purple/20 flex items-center justify-center mx-auto mb-4">
                             <svg class="w-8 h-8 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                             </svg>
                         </div>
                         <p class="text-lg font-display font-bold text-white mb-2">
-                            {% if lang == 'en' %}Drop your file here{% else %}Glisse ton fichier ici{% endif %}
+                            {% if lang == 'en' %}Drop your files here{% else %}Glisse tes fichiers ici{% endif %}
                         </p>
                         <p class="text-gray-400 text-sm">
-                            {% if lang == 'en' %}or click to select a .evtc, .zevtc or .zip file{% else %}ou clique pour sélectionner un fichier .evtc, .zevtc ou .zip{% endif %}
+                            {% if lang == 'en' %}or click to select one or multiple .evtc, .zevtc or .zip files{% else %}ou clique pour sélectionner un ou plusieurs fichiers .evtc, .zevtc ou .zip{% endif %}
                         </p>
                     </div>
                     
-                    <!-- File selected -->
-                    <div x-show="selectedFile" class="flex items-center justify-center gap-4">
-                        <div class="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center">
-                            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
+                    <!-- Files selected -->
+                    <div x-show="selectedFiles.length > 0" class="space-y-2">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="font-display font-bold text-white">
+                                <span x-text="selectedFiles.length"></span> {% if lang == 'en' %}file(s) selected{% else %}fichier(s) sélectionné(s){% endif %}
+                            </p>
+                            <button type="button" @click.stop="clearFiles()" class="px-3 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm">
+                                {% if lang == 'en' %}Clear all{% else %}Tout effacer{% endif %}
+                            </button>
                         </div>
-                        <div class="text-left">
-                            <p class="font-display font-bold text-white" x-text="selectedFile?.name"></p>
-                            <p class="text-sm text-gray-400" x-text="formatFileSize(selectedFile?.size)"></p>
-                        </div>
-                        <button type="button" @click.stop="clearFile()" class="ml-4 p-2 rounded-lg hover:bg-red-500/20 text-red-400">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
+                        <template x-for="(file, index) in selectedFiles" :key="index">
+                            <div class="flex items-center gap-3 p-3 rounded-lg bg-gw2-darker border border-green-500/30">
+                                <div class="w-8 h-8 rounded bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1 text-left min-w-0">
+                                    <p class="font-medium text-white truncate" x-text="file.name"></p>
+                                    <p class="text-xs text-gray-400" x-text="formatFileSize(file.size)"></p>
+                                </div>
+                                <button type="button" @click.stop="removeFile(index)" class="p-1 rounded hover:bg-red-500/20 text-red-400 flex-shrink-0">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>
             
             <button type="submit" 
-                    :disabled="!selectedFile"
-                    :class="selectedFile ? 'bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple hover:scale-[1.02]' : 'bg-gray-700 cursor-not-allowed'"
+                    :disabled="selectedFiles.length === 0"
+                    :class="selectedFiles.length > 0 ? 'bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple hover:scale-[1.02]' : 'bg-gray-700 cursor-not-allowed'"
                     class="w-full mt-6 py-4 rounded-xl font-display font-bold text-lg transition-all flex items-center justify-center gap-3">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
-                {% if lang == 'en' %}Analyze file{% else %}Analyser le fichier{% endif %}
+                <span x-show="selectedFiles.length === 1">{% if lang == 'en' %}Analyze file{% else %}Analyser le fichier{% endif %}</span>
+                <span x-show="selectedFiles.length > 1">{% if lang == 'en' %}Analyze{% else %}Analyser{% endif %} <span x-text="selectedFiles.length"></span> {% if lang == 'en' %}files{% else %}fichiers{% endif %}</span>
                 
                 <span id="loading-file" class="htmx-indicator">
                     <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
