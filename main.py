@@ -431,13 +431,48 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
     active_kills = sum(p.get('kills', 0) for p in allies)
     active_damage = sum(p.get('damage', 0) for p in allies)
     
+    # Calculate fight outcome based on combat stats
+    def determine_fight_outcome(allies, enemies, duration_sec):
+        """Determine fight outcome based on combat statistics"""
+        if not allies or not enemies:
+            return 'unknown'
+        
+        # Calculate total deaths and downs for allies
+        total_ally_deaths = sum(p.get('deaths', 0) for p in allies)
+        total_ally_downs = sum(p.get('downs', 0) for p in allies)
+        
+        # For very short fights (< 30s), consider draws unless clear winner
+        if duration_sec < 30:
+            if total_ally_deaths == 0:
+                return 'victory'
+            elif total_ally_deaths > 3:
+                return 'defeat'
+            else:
+                return 'draw'
+        
+        # For longer fights, use death ratio
+        if total_ally_deaths == 0:
+            return 'victory'
+        elif total_ally_downs > len(allies) * 0.8:  # Most allies were downed
+            return 'defeat'
+        else:
+            # Check if it was a close fight
+            if total_ally_deaths <= 2 and total_ally_downs <= len(allies) * 0.3:
+                return 'victory'
+            elif total_ally_deaths >= len(allies) * 0.5:
+                return 'defeat'
+            else:
+                return 'draw'
+    
+    fight_outcome = determine_fight_outcome(allies, parsed_log.players, parsed_log.duration_seconds)
+    
     return {
         'allies': allies,
         'allies_afk': allies_afk,  # AFK players tracked separately
         'enemies': sorted(enemies, key=lambda x: x.get('damage_taken', 0), reverse=True)[:20],
         'fight_name': f"WvW Combat ({parsed_log.duration_seconds}s)",
         'duration_sec': parsed_log.duration_seconds,
-        'fight_outcome': 'unknown',
+        'fight_outcome': fight_outcome,
         'fight_stats': {
             'ally_deaths': active_deaths,
             'ally_downs': sum(p.downs for p in parsed_log.players if not is_player_afk(p)),
