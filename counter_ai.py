@@ -714,10 +714,13 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
                 if account:
                     unique_players.add(account)
         
+        # Count only fights with enemy_composition
+        fights_with_composition = len([f for f in fights_table.all() if 'enemy_composition' in f and f['enemy_composition']])
+        
         return {
             'ollama_available': self.ollama_available,
             'model': MODEL_NAME if self.ollama_available else 'fallback_rules',
-            'total_fights': stats['total_fights'],
+            'total_fights': fights_with_composition,  # Changed from stats['total_fights']
             'win_rate': stats['win_rate'],
             'unique_players': len(unique_players),
             'last_updated': stats.get('last_updated'),

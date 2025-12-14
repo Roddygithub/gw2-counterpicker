@@ -781,11 +781,22 @@ class EVTCParser:
                 if event.src_agent in self.agents:
                     self.agents[event.src_agent].team_id = event.dst_agent
         
+        # If no end time from SQUAD_COMBAT_END, use the last event time
+        if end_time == 0 and self.events:
+            end_time = max(event.time for event in self.events)
+            
+        # If still no valid times, try to estimate from combat events
+        if end_time == 0 and self.events:
+            combat_times = [e.time for e in self.events if e.is_statechange == 0]  # Only combat events
+            if combat_times:
+                start_time = min(combat_times)
+                end_time = max(combat_times)
+        
         # Store metadata
         self._pov_agent = pov_agent
         self._map_id = map_id
-        self._start_time = start_time
-        self._end_time = end_time
+        self._start_time = start_time if start_time > 0 else 0
+        self._end_time = end_time if end_time > start_time else start_time + 30000  # Fallback: 30s
     
     def _build_result(self) -> ParsedLog:
         """Build the final parsed result"""
@@ -793,27 +804,107 @@ class EVTCParser:
         enemies = []
         
         # Get POV team and allied agents (same subgroup structure)
+        pov_agent = None
         pov_team = 0
         allied_agents = set()
-        if self._pov_agent and self._pov_agent in self.agents:
-            pov_team = self.agents[self._pov_agent].team_id
-            # In WvW, allies are players with subgroup > 0 (in squad)
+        
+        # Try to identify POV agent if not set
+        if not self._pov_agent and self.agents:
+            # Look for the first player agent with a name
             for agent in self.agents.values():
-                if agent.is_player and agent.subgroup > 0:
-                    allied_agents.add(agent.address)
+                if agent.is_player and agent.character_name:
+                    self._pov_agent = agent.address
+                    break
+        
+        if self._pov_agent and self._pov_agent in self.agents:
+            pov_agent = self.agents[self._pov_agent]
+            pov_team = pov_agent.team_id
+            
+            # In WvW, allies are players with subgroup > 0 (in squad) or same team
+            for agent in self.agents.values():
+                if agent.is_player:
+                    if agent.subgroup > 0 or agent.team_id == pov_team:
+                        allied_agents.add(agent.address)
         
         # For WvW: detect enemies by analyzing damage events
         # Enemies are players who RECEIVED damage from allied agents
         enemy_agents = set()
+        
+        # Index damage events by agent address for O(1) lookups
+        damage_given = {}  # agent -> set of targets damaged
+        damage_received = {}  # agent -> set of sources that damaged them
+        
+        # Single pass through all events
         for event in self.events:
-            if event.is_statechange:
+            if event.is_statechange or event.value <= 0:
                 continue
-            # If an allied agent dealt damage to another player agent
-            if event.src_agent in allied_agents and event.value > 0:
-                if event.dst_agent in self.agents:
-                    target = self.agents[event.dst_agent]
-                    if target.is_player and target.address not in allied_agents:
-                        enemy_agents.add(target.address)
+                
+            # Only consider damage events
+            if event.src_agent in self.agents and event.dst_agent in self.agents:
+                src = self.agents[event.src_agent]
+                dst = self.agents[event.dst_agent]
+                
+                # Only player vs player combat
+                if src.is_player and dst.is_player:
+                    # Index who damaged whom
+                    if src.address not in damage_given:
+                        damage_given[src.address] = set()
+                    damage_given[src.address].add(dst.address)
+                    
+                    if dst.address not in damage_received:
+                        damage_received[dst.address] = set()
+                    damage_received[dst.address].add(src.address)
+        
+        # Identify enemies based on indexed damage patterns
+        if allied_agents:
+            # Any player damaged by allies is an enemy
+            for ally in allied_agents:
+                if ally in damage_given:
+                    enemy_agents.update(damage_given[ally])
+                # Any player who damaged an ally is also an enemy
+                if ally in damage_received:
+                    enemy_agents.update(damage_received[ally])
+                # Early termination if we have enough enemies
+                if len(enemy_agents) > 50:
+                    break
+        elif self._pov_agent:
+            # Use POV agent as sole ally
+            if self._pov_agent in damage_given:
+                enemy_agents.update(damage_given[self._pov_agent])
+            if self._pov_agent in damage_received:
+                enemy_agents.update(damage_received[self._pov_agent])
+        
+        # Fallback 1: if no enemies found, use team-based detection
+        if not enemy_agents and pov_team > 0:
+            for agent in self.agents.values():
+                if agent.is_player and agent.team_id != 0 and agent.team_id != pov_team:
+                    enemy_agents.add(agent.address)
+        
+        # Fallback 2: if still no enemies and allied_agents is empty, 
+        # use POV agent as ally and detect enemies by damage patterns
+        if not enemy_agents and not allied_agents and self._pov_agent:
+            # Add POV agent as the sole ally
+            allied_agents.add(self._pov_agent)
+            
+            # Re-analyze damage events with POV as ally
+            for src, dst, value in damage_events:
+                if src.address == self._pov_agent and dst.address != self._pov_agent:
+                    enemy_agents.add(dst.address)
+                elif dst.address == self._pov_agent and src.address != self._pov_agent:
+                    enemy_agents.add(src.address)
+        
+        # Fallback 3: if still no enemies, treat other players with different team_id
+        if not enemy_agents and pov_team == 0:
+            # When no team info, split players by damage patterns
+            player_agents = [a for a in self.agents.values() if a.is_player]
+            if len(player_agents) > 1:
+                # Use first player as reference
+                ref_agent = player_agents[0]
+                # Check indexed damage events for interactions
+                if ref_agent.address in damage_given:
+                    enemy_agents.update(damage_given[ref_agent.address])
+                if ref_agent.address in damage_received:
+                    enemy_agents.update(damage_received[ref_agent.address])
         
         # Process all player agents
         for agent in self.agents.values():
