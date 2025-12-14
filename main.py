@@ -68,6 +68,26 @@ real_parser = RealEVTCParser()
 # Initialize scheduled tasks (fingerprint cleanup on Fridays at 18h55)
 setup_scheduled_tasks()
 
+# Import fight data if available (for deployment)
+def import_deployed_data():
+    """Import fight data from export file if database is empty"""
+    from pathlib import Path
+    import json
+    
+    # Check if we need to import data
+    fights = fights_table.all()
+    if not fights:
+        export_file = Path("data/export/fights_export.json")
+        if export_file.exists():
+            print(f"[Main] Importing {export_file.stat().st_size} bytes of fight data...")
+            with open(export_file) as f:
+                fights_data = json.load(f)
+            fights_table.insert_multiple(fights_data)
+            print(f"[Main] Imported {len(fights_data)} fights to database")
+
+# Import data on startup
+import_deployed_data()
+
 # Persistent session storage with TinyDB
 DB_PATH = Path("data")
 DB_PATH.mkdir(exist_ok=True)
