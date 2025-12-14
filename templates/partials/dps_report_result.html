@@ -65,12 +65,17 @@
     color: #ffffff;
 }
 
-/* Group colors for squad display */
+/* Group colors for squad display (up to 10 groups) */
 .group-1 { background-color: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; }
 .group-2 { background-color: rgba(34, 197, 94, 0.1); border-left: 3px solid #22C55E; }
 .group-3 { background-color: rgba(234, 179, 8, 0.1); border-left: 3px solid #EAB308; }
 .group-4 { background-color: rgba(249, 115, 22, 0.1); border-left: 3px solid #F97316; }
 .group-5 { background-color: rgba(168, 85, 247, 0.1); border-left: 3px solid #A855F7; }
+.group-6 { background-color: rgba(236, 72, 153, 0.1); border-left: 3px solid #EC4899; }
+.group-7 { background-color: rgba(20, 184, 166, 0.1); border-left: 3px solid #14B8A6; }
+.group-8 { background-color: rgba(251, 146, 60, 0.1); border-left: 3px solid #FB923C; }
+.group-9 { background-color: rgba(139, 92, 246, 0.1); border-left: 3px solid #8B5CF6; }
+.group-10 { background-color: rgba(244, 63, 94, 0.1); border-left: 3px solid #F43F5E; }
 </style>
 <div class="space-y-6 animate-slide-up">
     <!-- Success Header -->
@@ -405,12 +410,12 @@
         </div>
         {% endif %}
         
-        <!-- Tab Navigation -->
+        <!-- Tab Navigation - Combat first -->
         <div class="flex flex-wrap gap-2 mb-4 border-b border-gray-700 pb-3">
-            <button @click="activeTab = 'damage'" :class="activeTab === 'damage' ? 'bg-orange-500/20 text-orange-400 border-orange-500' : 'bg-gw2-darker text-gray-400 border-gray-700'" 
-                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">⚔️ {% if lang == 'en' %}Damage{% else %}Dégâts{% endif %}</button>
             <button @click="activeTab = 'combat'" :class="activeTab === 'combat' ? 'bg-pink-500/20 text-pink-400 border-pink-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
                     class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">💀 {% if lang == 'en' %}Combat{% else %}Combat{% endif %}</button>
+            <button @click="activeTab = 'damage'" :class="activeTab === 'damage' ? 'bg-orange-500/20 text-orange-400 border-orange-500' : 'bg-gw2-darker text-gray-400 border-gray-700'" 
+                    class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">⚔️ {% if lang == 'en' %}Damage{% else %}Dégâts{% endif %}</button>
             <button @click="activeTab = 'support'" :class="activeTab === 'support' ? 'bg-green-500/20 text-green-400 border-green-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
                     class="px-4 py-2 rounded-lg text-sm font-medium border transition-all">💚 {% if lang == 'en' %}Support{% else %}Support{% endif %}</button>
             <button @click="activeTab = 'boons'" :class="activeTab === 'boons' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-gw2-darker text-gray-400 border-gray-700'"
@@ -437,7 +442,8 @@
                         <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('damage-table', 3, true)">Groupe</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 4, true)">{% if lang == 'en' %}Damage Dealt{% else %}Dégâts Infligés{% endif %}</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 5, true)" title="Dégâts par seconde">DPS</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 6, true)" title="Dégâts infligés divisés par dégâts reçus. >1 = tu fais plus de dégâts que tu n'en reçois">Ratio Out/In</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 6, true)" title="{% if lang == 'en' %}Damage on downed enemies{% else %}Dégâts sur ennemis down{% endif %}">Down Contrib</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('damage-table', 7, true)" title="Dégâts infligés divisés par dégâts reçus. >1 = tu fais plus de dégâts que tu n'en reçois">Ratio Out/In</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -461,6 +467,7 @@
                         <td class="py-2 text-center text-gray-400">{{ p.group }}</td>
                         <td class="py-2 text-right font-mono text-orange-400">{{ "{:,}".format(p.damage_out|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-orange-300">{{ "{:,.0f}".format(p.dps|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-pink-400">{{ "{:,}".format(p.down_contrib|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-yellow-400">{{ p.damage_ratio|default(0) }}</td>
                     </tr>
                     {% endfor %}
@@ -485,12 +492,10 @@
                         <th class="pb-2">{% if lang == 'en' %}Class{% else %}Classe{% endif %}</th>
                         <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('combat-table', 2)">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</th>
                         <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('combat-table', 3, true)">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)" title="{% if lang == 'en' %}Damage on downed enemies{% else %}Dégâts sur ennemis down{% endif %}">Down Contrib</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)" title="{% if lang == 'en' %}Down Contrib per second{% else %}Down Contrib par seconde{% endif %}">DC/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 4, true)">{% if lang == 'en' %}Kills{% else %}Kills{% endif %}</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 5, true)">{% if lang == 'en' %}Deaths{% else %}Morts{% endif %}</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 6, true)" title="{% if lang == 'en' %}Crowd Control dealt{% else %}Crowd Control infligé{% endif %}">CC Out</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)" title="{% if lang == 'en' %}CC per second{% else %}CC par seconde{% endif %}">CC/s</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 8, true)" title="{% if lang == 'en' %}Boons stripped from enemies{% else %}Boons retirés aux ennemis{% endif %}">Strips Out</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 9, true)" title="{% if lang == 'en' %}Strips per second{% else %}Strips par seconde{% endif %}">S/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('combat-table', 7, true)" title="{% if lang == 'en' %}Boons stripped from enemies{% else %}Boons retirés aux ennemis{% endif %}">Strips Out</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -512,12 +517,10 @@
                             {% endif %}
                         </td>
                         <td class="py-2 text-center text-gray-400">{{ p.group }}</td>
-                        <td class="py-2 text-right font-mono text-pink-400">{{ "{:,}".format(p.down_contrib|default(0)) }}</td>
-                        <td class="py-2 text-right font-mono text-pink-300">{{ p.down_contrib_per_sec|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-green-400">{{ p.kills|default(0) }}</td>
+                        <td class="py-2 text-right font-mono text-red-400">{{ p.deaths|default(0) }}</td>
                         <td class="py-2 text-right font-mono text-blue-400">{{ "{:,}".format(p.cc_out|default(0)) }}</td>
-                        <td class="py-2 text-right font-mono text-blue-300">{{ p.cc_per_sec|default(0) }}</td>
                         <td class="py-2 text-right font-mono text-purple-400">{{ "{:,}".format(p.boon_strips|default(0)) }}</td>
-                        <td class="py-2 text-right font-mono text-purple-300">{{ p.strips_per_sec|default(0) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
