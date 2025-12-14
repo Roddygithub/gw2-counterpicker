@@ -601,8 +601,8 @@
                         <th class="pb-2 cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 2)">{% if lang == 'en' %}Role{% else %}Rôle{% endif %}</th>
                         <th class="pb-2 text-center cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 3, true)">{% if lang == 'en' %}Group{% else %}Groupe{% endif %}</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 4, true)">Dmg In</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 5, true)">Strips In</th>
-                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 6, true)">Strips/s</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 5, true)" title="{% if lang == 'en' %}Crowd Control received{% else %}Crowd Control reçu{% endif %}">CC In</th>
+                        <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 6, true)">Strips In</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 7, true)">Deaths</th>
                         <th class="pb-2 text-right cursor-pointer hover:text-white" onclick="sortTable('defensive-table', 8, true)">Downs</th>
                     </tr>
@@ -627,8 +627,8 @@
                         </td>
                         <td class="py-2 text-center text-gray-400">{{ p.group }}</td>
                         <td class="py-2 text-right font-mono text-red-400">{{ "{:,}".format(p.damage_in|default(0)) }}</td>
+                        <td class="py-2 text-right font-mono text-blue-400">{{ "{:,}".format(p.cc_in|default(0)) }}</td>
                         <td class="py-2 text-right font-mono text-purple-400">{{ "{:,}".format(p.boon_strip_in|default(0)) }}</td>
-                        <td class="py-2 text-right font-mono text-purple-300">{{ p.strip_in_per_sec|default(0) }}</td>
                         <td class="py-2 text-right font-mono text-red-500">{{ p.deaths|default(0) }}</td>
                         <td class="py-2 text-right font-mono text-red-300">{{ p.downs|default(0) }}</td>
                     </tr>
