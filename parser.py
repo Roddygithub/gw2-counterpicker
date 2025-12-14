@@ -123,18 +123,28 @@ ELITE_SPEC_NAMES = {
     66: "Virtuoso",
     64: "Harbinger",
     69: "Vindicator",
+    # Janthir Wilds
+    73: "Dragonslayer",  # Guardian
+    74: "Deathbringer",  # Warrior - placeholder name
+    75: "Riftstalker",   # Engineer - placeholder name
+    76: "Warden",        # Ranger - placeholder name
+    77: "Trickster",     # Thief - placeholder name
+    78: "Invoker",       # Elementalist - placeholder name
+    79: "Conduit",       # Revenant
+    80: "Evoker",        # Elementalist - confirmed
+    81: "Ritualist",     # Necromancer - placeholder name
 }
 
 ELITE_TO_PROFESSION = {
-    27: 1, 62: 1, 65: 1,  # Guardian
-    18: 2, 61: 2, 68: 2,  # Warrior
-    43: 3, 57: 3, 70: 3,  # Engineer
-    5: 4, 55: 4, 72: 4,   # Ranger
-    7: 5, 58: 5, 71: 5,   # Thief
-    48: 6, 56: 6, 67: 6,  # Elementalist
+    27: 1, 62: 1, 65: 1, 73: 1,  # Guardian
+    18: 2, 61: 2, 68: 2, 74: 2,  # Warrior
+    43: 3, 57: 3, 70: 3, 75: 3,  # Engineer
+    5: 4, 55: 4, 72: 4, 76: 4,   # Ranger
+    7: 5, 58: 5, 71: 5, 77: 5,   # Thief
+    48: 6, 56: 6, 67: 6, 78: 6, 80: 6,  # Elementalist
     40: 7, 59: 7, 66: 7,  # Mesmer
-    34: 8, 60: 8, 64: 8,  # Necromancer
-    52: 9, 63: 9, 69: 9,  # Revenant
+    34: 8, 60: 8, 64: 8, 81: 8,  # Necromancer
+    52: 9, 63: 9, 69: 9, 79: 9,  # Revenant
 }
 
 
@@ -601,14 +611,12 @@ class EVTCParser:
         arcdps_build = stream.read(8).decode('ascii', errors='ignore').rstrip('\x00')
         revision = struct.unpack('<B', stream.read(1))[0]
         
-        # Boss ID - size depends on revision
-        if revision >= 1:
-            boss_id = struct.unpack('<I', stream.read(4))[0]
-        else:
-            boss_id = struct.unpack('<H', stream.read(2))[0]
+        # Boss ID is always 2 bytes (uint16)
+        boss_id = struct.unpack('<H', stream.read(2))[0]
         
-        # Skip padding byte
-        stream.read(1)
+        # Skip padding byte for alignment (revision 1+)
+        if revision >= 1:
+            stream.read(1)
         
         is_wvw = boss_id == 1
         
@@ -784,18 +792,40 @@ class EVTCParser:
         players = []
         enemies = []
         
-        # Get POV team
+        # Get POV team and allied agents (same subgroup structure)
         pov_team = 0
+        allied_agents = set()
         if self._pov_agent and self._pov_agent in self.agents:
             pov_team = self.agents[self._pov_agent].team_id
+            # In WvW, allies are players with subgroup > 0 (in squad)
+            for agent in self.agents.values():
+                if agent.is_player and agent.subgroup > 0:
+                    allied_agents.add(agent.address)
+        
+        # For WvW: detect enemies by analyzing damage events
+        # Enemies are players who RECEIVED damage from allied agents
+        enemy_agents = set()
+        for event in self.events:
+            if event.is_statechange:
+                continue
+            # If an allied agent dealt damage to another player agent
+            if event.src_agent in allied_agents and event.value > 0:
+                if event.dst_agent in self.agents:
+                    target = self.agents[event.dst_agent]
+                    if target.is_player and target.address not in allied_agents:
+                        enemy_agents.add(target.address)
         
         # Process all player agents
         for agent in self.agents.values():
             if not agent.is_player:
                 continue
             
-            # Determine if enemy based on team
-            is_enemy = agent.team_id != pov_team and pov_team != 0
+            # Determine if enemy: either by team_id or by damage analysis
+            is_enemy = False
+            if pov_team != 0 and agent.team_id != pov_team:
+                is_enemy = True
+            elif agent.address in enemy_agents:
+                is_enemy = True
             
             # Build parsed player
             parsed = ParsedPlayer(
