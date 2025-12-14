@@ -953,6 +953,7 @@ async def analyze_evening_files(
     total_duration = 0
     victories = 0
     defeats = 0
+    draws = 0
     parse_mode = "offline"  # Track which mode was used
     
     # Try dps.report first, then fallback to local parser
@@ -1056,12 +1057,14 @@ async def analyze_evening_files(
             
             total_duration += players_data.get('duration_sec', 0)
             
-            # Track wins/losses
+            # Track wins/losses/draws
             outcome = players_data.get('fight_outcome', 'unknown')
             if outcome == 'victory':
                 victories += 1
             elif outcome == 'defeat':
                 defeats += 1
+            elif outcome == 'draw':
+                draws += 1
             
             fight_results.append({
                 'filename': f.filename,
@@ -1122,7 +1125,7 @@ async def analyze_evening_files(
             'suggestion': f"Ramenez plus de Spellbreaker/Scourge pour strip leurs {dominant_enemy[0]}"
         }
     
-    # Build stats dict
+    # Build stats dict - Simplified summary
     stats = {
         "total_fights": num_fights,
         "total_duration_min": round(total_duration / 60, 1),
@@ -1130,6 +1133,7 @@ async def analyze_evening_files(
         "avg_players": avg_players,
         "victories": victories,
         "defeats": defeats,
+        "draws": draws,
         "parse_mode": parse_mode
     }
     
