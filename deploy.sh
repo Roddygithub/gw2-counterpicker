@@ -68,7 +68,6 @@ else
     pkill -f "python.*main.py" || true
     sleep 2
     source venv/bin/activate
-    export OLLAMA_DISABLED=1
     nohup python -c "import uvicorn; uvicorn.run('main:app', host='0.0.0.0', port=8001)" > app.log 2>&1 &
 fi
 
