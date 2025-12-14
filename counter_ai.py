@@ -224,6 +224,14 @@ class CounterAI:
                 self.mark_file_as_analyzed(filename, filesize, f"duplicate_{fingerprint}")
             return None
         
+        # Skip fights shorter than 60 seconds (not meaningful for analysis)
+        duration_sec = fight_data.get('duration_sec', 0)
+        if duration_sec < 60:
+            print(f"[CounterAI] Skipping short fight ({duration_sec}s) - minimum 60s required")
+            if filename and filesize:
+                self.mark_file_as_analyzed(filename, filesize, f"short_{duration_sec}s")
+            return None
+        
         fight_id = f"fight_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(fights_table)}"
         
         # Extract compositions from fight data
