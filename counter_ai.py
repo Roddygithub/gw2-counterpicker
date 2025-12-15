@@ -11,10 +11,88 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from tinydb import TinyDB, Query
+from enum import Enum
 from logger import get_logger
 
 # Setup logger
 logger = get_logger('counter_ai')
+
+
+# === FIGHT CONTEXT SYSTEM ===
+class FightContext(str, Enum):
+    """Type of WvW combat - affects META stats and AI recommendations"""
+    ZERG = "zerg"           # 25+ players, blob vs blob
+    GUILD_RAID = "guild_raid"  # 10-25 players, structured guild fights
+    ROAM = "roam"           # 1-10 players, small scale / roaming
+    UNKNOWN = "unknown"     # Could not determine, needs user input
+    
+    @classmethod
+    def from_string(cls, value: str) -> 'FightContext':
+        """Convert string to FightContext, defaults to UNKNOWN"""
+        if not value or value == 'auto':
+            return cls.UNKNOWN
+        try:
+            return cls(value.lower())
+        except ValueError:
+            return cls.UNKNOWN
+
+
+def guess_fight_context(
+    ally_count: int,
+    enemy_count: int,
+    duration_sec: float,
+    subgroup_count: int = 1,
+    main_guild_ratio: float = 0.0
+) -> FightContext:
+    """
+    Auto-detect fight context based on available metrics.
+    
+    Heuristics:
+    - Roaming: <= 10 allies AND <= 12 enemies
+    - Zerg: >= 25 allies OR >= 30 enemies
+    - Guild Raid: 10-25 allies with high guild cohesion OR structured subgroups
+    - Unknown: ambiguous cases that need user confirmation
+    
+    Args:
+        ally_count: Number of allied players in the fight
+        enemy_count: Estimated number of enemies
+        duration_sec: Fight duration in seconds
+        subgroup_count: Number of distinct subgroups (from log structure)
+        main_guild_ratio: Ratio of players from the dominant guild (0.0-1.0)
+    
+    Returns:
+        FightContext enum value
+    """
+    # Clear roaming: small scale on both sides
+    if ally_count <= 10 and enemy_count <= 12:
+        return FightContext.ROAM
+    
+    # Clear zerg: large scale
+    if ally_count >= 25 or enemy_count >= 30:
+        return FightContext.ZERG
+    
+    # Guild raid indicators:
+    # - Medium size (10-25 allies)
+    # - High guild cohesion (>50% same guild)
+    # - Multiple organized subgroups (>= 2)
+    if 10 <= ally_count <= 25:
+        # Strong guild cohesion suggests organized guild raid
+        if main_guild_ratio >= 0.5:
+            return FightContext.GUILD_RAID
+        # Multiple subgroups suggest organized play
+        if subgroup_count >= 2:
+            return FightContext.GUILD_RAID
+    
+    # Ambiguous zone: 10-25 allies but no clear guild structure
+    # Could be small zerg, pug raid, or large roam group
+    if 10 <= ally_count <= 25:
+        # Lean towards zerg if enemy count is high
+        if enemy_count >= 20:
+            return FightContext.ZERG
+        # Otherwise unknown - let user decide
+        return FightContext.UNKNOWN
+    
+    return FightContext.UNKNOWN
 
 # === CONFIGURATION ===
 OLLAMA_URL = "http://localhost:11434"
@@ -84,11 +162,24 @@ class FightRecord:
     total_ally_damage: int
     total_enemy_damage: int
     
+    # Fight Context (NEW)
+    context_detected: str = "unknown"  # Auto-detected context
+    context_confirmed: Optional[str] = None  # User-confirmed context (overrides detected)
+    
+    @property
+    def context(self) -> str:
+        """Returns confirmed context if set, otherwise detected"""
+        return self.context_confirmed or self.context_detected
+    
     def to_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        data['context'] = self.context  # Include computed property
+        return data
     
     @classmethod
     def from_dict(cls, data: dict) -> 'FightRecord':
+        # Remove computed 'context' if present (it's a property)
+        data = {k: v for k, v in data.items() if k != 'context'}
         return cls(**data)
 
 
@@ -206,10 +297,17 @@ class CounterAI:
         if removed:
             logger.info(f"Cleaned up {len(removed)} old fingerprints")
     
-    def record_fight(self, fight_data: dict, filename: str = None, filesize: int = None) -> str:
+    def record_fight(self, fight_data: dict, filename: str = None, filesize: int = None, context: str = "auto") -> str:
         """
         Record a fight for learning with detailed ally build information
         Called automatically after each analysis
+        
+        Args:
+            fight_data: Parsed fight data
+            filename: Original filename (for deduplication)
+            filesize: File size in bytes (for deduplication)
+            context: Fight context - "auto", "zerg", "guild_raid", "roam", or "unknown"
+        
         Returns the fight_id, or None if file was already analyzed
         """
         # Check for duplicate file (same uploader)
@@ -307,6 +405,40 @@ class CounterAI:
             else:
                 outcome = 'draw'  # Close fight or inconclusive
         
+        # Determine fight context
+        ally_count = len(fight_data.get('allies', []))
+        enemy_count = len(fight_data.get('enemies', []))
+        
+        # Calculate subgroup count from ally builds
+        subgroups = set(b.get('group', 0) for b in ally_builds if b.get('group', 0) > 0)
+        subgroup_count = len(subgroups) if subgroups else 1
+        
+        # Calculate main guild ratio (if guild info available)
+        # For now, we estimate based on account name patterns
+        main_guild_ratio = 0.0  # TODO: Extract from API key data if available
+        
+        # Auto-detect or use provided context
+        if context == "auto" or not context:
+            detected_context = guess_fight_context(
+                ally_count=ally_count,
+                enemy_count=enemy_count,
+                duration_sec=duration_sec,
+                subgroup_count=subgroup_count,
+                main_guild_ratio=main_guild_ratio
+            )
+            context_detected = detected_context.value
+            context_confirmed = None
+        else:
+            # User provided explicit context
+            context_detected = guess_fight_context(
+                ally_count=ally_count,
+                enemy_count=enemy_count,
+                duration_sec=duration_sec,
+                subgroup_count=subgroup_count,
+                main_guild_ratio=main_guild_ratio
+            ).value
+            context_confirmed = FightContext.from_string(context).value
+        
         record = FightRecord(
             fight_id=fight_id,
             timestamp=datetime.now().isoformat(),
@@ -321,16 +453,18 @@ class CounterAI:
             ally_kills=fight_data.get('fight_stats', {}).get('ally_kills', 0),
             enemy_deaths=fight_data.get('fight_stats', {}).get('ally_kills', 0),  # enemy_deaths = our kills
             total_ally_damage=fight_data.get('fight_stats', {}).get('ally_damage', 0),
-            total_enemy_damage=fight_data.get('fight_stats', {}).get('enemy_damage_taken', 0)
+            total_enemy_damage=fight_data.get('fight_stats', {}).get('enemy_damage_taken', 0),
+            context_detected=context_detected,
+            context_confirmed=context_confirmed
         )
         
         fights_table.insert(record.to_dict())
         self._update_stats()
         
         # Also store builds in a separate table for quick lookups
-        self._store_build_performance(ally_builds, enemy_comp, outcome)
+        self._store_build_performance(ally_builds, enemy_comp, outcome, record.context)
         
-        logger.info(f"Recorded fight {fight_id}: {outcome} vs {list(enemy_comp.keys())[:3]}... ({len(ally_builds)} builds)")
+        logger.info(f"Recorded fight {fight_id}: {outcome} [{record.context}] vs {list(enemy_comp.keys())[:3]}... ({len(ally_builds)} builds)")
         
         # Mark file as analyzed to prevent duplicates
         if filename and filesize:
@@ -341,7 +475,7 @@ class CounterAI:
         
         return fight_id
     
-    def _store_build_performance(self, ally_builds: List[dict], enemy_comp: Dict[str, int], outcome: str):
+    def _store_build_performance(self, ally_builds: List[dict], enemy_comp: Dict[str, int], outcome: str, context: str = "unknown"):
         """Store individual build performance against specific enemy compositions"""
         builds_table = fights_db.table('builds')
         
@@ -372,6 +506,7 @@ class CounterAI:
             builds_table.insert({
                 'spec': spec,
                 'role': role,
+                'context': context,  # Fight context for filtering
                 'enemy_comp_hash': self._hash_composition(enemy_comp),
                 'enemy_comp': enemy_comp,
                 'outcome': outcome,
@@ -417,8 +552,15 @@ class CounterAI:
             'last_updated': None
         }
     
-    def _find_similar_fights(self, enemy_comp: Dict[str, int], limit: int = 30) -> List[dict]:
-        """Find fights with similar enemy compositions"""
+    def _find_similar_fights(self, enemy_comp: Dict[str, int], limit: int = 30, context: str = None) -> List[dict]:
+        """
+        Find fights with similar enemy compositions
+        
+        Args:
+            enemy_comp: Enemy composition to match
+            limit: Maximum number of fights to return
+            context: Optional context filter - "zerg", "guild_raid", "roam"
+        """
         all_fights = fights_table.all()
         
         # Score each fight by composition similarity
@@ -426,6 +568,12 @@ class CounterAI:
         enemy_specs = set(enemy_comp.keys())
         
         for fight in all_fights:
+            # Filter by context if specified
+            if context:
+                fight_context = fight.get('context_confirmed') or fight.get('context_detected') or fight.get('context', 'unknown')
+                if fight_context != context:
+                    continue
+            
             fight_enemy_specs = set(fight.get('enemy_composition', {}).keys())
             
             # Jaccard similarity
@@ -584,13 +732,18 @@ class CounterAI:
         
         return best_by_role
     
-    async def generate_counter(self, enemy_comp: Dict[str, int]) -> dict:
+    async def generate_counter(self, enemy_comp: Dict[str, int], context: str = "zerg") -> dict:
         """
         Generate counter recommendation using Llama 3.2 8B
+        
+        Args:
+            enemy_comp: Enemy composition {spec: count}
+            context: Fight context - "zerg", "guild_raid", "roam"
+        
         Returns dict with recommendation and metadata
         """
         stats = self.get_stats()
-        similar_fights = self._find_similar_fights(enemy_comp)
+        similar_fights = self._find_similar_fights(enemy_comp, context=context)
         fights_summary = self._format_fights_summary(similar_fights)
         enemy_str = self._format_enemy_comp(enemy_comp)
         
@@ -599,17 +752,45 @@ class CounterAI:
             self._check_ollama()
         
         if not self.ollama_available:
-            return self._fallback_counter(enemy_comp, stats)
+            return self._fallback_counter(enemy_comp, stats, context)
         
-        # THE PROMPT - Exactly as specified
-        prompt = f"""Tu es le meilleur commandant WvW EU de l'histoire. Tu as analysé plus de 10 000 fights réels.
+        # Context-specific prompts
+        context_prompts = {
+            'zerg': f"""Tu es le meilleur commandant WvW EU de l'histoire. Tu as analysé plus de 10 000 fights réels.
+Contexte: ZERG (25+ joueurs par côté, combats de masse open field)
 Composition ennemie actuelle : {enemy_str}
 Voici les 30 derniers fights similaires que nous avons joués :
 {fights_summary}
 
-Donne-moi en 4 lignes maximum le counter parfait à jouer avec un groupe de 15-50 joueurs.
+Donne-moi en 4 lignes maximum le counter parfait à jouer avec un groupe de 25-50 joueurs.
+Focus sur: timing de push, coordination AOE, survie dans le blob, cibles prioritaires.
+Sois brutal, précis, et donne les priorités cibles.
+Réponds UNIQUEMENT le counter, rien d'autre.""",
+
+            'guild_raid': f"""Tu es le meilleur raid leader de guilde WvW EU. Tu as analysé plus de 10 000 fights réels.
+Contexte: RAID GUILDE (10-25 joueurs, compo structurée et coordonnée)
+Composition ennemie actuelle : {enemy_str}
+Voici les 30 derniers fights similaires que nous avons joués :
+{fights_summary}
+
+Donne-moi en 4 lignes maximum le counter parfait pour un raid guilde de 15-25 joueurs.
+Focus sur: synergies de compo, rôles précis, discipline et coordination, burst windows.
+Sois brutal, précis, et donne les priorités cibles.
+Réponds UNIQUEMENT le counter, rien d'autre.""",
+
+            'roam': f"""Tu es le meilleur roamer WvW EU. Tu as analysé plus de 10 000 fights réels.
+Contexte: ROAMING (1-10 joueurs, petit comité, mobilité)
+Composition ennemie actuelle : {enemy_str}
+Voici les 30 derniers fights similaires que nous avons joués :
+{fights_summary}
+
+Donne-moi en 4 lignes maximum le counter parfait pour un groupe de 2-8 joueurs.
+Focus sur: burst, mobilité, disengage, 1v1/2v2 matchups, kiting.
 Sois brutal, précis, et donne les priorités cibles.
 Réponds UNIQUEMENT le counter, rien d'autre."""
+        }
+        
+        prompt = context_prompts.get(context, context_prompts['zerg'])
 
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -654,13 +835,13 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
                     }
                 else:
                     logger.error(f"Ollama error: {response.status_code}")
-                    return self._fallback_counter(enemy_comp, stats)
+                    return self._fallback_counter(enemy_comp, stats, context)
                     
         except Exception as e:
             logger.error(f"Generation error: {e}")
-            return self._fallback_counter(enemy_comp, stats)
+            return self._fallback_counter(enemy_comp, stats, context)
     
-    def _fallback_counter(self, enemy_comp: Dict[str, int], stats: dict) -> dict:
+    def _fallback_counter(self, enemy_comp: Dict[str, int], stats: dict, context: str = "zerg") -> dict:
         """Fallback counter when Ollama is not available"""
         enemy_str = self._format_enemy_comp(enemy_comp)
         
@@ -672,22 +853,52 @@ Réponds UNIQUEMENT le counter, rien d'autre."""
         has_scrapper = any('Scrapper' in spec for spec in enemy_comp.keys())
         has_scourge = any('Scourge' in spec for spec in enemy_comp.keys())
         has_herald = any('Herald' in spec or 'Vindicator' in spec for spec in enemy_comp.keys())
+        has_thief = any('Thief' in spec or 'Specter' in spec or 'Deadeye' in spec or 'Daredevil' in spec for spec in enemy_comp.keys())
         
-        if has_fb:
-            counter_lines.append("→ 2-3 Spellbreaker full strip pour neutraliser les Firebrand")
-        if has_scrapper:
-            counter_lines.append("→ Reaper/Harbinger burst pour percer le barrier Scrapper")
-        if has_scourge:
-            counter_lines.append("→ Burst power coordonné, éviter les fights prolongés")
-        if has_herald:
-            counter_lines.append("→ Focus les Herald en premier, ils feed les boons")
-        
-        if not counter_lines:
-            counter_lines = [
-                "→ Composition standard: 2 Spellbreaker + 2 Scourge + supports",
-                "→ Focus les healers en priorité",
-                "→ Burst coordonné sur le tag ennemi"
-            ]
+        # Context-specific recommendations
+        if context == 'roam':
+            # Roaming-specific counters
+            if has_thief:
+                counter_lines.append("→ Révélation + CC chain, ne pas les laisser reset")
+            if has_fb:
+                counter_lines.append("→ Strip rapide + burst, éviter les fights prolongés")
+            if not counter_lines:
+                counter_lines = [
+                    "→ Builds burst avec mobilité (Willbender, Daredevil)",
+                    "→ Toujours avoir un disengage",
+                    "→ Focus le plus squishy en premier"
+                ]
+        elif context == 'guild_raid':
+            # Guild raid-specific counters
+            if has_fb:
+                counter_lines.append("→ 2 Spellbreaker coordonnés pour strip les aegis")
+            if has_scrapper:
+                counter_lines.append("→ Burst power synchronisé pour percer le barrier")
+            if has_scourge:
+                counter_lines.append("→ Push rapide, ne pas laisser les shades s'installer")
+            if not counter_lines:
+                counter_lines = [
+                    "→ Compo équilibrée: 2 strip, 2 heal, reste DPS",
+                    "→ Coordination des burst windows",
+                    "→ Focus tag ennemi sur le call"
+                ]
+        else:
+            # Zerg-specific counters (default)
+            if has_fb:
+                counter_lines.append("→ 2-3 Spellbreaker full strip pour neutraliser les Firebrand")
+            if has_scrapper:
+                counter_lines.append("→ Reaper/Harbinger burst pour percer le barrier Scrapper")
+            if has_scourge:
+                counter_lines.append("→ Burst power coordonné, éviter les fights prolongés")
+            if has_herald:
+                counter_lines.append("→ Focus les Herald en premier, ils feed les boons")
+            
+            if not counter_lines:
+                counter_lines = [
+                    "→ Composition standard: 2 Spellbreaker + 2 Scourge + supports",
+                    "→ Focus les healers en priorité",
+                    "→ Burst coordonné sur le tag ennemi"
+                ]
         
         # Add priority targets
         top_enemy = sorted(enemy_comp.items(), key=lambda x: x[1], reverse=True)[:3]
@@ -745,9 +956,19 @@ counter_ai = CounterAI()
 
 # === API Functions ===
 
-def record_fight_for_learning(fight_data: dict, filename: str = None, filesize: int = None) -> str:
-    """Record a fight for AI learning. Returns None if file was already analyzed."""
-    return counter_ai.record_fight(fight_data, filename=filename, filesize=filesize)
+def record_fight_for_learning(fight_data: dict, filename: str = None, filesize: int = None, context: str = "auto") -> str:
+    """
+    Record a fight for AI learning.
+    
+    Args:
+        fight_data: Parsed fight data
+        filename: Original filename (for deduplication)
+        filesize: File size in bytes (for deduplication)
+        context: Fight context - "auto", "zerg", "guild_raid", "roam"
+    
+    Returns None if file was already analyzed.
+    """
+    return counter_ai.record_fight(fight_data, filename=filename, filesize=filesize, context=context)
 
 
 def is_file_already_analyzed(filename: str, filesize: int) -> bool:
@@ -755,9 +976,15 @@ def is_file_already_analyzed(filename: str, filesize: int) -> bool:
     return counter_ai.is_file_already_analyzed(filename, filesize)
 
 
-async def get_ai_counter(enemy_composition: Dict[str, int]) -> dict:
-    """Get AI-generated counter recommendation"""
-    return await counter_ai.generate_counter(enemy_composition)
+async def get_ai_counter(enemy_composition: Dict[str, int], context: str = "zerg") -> dict:
+    """
+    Get AI-generated counter recommendation
+    
+    Args:
+        enemy_composition: Enemy composition {spec: count}
+        context: Fight context - "zerg", "guild_raid", "roam"
+    """
+    return await counter_ai.generate_counter(enemy_composition, context=context)
 
 
 def get_ai_status() -> dict:

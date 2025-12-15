@@ -269,10 +269,21 @@ async def evening_page_redirect(request: Request):
 
 
 @app.get("/meta", response_class=HTMLResponse)
-async def meta_page(request: Request):
-    """Meta 2025 page - Current trending builds with AI status"""
+@app.get("/meta/{context}", response_class=HTMLResponse)
+async def meta_page(request: Request, context: str = None):
+    """
+    Meta 2025 page - Current trending builds with AI status
+    
+    Args:
+        context: Optional filter - "zerg", "guild_raid", "roam", or None for all
+    """
+    # Validate context parameter
+    valid_contexts = ['zerg', 'guild_raid', 'roam', None]
+    if context and context not in valid_contexts:
+        context = None
+    
     # Try to get meta from database first (real data), fallback to static/default
-    meta_data = get_meta_from_database()
+    meta_data = get_meta_from_database(context=context)
     
     # If no data from database, try static file
     if not meta_data.get('tier_s'):
@@ -286,12 +297,21 @@ async def meta_page(request: Request):
     # Add AI learning status
     ai_status = get_ai_status()
     
+    # Title based on context
+    context_titles = {
+        'zerg': 'Meta Zerg 2025',
+        'guild_raid': 'Meta Raid Guilde 2025',
+        'roam': 'Meta Roaming 2025',
+        None: 'Meta WvW 2025'
+    }
+    
     lang = get_lang(request)
     return templates.TemplateResponse("meta.html", {
         "request": request,
-        "title": "Meta 2025",
+        "title": context_titles.get(context, "Meta 2025"),
         "meta_data": meta_data,
         "ai_status": ai_status,
+        "current_context": context,
         "lang": lang,
         "t": get_all_translations(lang)
     })
@@ -414,11 +434,16 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
 @app.post("/api/analyze/evtc")
 async def analyze_evtc_files(
     request: Request,
-    files: List[UploadFile] = File(...)
+    files: List[UploadFile] = File(...),
+    context: str = Form("auto")
 ):
     """
     Unified endpoint: Analyze single or multiple .evtc files
     Strategy: Try dps.report first, fallback to local parser if unavailable
+    
+    Args:
+        files: EVTC/ZEVTC files to analyze
+        context: Fight context - "auto", "zerg", "guild_raid", "roam"
     
     Security: Rate limited to 10 uploads/min, max 50MB per file, ZIP validation
     """
@@ -470,10 +495,10 @@ async def analyze_evtc_files(
                             
                             players_data = extract_players_from_ei_json(log_data)
                             
-                            # Record fight for AI learning
+                            # Record fight for AI learning with context
                             players_data['source'] = 'dps_report'
                             players_data['source_name'] = permalink
-                            record_fight_for_learning(players_data)
+                            record_fight_for_learning(players_data, context=context)
                             
                             # Record performance stats for global comparison
                             duration_sec = players_data.get('duration_sec', 0)
@@ -513,10 +538,10 @@ async def analyze_evtc_files(
             # Convert parsed log to players_data format
             players_data = convert_parsed_log_to_players_data(parsed_log)
             
-            # Record fight for AI learning (with deduplication)
+            # Record fight for AI learning with context (with deduplication)
             players_data['source'] = 'evtc'
             players_data['source_name'] = file.filename
-            record_fight_for_learning(players_data, filename=file.filename, filesize=file.size)
+            record_fight_for_learning(players_data, filename=file.filename, filesize=file.size, context=context)
             
             # Record performance stats for global comparison
             duration_sec = players_data.get('duration_sec', 0)
@@ -1580,23 +1605,39 @@ def get_default_meta_data() -> dict:
     }
 
 
-def get_meta_from_database() -> dict:
-    """Generate meta data from actual fight database"""
+def get_meta_from_database(context: str = None) -> dict:
+    """
+    Generate meta data from actual fight database
+    
+    Args:
+        context: Filter by fight context - "zerg", "guild_raid", "roam", or None for all
+    """
     from counter_ai import fights_table
     
-    # Count spec usage across all fights
+    # Count spec usage across fights (optionally filtered by context)
     spec_counts = {}
     total_builds = 0
+    fights_count = 0
     
     for fight in fights_table.all():
+        # Filter by context if specified
+        if context:
+            fight_context = fight.get('context_confirmed') or fight.get('context_detected') or fight.get('context', 'unknown')
+            if fight_context != context:
+                continue
+        
+        fights_count += 1
         for build in fight.get('ally_builds', []):
             spec = build.get('elite_spec', build.get('profession', 'Unknown'))
             role = build.get('role', 'dps')
             if spec and spec != 'Unknown':
                 if spec not in spec_counts:
-                    spec_counts[spec] = {'count': 0, 'roles': {}}
+                    spec_counts[spec] = {'count': 0, 'roles': {}, 'wins': 0}
                 spec_counts[spec]['count'] += 1
                 spec_counts[spec]['roles'][role] = spec_counts[spec]['roles'].get(role, 0) + 1
+                # Track wins for win rate calculation
+                if fight.get('outcome') == 'victory':
+                    spec_counts[spec]['wins'] += 1
                 total_builds += 1
     
     if total_builds == 0:
@@ -1617,10 +1658,12 @@ def get_meta_from_database() -> dict:
         for spec, data in specs_slice:
             usage = round((data['count'] / total_builds) * 100)
             main_role = get_main_role(data['roles'])
+            win_rate = round((data['wins'] / data['count']) * 100) if data['count'] > 0 else 0
             result.append({
                 'spec': spec,
                 'role': main_role,
-                'usage': min(usage, 99)  # Cap at 99%
+                'usage': min(usage, 99),  # Cap at 99%
+                'win_rate': win_rate
             })
         return result
     
@@ -1630,8 +1673,19 @@ def get_meta_from_database() -> dict:
     tier_b = make_tier(sorted_specs[6:9]) if len(sorted_specs) >= 9 else []
     tier_c = make_tier(sorted_specs[9:12]) if len(sorted_specs) >= 12 else []
     
+    # Context labels for display
+    context_labels = {
+        'zerg': 'Zerg (25+ joueurs)',
+        'guild_raid': 'Raid Guilde (10-25 joueurs)',
+        'roam': 'Roaming (1-10 joueurs)',
+        None: 'Tous les contextes'
+    }
+    
     return {
         "last_updated": "Décembre 2025 (Live Data)",
+        "context": context,
+        "context_label": context_labels.get(context, 'Tous les contextes'),
+        "fights_count": fights_count,
         "tier_s": tier_s,
         "tier_a": tier_a,
         "tier_b": tier_b,

@@ -18,13 +18,13 @@
 </style>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
-    <div class="text-center mb-12">
+    <div class="text-center mb-8">
         <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
             <span class="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent inline-flex items-center gap-3">
                 <svg class="w-10 h-10 md:w-12 md:h-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                 </svg>
-                Meta WvW 2025
+                {{ title }}
             </span>
         </h1>
         <p class="text-xl text-gray-400">
@@ -32,8 +32,56 @@
         </p>
         <p class="text-sm text-gray-500 mt-2">
             {% if lang == 'en' %}Last updated{% else %}Dernière mise à jour{% endif %}: {{ meta_data.last_updated }}
+            {% if meta_data.fights_count %}
+            <span class="mx-2">•</span>
+            <span>{{ meta_data.fights_count }} {% if lang == 'en' %}fights analyzed{% else %}combats analysés{% endif %}</span>
+            {% endif %}
         </p>
     </div>
+    
+    <!-- Context Selector -->
+    <div class="flex justify-center mb-8">
+        <div class="inline-flex flex-wrap justify-center gap-2 p-2 rounded-xl bg-gw2-darker border border-gw2-purple/30">
+            <!-- All -->
+            <a href="/meta" 
+               class="px-4 py-2 rounded-lg font-display font-bold transition-all flex items-center gap-2 {% if not current_context %}bg-gw2-purple text-white{% else %}text-gray-400 hover:text-white hover:bg-gw2-purple/20{% endif %}">
+                <span>🌐</span>
+                <span>{% if lang == 'en' %}All{% else %}Tous{% endif %}</span>
+            </a>
+            <!-- Zerg -->
+            <a href="/meta/zerg" 
+               class="px-4 py-2 rounded-lg font-display font-bold transition-all flex items-center gap-2 {% if current_context == 'zerg' %}bg-red-500 text-white{% else %}text-gray-400 hover:text-white hover:bg-red-500/20{% endif %}">
+                <span>⚔️</span>
+                <span>Zerg</span>
+            </a>
+            <!-- Guild Raid -->
+            <a href="/meta/guild_raid" 
+               class="px-4 py-2 rounded-lg font-display font-bold transition-all flex items-center gap-2 {% if current_context == 'guild_raid' %}bg-blue-500 text-white{% else %}text-gray-400 hover:text-white hover:bg-blue-500/20{% endif %}">
+                <span>🛡️</span>
+                <span>{% if lang == 'en' %}Guild{% else %}Guilde{% endif %}</span>
+            </a>
+            <!-- Roam -->
+            <a href="/meta/roam" 
+               class="px-4 py-2 rounded-lg font-display font-bold transition-all flex items-center gap-2 {% if current_context == 'roam' %}bg-green-500 text-white{% else %}text-gray-400 hover:text-white hover:bg-green-500/20{% endif %}">
+                <span>🗡️</span>
+                <span>Roam</span>
+            </a>
+        </div>
+    </div>
+    
+    {% if current_context %}
+    <div class="text-center mb-6">
+        <p class="text-sm text-gray-500">
+            {% if current_context == 'zerg' %}
+                {% if lang == 'en' %}Stats from fights with 25+ players{% else %}Stats des combats avec 25+ joueurs{% endif %}
+            {% elif current_context == 'guild_raid' %}
+                {% if lang == 'en' %}Stats from structured guild fights (10-25 players){% else %}Stats des combats de guilde structurés (10-25 joueurs){% endif %}
+            {% elif current_context == 'roam' %}
+                {% if lang == 'en' %}Stats from small scale fights (1-10 players){% else %}Stats des combats petit comité (1-10 joueurs){% endif %}
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
     
     <!-- Tier Lists -->
     <div class="space-y-8">
