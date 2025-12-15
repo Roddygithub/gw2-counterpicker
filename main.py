@@ -694,11 +694,14 @@ def extract_players_from_ei_json(data: dict) -> dict:
 
     for player in data.get('players', []):
         player_name = player.get('name', 'Unknown')
-        # Note: Keep pugs (names with "pl-") to count them as allied pugs
         
         # === DAMAGE OUT ===
         dps_entries = player.get('dpsAll', [])
         damage_out = safe_number(dps_entries)
+        
+        # Skip players who didn't participate (less than 1k damage)
+        if damage_out < 1000:
+            continue
         
         # === DAMAGE IN ===
         damage_in = 0
