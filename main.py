@@ -693,10 +693,8 @@ def extract_players_from_ei_json(data: dict) -> dict:
     group_boon_uptimes = {}  # {group_num: {boon_name: uptime %}}
 
     for player in data.get('players', []):
-        # Filter out non-squad allies (names like "Profession pl-XXXX")
         player_name = player.get('name', 'Unknown')
-        if ' pl-' in player_name:
-            continue  # Skip non-squad allies
+        # Note: Keep pugs (names with "pl-") to count them as allied pugs
         
         # === DAMAGE OUT ===
         dps_entries = player.get('dpsAll', [])
