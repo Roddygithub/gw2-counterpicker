@@ -17,7 +17,8 @@ from services.gw2_api_service import (
 )
 from services.player_stats_service import (
     get_player_fights, get_player_career_stats, get_player_spec_stats,
-    get_guild_stats, record_player_fight, import_fights_from_ai_database
+    get_guild_stats, record_player_fight, import_fights_from_ai_database,
+    import_guild_fights_from_ai_database
 )
 from logger import get_logger
 
@@ -594,6 +595,37 @@ async def get_my_guilds(request: Request):
         
     except Exception as e:
         logger.error(f"Get guilds error: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+# ==================== GUILD IMPORT ENDPOINT ====================
+
+@router.post("/guild/{guild_id}/import")
+async def import_guild_fights(request: Request, guild_id: str):
+    """Import fights from AI database for a guild"""
+    try:
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            return JSONResponse({"success": False, "error": "Non connecté"}, status_code=401)
+        
+        api_key = get_api_key_by_session(session_id)
+        if not api_key:
+            return JSONResponse({"success": False, "error": "Clé API non trouvée"}, status_code=401)
+        
+        # Get guild info
+        guild_info = await gw2_api.get_guild_info(guild_id, api_key)
+        if not guild_info:
+            return JSONResponse({"success": False, "error": "Guilde non trouvée"}, status_code=404)
+        
+        guild_name = guild_info.get("name", "Unknown")
+        guild_tag = guild_info.get("tag", "")
+        
+        result = import_guild_fights_from_ai_database(guild_id, guild_name, guild_tag)
+        
+        return JSONResponse(result)
+        
+    except Exception as e:
+        logger.error(f"Import guild fights error: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 

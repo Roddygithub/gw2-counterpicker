@@ -249,7 +249,7 @@
                                                 {% elif profession == 'Necromancer' %}bg-[#52A76F]/20 text-[#52A76F]
                                                 {% else %}bg-gray-500/20 text-gray-300{% endif %}
                                             {% else %}bg-gray-700/30 text-gray-500 line-through{% endif %}">
-                                            <img src="/static/icons/{{ profession|lower }}.png" alt="{{ profession }}" class="w-4 h-4" onerror="this.style.display='none'">
+                                            <img src="/static/icons/{{ spec|lower }}.png" alt="{{ spec }}" class="w-4 h-4" onerror="this.src='/static/icons/{{ profession|lower }}.png'">
                                             {{ spec }}
                                         </span>
                                         {% endfor %}

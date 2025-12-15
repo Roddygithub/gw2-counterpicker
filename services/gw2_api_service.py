@@ -113,9 +113,9 @@ ELITE_SPEC_EXPANSIONS = {
     "Mechanist": "eod", "Untamed": "eod", "Specter": "eod",
     "Catalyst": "eod", "Virtuoso": "eod", "Harbinger": "eod",
     # Secrets of the Obscure
-    "Luminary": "soto", "Paragon": "soto", "Ritualist": "soto",
-    "Conduit": "soto", "Warden": "soto", "Trickster": "soto",
-    "Evoker": "soto", "Troubadour": "soto", "Wraith": "soto",
+    "Luminary": "soto", "Paragon": "soto", "Conduit": "soto",
+    "Amalgam": "soto", "Galeshot": "soto", "Antiquary": "soto",
+    "Evoker": "soto", "Troubadour": "soto", "Ritualist": "soto",
 }
 
 # Specs organized by expansion for display
@@ -123,20 +123,20 @@ SPECS_BY_EXPANSION = {
     "Heart of Thorns": ["Dragonhunter", "Berserker", "Herald", "Scrapper", "Druid", "Daredevil", "Tempest", "Chronomancer", "Reaper"],
     "Path of Fire": ["Firebrand", "Spellbreaker", "Renegade", "Holosmith", "Soulbeast", "Deadeye", "Weaver", "Mirage", "Scourge"],
     "End of Dragons": ["Willbender", "Bladesworn", "Vindicator", "Mechanist", "Untamed", "Specter", "Catalyst", "Virtuoso", "Harbinger"],
-    "Secrets of the Obscure": ["Luminary", "Paragon", "Ritualist", "Conduit", "Warden", "Trickster", "Evoker", "Troubadour", "Wraith"],
+    "Secrets of the Obscure": ["Luminary", "Paragon", "Conduit", "Amalgam", "Galeshot", "Antiquary", "Evoker", "Troubadour", "Ritualist"],
 }
 
 # Spec to profession mapping
 SPEC_TO_PROFESSION = {
     "Dragonhunter": "Guardian", "Firebrand": "Guardian", "Willbender": "Guardian", "Luminary": "Guardian",
     "Berserker": "Warrior", "Spellbreaker": "Warrior", "Bladesworn": "Warrior", "Paragon": "Warrior",
-    "Herald": "Revenant", "Renegade": "Revenant", "Vindicator": "Revenant", "Ritualist": "Revenant",
-    "Scrapper": "Engineer", "Holosmith": "Engineer", "Mechanist": "Engineer", "Conduit": "Engineer",
-    "Druid": "Ranger", "Soulbeast": "Ranger", "Untamed": "Ranger", "Warden": "Ranger",
-    "Daredevil": "Thief", "Deadeye": "Thief", "Specter": "Thief", "Trickster": "Thief",
+    "Herald": "Revenant", "Renegade": "Revenant", "Vindicator": "Revenant", "Conduit": "Revenant",
+    "Scrapper": "Engineer", "Holosmith": "Engineer", "Mechanist": "Engineer", "Amalgam": "Engineer",
+    "Druid": "Ranger", "Soulbeast": "Ranger", "Untamed": "Ranger", "Galeshot": "Ranger",
+    "Daredevil": "Thief", "Deadeye": "Thief", "Specter": "Thief", "Antiquary": "Thief",
     "Tempest": "Elementalist", "Weaver": "Elementalist", "Catalyst": "Elementalist", "Evoker": "Elementalist",
     "Chronomancer": "Mesmer", "Mirage": "Mesmer", "Virtuoso": "Mesmer", "Troubadour": "Mesmer",
-    "Reaper": "Necromancer", "Scourge": "Necromancer", "Harbinger": "Necromancer", "Wraith": "Necromancer",
+    "Reaper": "Necromancer", "Scourge": "Necromancer", "Harbinger": "Necromancer", "Ritualist": "Necromancer",
 }
 
 

@@ -555,3 +555,82 @@ def import_fights_from_ai_database(account_id: str, account_name: str) -> Dict[s
             'error': str(e),
             'imported': 0
         }
+
+
+def import_guild_fights_from_ai_database(guild_id: str, guild_name: str, guild_tag: str) -> Dict[str, Any]:
+    """
+    Import existing fights from the AI learning database into guild stats.
+    Matches fights where guild members participated.
+    """
+    try:
+        from counter_ai import fights_table as ai_fights_table
+        
+        all_fights = ai_fights_table.all()
+        
+        imported_count = 0
+        skipped_count = 0
+        
+        for fight in all_fights:
+            ally_builds = fight.get('ally_builds', [])
+            
+            if not ally_builds:
+                continue
+            
+            # Check if already imported
+            fight_date = fight.get('timestamp', '')
+            Fight = Query()
+            existing = guild_stats_table.search(
+                (Fight.guild_id == guild_id) & 
+                (Fight.fight_date == fight_date)
+            )
+            
+            if existing:
+                skipped_count += 1
+                continue
+            
+            # Create guild fight record
+            participants = []
+            for ally in ally_builds:
+                participants.append({
+                    'account_id': ally.get('account', ''),
+                    'account_name': ally.get('account', ally.get('player_name', '')),
+                    'elite_spec': ally.get('elite_spec', ally.get('profession', '')),
+                    'role': ally.get('role', 'dps'),
+                    'damage_out': ally.get('damage_out', 0),
+                    'deaths': ally.get('deaths', 0)
+                })
+            
+            record = {
+                'guild_id': guild_id,
+                'guild_name': guild_name,
+                'guild_tag': guild_tag,
+                'fight_date': fight_date,
+                'duration': int(fight.get('duration_sec', 0)),
+                'outcome': fight.get('outcome', 'draw'),
+                'ally_count': len(ally_builds),
+                'enemy_count': sum(fight.get('enemy_composition', {}).values()),
+                'total_damage': sum(p.get('damage_out', 0) for p in participants),
+                'total_kills': fight.get('enemy_deaths', 0),
+                'total_deaths': sum(p.get('deaths', 0) for p in participants),
+                'participants': participants
+            }
+            
+            guild_stats_table.insert(record)
+            imported_count += 1
+        
+        logger.info(f"Imported {imported_count} fights for guild [{guild_tag}], skipped {skipped_count} duplicates")
+        
+        return {
+            'success': True,
+            'imported': imported_count,
+            'skipped': skipped_count,
+            'total_in_db': len(all_fights)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to import guild fights: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'imported': 0
+        }
