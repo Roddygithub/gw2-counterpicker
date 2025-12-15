@@ -48,28 +48,6 @@
     </div>
     
     
-    <!-- Top Specs Most Played -->
-    <div class="glow-card rounded-2xl p-6">
-        <h3 class="font-display text-xl font-bold text-cyber-cyan mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-            </svg>
-            📊 Spécialisations les plus jouées
-        </h3>
-        <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
-            {% for spec, count in composition.spec_counts.items() %}
-            {% if loop.index <= 12 %}
-            <div class="bg-gw2-darker rounded-lg p-3 text-center border border-cyber-cyan/20 hover:border-cyber-cyan/50 transition-all">
-                <div class="text-2xl font-bold text-cyber-cyan">{{ count }}</div>
-                <div class="text-xs prof-{{ spec|lower|replace(' ', '') }} truncate">{{ spec }}</div>
-            </div>
-            {% endif %}
-            {% endfor %}
-        </div>
-    </div>
-    
-    
-    
     <!-- Squad Composition Summary (like Quick Analysis) -->
     {% if composition %}
     <div class="glow-card rounded-2xl p-6">
@@ -198,27 +176,6 @@
     </div>
     {% endif %}
     
-    <!-- Map/Zone Heatmap -->
-    {% if map_counts %}
-    <div class="glow-card rounded-2xl p-6">
-        <h3 class="font-display text-xl font-bold text-amber-400 mb-4">🗺️ Zones les plus fightées</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {% for map_name, count in map_counts %}
-            <div class="bg-gw2-darker rounded-xl p-4 flex items-center justify-between border border-amber-500/20 hover:border-amber-500/50 transition-all">
-                <span class="text-white font-medium truncate">{{ map_name }}</span>
-                <div class="flex items-center gap-2">
-                    <div class="w-24 h-2 rounded-full bg-gw2-dark overflow-hidden">
-                        {% set max_count = map_counts[0][1] if map_counts else 1 %}
-                        <div class="h-full bg-gradient-to-r from-amber-400 to-orange-500" style="width: {{ (count / max_count * 100)|int }}%"></div>
-                    </div>
-                    <span class="text-amber-400 font-bold">{{ count }}</span>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-    
     <!-- Top 10 Players -->
     {% if top_players %}
     <div class="glow-card rounded-2xl p-6">
@@ -227,13 +184,13 @@
             <table class="w-full text-sm" id="top-players-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 0)"># ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 1)">Joueur ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 2)">Build ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 3, true)">Dégâts totaux ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 4, true)">Kills ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 5, true)">Deaths ↕</th>
-                        <th class="pb-3 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 6, true)">Apparitions ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 0)" title="Classement par dégâts totaux"># ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 1)" title="Nom du joueur">Joueur ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 2)" title="Spécialisation élite la plus jouée">Build ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 3, true)" title="Somme des dégâts sur tous les combats">Dégâts totaux ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 4, true)" title="Nombre total de kills">Kills ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 5, true)" title="Nombre total de morts">Deaths ↕</th>
+                        <th class="pb-3 cursor-pointer hover:text-white" onclick="sortTable('top-players-table', 6, true)" title="Nombre de combats auxquels le joueur a participé">Apparitions ↕</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
@@ -256,43 +213,6 @@
     </div>
     {% endif %}
     
-    <!-- Build le plus joué par classe -->
-    {% if builds_by_class %}
-    <div class="glow-card rounded-2xl p-6">
-        <h3 class="font-display text-xl font-bold text-gw2-purple mb-4">🎮 Build le plus joué par classe</h3>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {% for base_class, data in builds_by_class.items() %}
-            <div class="bg-gw2-darker rounded-xl p-4 text-center border border-gw2-purple/20 hover:border-gw2-purple/50 transition-all">
-                <div class="text-xs text-gray-500 mb-1">{{ base_class }}</div>
-                <div class="font-bold prof-{{ data.spec|lower|replace(' ', '') }}">{{ data.spec }}</div>
-                <div class="text-sm text-gray-400">{{ data.count }} fois</div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-    
-    <!-- Counter Recommendation for Next Session -->
-    {% if counter_recommendation %}
-    <div class="glow-card rounded-2xl p-6 border-2 border-cyber-cyan/50">
-        <h3 class="font-display text-xl font-bold text-cyber-cyan mb-4">🎯 Counter Parfait pour Demain Soir</h3>
-        <div class="bg-gw2-darker rounded-xl p-4">
-            <div class="flex items-center gap-4 mb-3">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyber-cyan to-blue-500 flex items-center justify-center">
-                    <span class="text-2xl">⚔️</span>
-                </div>
-                <div>
-                    <p class="text-white font-medium">Cible principale: <span class="text-red-400 font-bold">{{ counter_recommendation.target }}</span> ({{ counter_recommendation.count }} détectés)</p>
-                    <p class="text-gray-400 text-sm">{{ counter_recommendation.suggestion }}</p>
-                </div>
-            </div>
-            <div class="text-xs text-gray-500 mt-2">
-                💡 Conseil: Adaptez votre composition en fonction des specs ennemies dominantes observées ce soir.
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    
     <!-- Fight List -->
     <div class="glow-card rounded-2xl p-6">
         <h3 class="font-display text-xl font-bold text-white mb-4">⚔️ Détail des Combats</h3>
@@ -301,13 +221,13 @@
             <table class="w-full text-sm" id="fights-table">
                 <thead>
                     <tr class="text-left text-gray-400 border-b border-gray-700">
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 0)">Fichier ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 1)">Combat ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 2)">Résultat ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 3, true)">Durée ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 4, true)">Alliés ↕</th>
-                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 5)">Stats ↕</th>
-                        <th class="pb-3 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 6)">Lien ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 0)" title="Nom du fichier analysé">Fichier ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 1)" title="Nom du combat détecté">Combat ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 2)" title="Victoire/Défaite/Nul basé sur les morts et downs">Résultat ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 3, true)" title="Durée totale du combat">Durée ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 4, true)" title="Nombre de joueurs alliés dans ce combat">Alliés ↕</th>
+                        <th class="pb-3 pr-4 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 5)" title="Morts et downs de l'équipe">Stats ↕</th>
+                        <th class="pb-3 cursor-pointer hover:text-white" onclick="sortTable('fights-table', 6)" title="Lien vers le rapport complet dps.report">Lien ↕</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">

@@ -668,7 +668,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
             return safe_number(value[0])
         return 0
 
-    # Boon IDs for tracking
+    # Boon IDs for tracking (from GW2 API)
     BOON_IDS = {
         'quickness': 1187,
         'protection': 717,
@@ -676,7 +676,14 @@ def extract_players_from_ei_json(data: dict) -> dict:
         'aegis': 743,
         'stability': 1122,
         'resistance': 26980,
-        'superspeed': 5974
+        'superspeed': 5974,
+        # Secondary boons
+        'might': 740,
+        'fury': 725,
+        'regeneration': 718,
+        'resolution': 873,
+        'swiftness': 719,
+        'alacrity': 30328
     }
 
     # Get fight duration using centralized parser
