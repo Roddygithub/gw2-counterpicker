@@ -139,7 +139,7 @@
                         <div>
                             <h2 class="text-2xl font-display font-bold text-white">{{ account.account_name }}</h2>
                             <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-gray-400">
-                                <span id="world-display">🌍 {{ account.world_name or 'Chargement...' }}</span>
+                                <span id="world-display" title="{% if lang == 'en' %}Original home world (WvW teams change weekly){% else %}Monde d'origine (les équipes WvW changent chaque semaine){% endif %}">🌍 {{ account.world_name or '—' }}</span>
                                 <span>⭐ {% if lang == 'en' %}WvW Rank{% else %}Rang WvW{% endif %}: {{ account.wvw_rank }}</span>
                             </div>
                         </div>
