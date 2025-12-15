@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}{% if lang == 'en' %}My Dashboard{% else %}Mon Dashboard{% endif %} - GW2 CounterPicker{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-b from-gw2-darker via-gw2-dark to-gw2-darker">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 mb-2">
+                {% if lang == 'en' %}My WvW Dashboard{% else %}Mon Dashboard WvW{% endif %}
+            </h1>
+            <p class="text-gray-400">
+                {% if lang == 'en' %}Track your progress and get personalized recommendations{% else %}Suivez votre progression et obtenez des recommandations personnalisées{% endif %}
+            </p>
+        </div>
+
+        {% if not connected %}
+        <!-- Not Connected State -->
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-8 mb-8">
+            <div class="max-w-2xl mx-auto text-center">
+                <div class="text-6xl mb-4">🔑</div>
+                <h2 class="text-2xl font-display font-bold text-amber-400 mb-4">
+                    {% if lang == 'en' %}Connect your GW2 API Key{% else %}Connectez votre clé API GW2{% endif %}
+                </h2>
+                <p class="text-gray-300 mb-6">
+                    {% if lang == 'en' %}
+                    Link your Guild Wars 2 account to unlock personalized features:
+                    {% else %}
+                    Liez votre compte Guild Wars 2 pour débloquer des fonctionnalités personnalisées :
+                    {% endif %}
+                </p>
+                
+                <!-- Benefits -->
+                <div class="grid md:grid-cols-2 gap-4 mb-8 text-left">
+                    <div class="bg-gw2-darker/50 rounded-lg p-4 border border-green-500/20">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-2xl">📊</span>
+                            <span class="font-bold text-green-400">{% if lang == 'en' %}Personal Stats{% else %}Stats Personnelles{% endif %}</span>
+                        </div>
+                        <p class="text-sm text-gray-400">{% if lang == 'en' %}Track your WvW career across all your characters{% else %}Suivez votre carrière WvW sur tous vos personnages{% endif %}</p>
+                    </div>
+                    <div class="bg-gw2-darker/50 rounded-lg p-4 border border-blue-500/20">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-2xl">🎯</span>
+                            <span class="font-bold text-blue-400">{% if lang == 'en' %}Smart Recommendations{% else %}Recommandations Intelligentes{% endif %}</span>
+                        </div>
+                        <p class="text-sm text-gray-400">{% if lang == 'en' %}Get counter-picks you can actually play{% else %}Obtenez des contre-picks que vous pouvez vraiment jouer{% endif %}</p>
+                    </div>
+                    <div class="bg-gw2-darker/50 rounded-lg p-4 border border-purple-500/20">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-2xl">⚔️</span>
+                            <span class="font-bold text-purple-400">{% if lang == 'en' %}Build Sync{% else %}Sync des Builds{% endif %}</span>
+                        </div>
+                        <p class="text-sm text-gray-400">{% if lang == 'en' %}We know your available elite specs{% else %}Nous connaissons vos spés élites disponibles{% endif %}</p>
+                    </div>
+                    <div class="bg-gw2-darker/50 rounded-lg p-4 border border-amber-500/20">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-2xl">🏰</span>
+                            <span class="font-bold text-amber-400">{% if lang == 'en' %}Guild Features{% else %}Fonctionnalités Guilde{% endif %}</span>
+                        </div>
+                        <p class="text-sm text-gray-400">{% if lang == 'en' %}Coming soon: guild analytics{% else %}Bientôt : analytics de guilde{% endif %}</p>
+                    </div>
+                </div>
+
+                <!-- API Key Input -->
+                <form id="api-key-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2 text-left">
+                            {% if lang == 'en' %}Your GW2 API Key{% else %}Votre clé API GW2{% endif %}
+                        </label>
+                        <input type="text" 
+                               id="api-key-input"
+                               name="api_key"
+                               placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX..."
+                               class="w-full px-4 py-3 bg-gw2-darker border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-mono text-sm">
+                    </div>
+                    
+                    <div id="api-error" class="hidden text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg p-3"></div>
+                    
+                    <button type="submit" 
+                            id="connect-btn"
+                            class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all disabled:opacity-50">
+                        <span id="btn-text">{% if lang == 'en' %}Connect API Key{% else %}Connecter la clé API{% endif %}</span>
+                        <span id="btn-loading" class="hidden">
+                            <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                    </button>
+                </form>
+
+                <!-- How to create API key -->
+                <div class="mt-8 text-left">
+                    <details class="bg-gw2-darker/50 rounded-lg border border-gray-700">
+                        <summary class="px-4 py-3 cursor-pointer text-amber-400 font-medium hover:text-amber-300">
+                            {% if lang == 'en' %}How to create an API key?{% else %}Comment créer une clé API ?{% endif %}
+                        </summary>
+                        <div class="px-4 pb-4 text-sm text-gray-300 space-y-3">
+                            <ol class="list-decimal list-inside space-y-2">
+                                <li>{% if lang == 'en' %}Go to{% else %}Allez sur{% endif %} <a href="https://account.arena.net/applications" target="_blank" class="text-amber-400 hover:underline">account.arena.net/applications</a></li>
+                                <li>{% if lang == 'en' %}Click "New Key"{% else %}Cliquez sur "New Key"{% endif %}</li>
+                                <li>{% if lang == 'en' %}Give it a name (e.g., "GW2 CounterPicker"){% else %}Donnez-lui un nom (ex: "GW2 CounterPicker"){% endif %}</li>
+                                <li>{% if lang == 'en' %}Select these permissions:{% else %}Sélectionnez ces permissions :{% endif %}
+                                    <ul class="list-disc list-inside ml-4 mt-1 text-gray-400">
+                                        <li><code class="text-green-400">account</code> - {% if lang == 'en' %}Account info{% else %}Infos du compte{% endif %}</li>
+                                        <li><code class="text-green-400">characters</code> - {% if lang == 'en' %}Character list{% else %}Liste des personnages{% endif %}</li>
+                                        <li><code class="text-green-400">builds</code> - {% if lang == 'en' %}Build templates{% else %}Templates de build{% endif %}</li>
+                                        <li><code class="text-green-400">progression</code> - {% if lang == 'en' %}WvW rank{% else %}Rang WvW{% endif %}</li>
+                                    </ul>
+                                </li>
+                                <li>{% if lang == 'en' %}Copy the generated key{% else %}Copiez la clé générée{% endif %}</li>
+                            </ol>
+                            <div class="bg-blue-500/10 border border-blue-500/30 rounded p-3 mt-3">
+                                <p class="text-blue-300">
+                                    <strong>🔒 {% if lang == 'en' %}Security{% else %}Sécurité{% endif %}:</strong> 
+                                    {% if lang == 'en' %}We only request read-only permissions. We cannot modify your account, access your wallet, or make trades.{% else %}Nous ne demandons que des permissions en lecture seule. Nous ne pouvons pas modifier votre compte, accéder à votre portefeuille, ni effectuer d'échanges.{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Connected State -->
+        <div class="space-y-6">
+            
+            <!-- Account Card -->
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-green-500/30 p-6">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-3xl">
+                            {% if account.commander %}👑{% else %}⚔️{% endif %}
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-display font-bold text-white">{{ account.account_name }}</h2>
+                            <div class="flex items-center gap-3 text-sm text-gray-400">
+                                <span>🌍 {{ account.world_name }}</span>
+                                <span>⭐ {% if lang == 'en' %}WvW Rank{% else %}Rang WvW{% endif %}: {{ account.wvw_rank }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="disconnectAccount()" 
+                            class="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors text-sm">
+                        {% if lang == 'en' %}Disconnect{% else %}Déconnecter{% endif %}
+                    </button>
+                </div>
+                
+                <!-- Expansions -->
+                <div class="mt-4 flex flex-wrap gap-2">
+                    {% for exp in account.access %}
+                    <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs font-medium">
+                        {{ exp }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Characters Section -->
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-6">
+                <h3 class="text-xl font-display font-bold text-amber-400 mb-4 flex items-center gap-2">
+                    <span>👥</span>
+                    {% if lang == 'en' %}Your Characters{% else %}Vos Personnages{% endif %}
+                </h3>
+                <div id="characters-container" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="text-center py-8 text-gray-400">
+                        <svg class="animate-spin h-8 w-8 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {% if lang == 'en' %}Loading characters...{% else %}Chargement des personnages...{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Available Elite Specs -->
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
+                <h3 class="text-xl font-display font-bold text-purple-400 mb-4 flex items-center gap-2">
+                    <span>⚡</span>
+                    {% if lang == 'en' %}Available Elite Specializations{% else %}Spécialisations Élites Disponibles{% endif %}
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for spec in account.available_elite_specs %}
+                    <span class="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-lg text-sm">
+                        {{ spec }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Stats Placeholder -->
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-blue-500/20 p-6">
+                <h3 class="text-xl font-display font-bold text-blue-400 mb-4 flex items-center gap-2">
+                    <span>📈</span>
+                    {% if lang == 'en' %}Your WvW Stats{% else %}Vos Stats WvW{% endif %}
+                </h3>
+                <div class="text-center py-8 text-gray-400">
+                    <div class="text-4xl mb-2">🚧</div>
+                    <p>{% if lang == 'en' %}Coming soon: Your personal WvW statistics{% else %}Bientôt : Vos statistiques WvW personnelles{% endif %}</p>
+                    <p class="text-sm mt-2">{% if lang == 'en' %}Upload logs to start tracking your progress{% else %}Uploadez des logs pour commencer à suivre votre progression{% endif %}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// API Key form handling
+document.getElementById('api-key-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const apiKey = document.getElementById('api-key-input').value.trim();
+    const errorDiv = document.getElementById('api-error');
+    const btn = document.getElementById('connect-btn');
+    const btnText = document.getElementById('btn-text');
+    const btnLoading = document.getElementById('btn-loading');
+    
+    if (!apiKey) {
+        errorDiv.textContent = '{% if lang == "en" %}Please enter an API key{% else %}Veuillez entrer une clé API{% endif %}';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+    
+    // Show loading
+    btn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    errorDiv.classList.add('hidden');
+    
+    try {
+        const formData = new FormData();
+        formData.append('api_key', apiKey);
+        
+        const response = await fetch('/api/gw2/connect', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Reload page to show connected state
+            window.location.reload();
+        } else {
+            errorDiv.textContent = data.error || '{% if lang == "en" %}Connection failed{% else %}Échec de la connexion{% endif %}';
+            if (data.missing_scopes) {
+                errorDiv.textContent += '\n{% if lang == "en" %}Missing permissions{% else %}Permissions manquantes{% endif %}: ' + data.missing_scopes.join(', ');
+            }
+            errorDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        errorDiv.textContent = '{% if lang == "en" %}Network error{% else %}Erreur réseau{% endif %}: ' + error.message;
+        errorDiv.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+    }
+});
+
+// Disconnect function
+async function disconnectAccount() {
+    if (!confirm('{% if lang == "en" %}Are you sure you want to disconnect?{% else %}Êtes-vous sûr de vouloir vous déconnecter ?{% endif %}')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/gw2/disconnect', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || '{% if lang == "en" %}Disconnect failed{% else %}Échec de la déconnexion{% endif %}');
+        }
+    } catch (error) {
+        alert('{% if lang == "en" %}Network error{% else %}Erreur réseau{% endif %}');
+    }
+}
+
+// Load characters if connected
+{% if connected %}
+async function loadCharacters() {
+    try {
+        const response = await fetch('/api/gw2/characters');
+        const data = await response.json();
+        
+        const container = document.getElementById('characters-container');
+        
+        if (data.success && data.characters.length > 0) {
+            container.innerHTML = data.characters.map(char => `
+                <div class="bg-gw2-darker/50 rounded-lg p-4 border border-gray-700 hover:border-amber-500/30 transition-colors">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-lg">
+                            ${getProfessionEmoji(char.profession)}
+                        </div>
+                        <div>
+                            <div class="font-bold text-white">${char.name}</div>
+                            <div class="text-sm text-gray-400">${char.profession} - Lv ${char.level}</div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-2">
+                        ⏱️ ${char.hours_played}h played
+                        ${char.wvw_elite_spec ? `<br>⚔️ WvW: ${char.wvw_elite_spec}` : ''}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<div class="text-gray-400 text-center py-4">{% if lang == "en" %}No characters found{% else %}Aucun personnage trouvé{% endif %}</div>';
+        }
+    } catch (error) {
+        console.error('Failed to load characters:', error);
+    }
+}
+
+function getProfessionEmoji(profession) {
+    const emojis = {
+        'Guardian': '🛡️',
+        'Warrior': '⚔️',
+        'Revenant': '👻',
+        'Engineer': '🔧',
+        'Ranger': '🏹',
+        'Thief': '🗡️',
+        'Elementalist': '🔥',
+        'Mesmer': '💜',
+        'Necromancer': '💀'
+    };
+    return emojis[profession] || '⚔️';
+}
+
+// Load on page load
+loadCharacters();
+{% endif %}
+</script>
+{% endblock %}

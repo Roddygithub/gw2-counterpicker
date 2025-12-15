@@ -49,6 +49,7 @@ from translations import get_all_translations
 from scheduler import setup_scheduled_tasks
 from rate_limiter import check_upload_rate_limit
 from logger import get_logger
+from routers.gw2_api import router as gw2_api_router
 import zipfile
 import io
 
@@ -77,6 +78,9 @@ real_parser = RealEVTCParser()
 
 # Initialize scheduled tasks (fingerprint cleanup on Fridays at 18h55)
 setup_scheduled_tasks()
+
+# Include GW2 API router
+app.include_router(gw2_api_router)
 
 # Auto-deployment system active - Changes sync to GitHub and server automatically
 
