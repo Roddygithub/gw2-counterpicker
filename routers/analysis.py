@@ -37,6 +37,7 @@ async def analyze_url(request: Request, url: str = Form(...)):
     
     try:
         result = await analyze_dps_report_url(url, lang)
+        result["request"] = request
         return templates.TemplateResponse("partials/dps_report_result.html", result)
     except Exception as e:
         logger.error(f"dps.report API failed: {e}")
@@ -71,6 +72,7 @@ async def analyze_evtc(
         logger.info(f"Received file: {file.filename}, size: {len(data)} bytes")
         
         result = await analyze_single_file(file.filename, data, file.size, lang)
+        result["request"] = request
         return templates.TemplateResponse("partials/dps_report_result.html", result)
     
     # Multiple files mode
@@ -112,5 +114,6 @@ async def analyze_files(
     
     lang = get_lang(request)
     result = await analyze_multiple_files(validated_files, lang)
+    result["request"] = request
     
     return templates.TemplateResponse("partials/evening_result_v2.html", result)
