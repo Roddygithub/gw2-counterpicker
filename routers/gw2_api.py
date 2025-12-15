@@ -597,6 +597,66 @@ async def get_my_guilds(request: Request):
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
+# ==================== GUILD ANALYTICS PAGE ====================
+
+@router.get("/guild/{guild_id}", response_class=HTMLResponse)
+async def guild_analytics_page(request: Request, guild_id: str):
+    """Guild analytics page"""
+    session_id = request.cookies.get("session_id")
+    lang = request.cookies.get("lang", "fr")
+    
+    if not session_id:
+        return templates.TemplateResponse(
+            "guild_analytics.html",
+            {"request": request, "guild": None, "stats": None, "lang": lang, "error": "Non connecté"}
+        )
+    
+    api_key = get_api_key_by_session(session_id)
+    if not api_key:
+        return templates.TemplateResponse(
+            "guild_analytics.html",
+            {"request": request, "guild": None, "stats": None, "lang": lang, "error": "Clé API non trouvée"}
+        )
+    
+    # Get guild info
+    guild_info = await gw2_api.get_guild_info(guild_id, api_key)
+    if not guild_info:
+        return templates.TemplateResponse(
+            "guild_analytics.html",
+            {"request": request, "guild": None, "stats": None, "lang": lang, "error": "Guilde non trouvée"}
+        )
+    
+    guild = {
+        "id": guild_id,
+        "name": guild_info.get("name", "Unknown"),
+        "tag": guild_info.get("tag", "")
+    }
+    
+    # Get guild stats
+    stats = get_guild_stats(guild_id)
+    stats_dict = None
+    if stats:
+        stats_dict = stats.to_dict()
+        # Sort spec distribution for display
+        if stats_dict.get('spec_distribution'):
+            stats_dict['spec_distribution'] = sorted(
+                stats_dict['spec_distribution'].items(),
+                key=lambda x: x[1],
+                reverse=True
+            )
+    
+    return templates.TemplateResponse(
+        "guild_analytics.html",
+        {
+            "request": request,
+            "guild": guild,
+            "stats": stats_dict,
+            "spec_to_profession": SPEC_TO_PROFESSION,
+            "lang": lang
+        }
+    )
+
+
 # ==================== HISTORY PAGE ====================
 
 @router.get("/history", response_class=HTMLResponse)

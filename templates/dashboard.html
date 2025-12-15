@@ -169,17 +169,20 @@
                 </h3>
                 <div class="grid md:grid-cols-3 gap-4">
                     {% for guild in guilds %}
-                    <div class="bg-gw2-darker/50 rounded-lg p-4 border border-cyan-500/10 hover:border-cyan-500/30 transition-colors">
+                    <a href="/api/gw2/guild/{{ guild.id }}" 
+                       class="bg-gw2-darker/50 rounded-lg p-4 border border-cyan-500/10 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group block">
                         <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:scale-105 transition-transform">
                                 [{{ guild.tag }}]
                             </div>
-                            <div>
-                                <div class="font-bold text-white">{{ guild.name }}</div>
-                                <div class="text-xs text-gray-500">[{{ guild.tag }}]</div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-white truncate">{{ guild.name }}</div>
+                                <div class="text-xs text-cyan-400 group-hover:text-cyan-300">
+                                    {% if lang == 'en' %}View Analytics →{% else %}Voir Analytics →{% endif %}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
                     {% endfor %}
                 </div>
             </div>
