@@ -515,9 +515,9 @@ def import_fights_from_ai_database(account_id: str, account_name: str) -> Dict[s
                 fight_duration=int(fight.get('duration_sec', 0)),
                 damage_out=player_data.get('damage_out', 0),
                 damage_in=player_data.get('damage_in', 0),
-                kills=fight.get('ally_kills', 0) // max(len(ally_builds), 1),  # Estimate per player
+                kills=player_data.get('down_contrib', 0),  # down_contrib = kills contribution
                 deaths=player_data.get('deaths', 0),
-                downs=player_data.get('down_contrib', 0),
+                downs=0,  # Not tracked individually
                 cleanses=player_data.get('cleanses', 0),
                 strips=player_data.get('boon_strips', 0),
                 healing=player_data.get('healing', 0),

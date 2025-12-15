@@ -138,8 +138,8 @@
                         </div>
                         <div>
                             <h2 class="text-2xl font-display font-bold text-white">{{ account.account_name }}</h2>
-                            <div class="flex items-center gap-3 text-sm text-gray-400">
-                                <span>🌍 {{ account.world_name }}</span>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-gray-400">
+                                <span id="world-display">🌍 {{ account.world_name or 'Chargement...' }}</span>
                                 <span>⭐ {% if lang == 'en' %}WvW Rank{% else %}Rang WvW{% endif %}: {{ account.wvw_rank }}</span>
                             </div>
                         </div>
@@ -160,6 +160,31 @@
                 </div>
             </div>
 
+            <!-- Guilds Section -->
+            {% if guilds %}
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-cyan-500/20 p-6">
+                <h3 class="text-xl font-display font-bold text-cyan-400 mb-4 flex items-center gap-2">
+                    <span>🏰</span>
+                    {% if lang == 'en' %}My Guilds{% else %}Mes Guildes{% endif %}
+                </h3>
+                <div class="grid md:grid-cols-3 gap-4">
+                    {% for guild in guilds %}
+                    <div class="bg-gw2-darker/50 rounded-lg p-4 border border-cyan-500/10 hover:border-cyan-500/30 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                                [{{ guild.tag }}]
+                            </div>
+                            <div>
+                                <div class="font-bold text-white">{{ guild.name }}</div>
+                                <div class="text-xs text-gray-500">[{{ guild.tag }}]</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Characters Section -->
             <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-6">
                 <h3 class="text-xl font-display font-bold text-amber-400 mb-4 flex items-center gap-2">
@@ -177,18 +202,60 @@
                 </div>
             </div>
 
-            <!-- Available Elite Specs -->
+            <!-- Available Elite Specs by Expansion -->
             <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
                 <h3 class="text-xl font-display font-bold text-purple-400 mb-4 flex items-center gap-2">
                     <span>⚡</span>
                     {% if lang == 'en' %}Available Elite Specializations{% else %}Spécialisations Élites Disponibles{% endif %}
                 </h3>
-                <div class="flex flex-wrap gap-2">
-                    {% for spec in account.available_elite_specs %}
-                    <span class="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-lg text-sm">
-                        {{ spec }}
-                    </span>
-                    {% endfor %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left border-b border-gray-700">
+                                <th class="py-2 px-3 text-gray-400 font-medium">Extension</th>
+                                <th class="py-2 px-3 text-gray-400 font-medium">{% if lang == 'en' %}Specializations{% else %}Spécialisations{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expansion, specs in specs_by_expansion.items() %}
+                            <tr class="border-b border-gray-800">
+                                <td class="py-3 px-3">
+                                    <span class="font-medium 
+                                        {% if expansion == 'Heart of Thorns' %}text-green-400
+                                        {% elif expansion == 'Path of Fire' %}text-orange-400
+                                        {% elif expansion == 'End of Dragons' %}text-cyan-400
+                                        {% else %}text-purple-400{% endif %}">
+                                        {{ expansion }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-3">
+                                    <div class="flex flex-wrap gap-2">
+                                        {% for spec in specs %}
+                                        {% set available = spec in account.available_elite_specs %}
+                                        {% set profession = spec_to_profession.get(spec, 'Unknown') %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs
+                                            {% if available %}
+                                                {% if profession == 'Guardian' %}bg-[#72C1D9]/20 text-[#72C1D9]
+                                                {% elif profession == 'Warrior' %}bg-[#FFD166]/20 text-[#FFD166]
+                                                {% elif profession == 'Revenant' %}bg-[#D16E5A]/20 text-[#D16E5A]
+                                                {% elif profession == 'Engineer' %}bg-[#D09C59]/20 text-[#D09C59]
+                                                {% elif profession == 'Ranger' %}bg-[#8CDC82]/20 text-[#8CDC82]
+                                                {% elif profession == 'Thief' %}bg-[#C08F95]/20 text-[#C08F95]
+                                                {% elif profession == 'Elementalist' %}bg-[#F68A87]/20 text-[#F68A87]
+                                                {% elif profession == 'Mesmer' %}bg-[#B679D5]/20 text-[#B679D5]
+                                                {% elif profession == 'Necromancer' %}bg-[#52A76F]/20 text-[#52A76F]
+                                                {% else %}bg-gray-500/20 text-gray-300{% endif %}
+                                            {% else %}bg-gray-700/30 text-gray-500 line-through{% endif %}">
+                                            <img src="/static/icons/{{ profession|lower }}.png" alt="{{ profession }}" class="w-4 h-4" onerror="this.style.display='none'">
+                                            {{ spec }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -368,23 +435,26 @@ async function loadCharacters() {
         const container = document.getElementById('characters-container');
         
         if (data.success && data.characters.length > 0) {
-            container.innerHTML = data.characters.map(char => `
+            container.innerHTML = data.characters.map(char => {
+                const profColor = getProfessionColor(char.profession);
+                return `
                 <div class="bg-gw2-darker/50 rounded-lg p-4 border border-gray-700 hover:border-amber-500/30 transition-colors">
                     <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-lg">
-                            ${getProfessionEmoji(char.profession)}
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background: ${profColor}20; border: 2px solid ${profColor}">
+                            <img src="/static/icons/${char.profession.toLowerCase()}.png" alt="${char.profession}" class="w-6 h-6" 
+                                 onerror="this.outerHTML='<span style=\\'color:${profColor}\\'>${getProfessionIcon(char.profession)}</span>'">
                         </div>
                         <div>
                             <div class="font-bold text-white">${char.name}</div>
-                            <div class="text-sm text-gray-400">${char.profession} - Lv ${char.level}</div>
+                            <div class="text-sm" style="color: ${profColor}">${char.profession} - Lv ${char.level}</div>
                         </div>
                     </div>
                     <div class="text-xs text-gray-500 mt-2">
                         ⏱️ ${char.hours_played}h played
-                        ${char.wvw_elite_spec ? `<br>⚔️ WvW: ${char.wvw_elite_spec}` : ''}
+                        ${char.wvw_elite_spec ? `<br>⚔️ WvW: <span style="color:${profColor}">${char.wvw_elite_spec}</span>` : ''}
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         } else {
             container.innerHTML = '<div class="text-gray-400 text-center py-4">{% if lang == "en" %}No characters found{% else %}Aucun personnage trouvé{% endif %}</div>';
         }
@@ -393,19 +463,34 @@ async function loadCharacters() {
     }
 }
 
-function getProfessionEmoji(profession) {
-    const emojis = {
-        'Guardian': '🛡️',
-        'Warrior': '⚔️',
-        'Revenant': '👻',
-        'Engineer': '🔧',
+function getProfessionColor(profession) {
+    const colors = {
+        'Guardian': '#72C1D9',
+        'Warrior': '#FFD166',
+        'Revenant': '#D16E5A',
+        'Engineer': '#D09C59',
+        'Ranger': '#8CDC82',
+        'Thief': '#C08F95',
+        'Elementalist': '#F68A87',
+        'Mesmer': '#B679D5',
+        'Necromancer': '#52A76F'
+    };
+    return colors[profession] || '#888888';
+}
+
+function getProfessionIcon(profession) {
+    const icons = {
+        'Guardian': '🛡',
+        'Warrior': '⚔',
+        'Revenant': '👁',
+        'Engineer': '⚙',
         'Ranger': '🏹',
-        'Thief': '🗡️',
+        'Thief': '🗡',
         'Elementalist': '🔥',
-        'Mesmer': '💜',
+        'Mesmer': '🔮',
         'Necromancer': '💀'
     };
-    return emojis[profession] || '⚔️';
+    return icons[profession] || '⚔';
 }
 
 // Load on page load

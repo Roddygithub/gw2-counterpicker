@@ -101,15 +101,42 @@ class GW2Character:
 # Elite specialization requirements by expansion
 ELITE_SPEC_EXPANSIONS = {
     # Heart of Thorns
-    "Dragonhunter": "hot", "Firebrand": "pof", "Willbender": "eod",
-    "Berserker": "hot", "Spellbreaker": "pof", "Bladesworn": "eod",
-    "Herald": "hot", "Renegade": "pof", "Vindicator": "eod",
-    "Scrapper": "hot", "Holosmith": "pof", "Mechanist": "eod",
-    "Druid": "hot", "Soulbeast": "pof", "Untamed": "eod",
-    "Daredevil": "hot", "Deadeye": "pof", "Specter": "eod",
-    "Tempest": "hot", "Weaver": "pof", "Catalyst": "eod",
-    "Chronomancer": "hot", "Mirage": "pof", "Virtuoso": "eod",
-    "Reaper": "hot", "Scourge": "pof", "Harbinger": "eod",
+    "Dragonhunter": "hot", "Berserker": "hot", "Herald": "hot",
+    "Scrapper": "hot", "Druid": "hot", "Daredevil": "hot",
+    "Tempest": "hot", "Chronomancer": "hot", "Reaper": "hot",
+    # Path of Fire
+    "Firebrand": "pof", "Spellbreaker": "pof", "Renegade": "pof",
+    "Holosmith": "pof", "Soulbeast": "pof", "Deadeye": "pof",
+    "Weaver": "pof", "Mirage": "pof", "Scourge": "pof",
+    # End of Dragons
+    "Willbender": "eod", "Bladesworn": "eod", "Vindicator": "eod",
+    "Mechanist": "eod", "Untamed": "eod", "Specter": "eod",
+    "Catalyst": "eod", "Virtuoso": "eod", "Harbinger": "eod",
+    # Secrets of the Obscure
+    "Luminary": "soto", "Paragon": "soto", "Ritualist": "soto",
+    "Conduit": "soto", "Warden": "soto", "Trickster": "soto",
+    "Evoker": "soto", "Troubadour": "soto", "Wraith": "soto",
+}
+
+# Specs organized by expansion for display
+SPECS_BY_EXPANSION = {
+    "Heart of Thorns": ["Dragonhunter", "Berserker", "Herald", "Scrapper", "Druid", "Daredevil", "Tempest", "Chronomancer", "Reaper"],
+    "Path of Fire": ["Firebrand", "Spellbreaker", "Renegade", "Holosmith", "Soulbeast", "Deadeye", "Weaver", "Mirage", "Scourge"],
+    "End of Dragons": ["Willbender", "Bladesworn", "Vindicator", "Mechanist", "Untamed", "Specter", "Catalyst", "Virtuoso", "Harbinger"],
+    "Secrets of the Obscure": ["Luminary", "Paragon", "Ritualist", "Conduit", "Warden", "Trickster", "Evoker", "Troubadour", "Wraith"],
+}
+
+# Spec to profession mapping
+SPEC_TO_PROFESSION = {
+    "Dragonhunter": "Guardian", "Firebrand": "Guardian", "Willbender": "Guardian", "Luminary": "Guardian",
+    "Berserker": "Warrior", "Spellbreaker": "Warrior", "Bladesworn": "Warrior", "Paragon": "Warrior",
+    "Herald": "Revenant", "Renegade": "Revenant", "Vindicator": "Revenant", "Ritualist": "Revenant",
+    "Scrapper": "Engineer", "Holosmith": "Engineer", "Mechanist": "Engineer", "Conduit": "Engineer",
+    "Druid": "Ranger", "Soulbeast": "Ranger", "Untamed": "Ranger", "Warden": "Ranger",
+    "Daredevil": "Thief", "Deadeye": "Thief", "Specter": "Thief", "Trickster": "Thief",
+    "Tempest": "Elementalist", "Weaver": "Elementalist", "Catalyst": "Elementalist", "Evoker": "Elementalist",
+    "Chronomancer": "Mesmer", "Mirage": "Mesmer", "Virtuoso": "Mesmer", "Troubadour": "Mesmer",
+    "Reaper": "Necromancer", "Scourge": "Necromancer", "Harbinger": "Necromancer", "Wraith": "Necromancer",
 }
 
 

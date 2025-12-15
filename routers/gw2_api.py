@@ -12,7 +12,8 @@ from pathlib import Path
 from services.gw2_api_service import (
     gw2_api, GW2Account, GW2Character,
     store_api_key, get_api_key_by_session, get_account_by_session,
-    delete_api_key, REQUIRED_SCOPES, ELITE_SPEC_EXPANSIONS
+    delete_api_key, REQUIRED_SCOPES, ELITE_SPEC_EXPANSIONS,
+    SPECS_BY_EXPANSION, SPEC_TO_PROFESSION
 )
 from services.player_stats_service import (
     get_player_fights, get_player_career_stats, get_player_spec_stats,
@@ -376,12 +377,29 @@ async def dashboard_page(request: Request):
     
     lang = request.cookies.get("lang", "fr")
     
+    # Get guild info if connected
+    guilds_info = []
+    if connected and account_info:
+        api_key = get_api_key_by_session(session_id)
+        for guild_id in account_info.get("guilds", [])[:3]:  # Max 3 guilds
+            guild_data = await gw2_api.get_guild_info(guild_id, api_key)
+            if guild_data:
+                guilds_info.append({
+                    "id": guild_id,
+                    "name": guild_data.get("name", "Unknown"),
+                    "tag": guild_data.get("tag", ""),
+                    "emblem": guild_data.get("emblem", {})
+                })
+    
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
             "connected": connected,
             "account": account_info,
+            "guilds": guilds_info,
+            "specs_by_expansion": SPECS_BY_EXPANSION,
+            "spec_to_profession": SPEC_TO_PROFESSION,
             "lang": lang,
             "required_scopes": REQUIRED_SCOPES
         }
