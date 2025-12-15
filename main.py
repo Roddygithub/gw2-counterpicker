@@ -13,7 +13,7 @@ import re
 import uuid
 import json
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pathlib import Path
 from dataclasses import asdict
 
