@@ -15,6 +15,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional, List
 from pathlib import Path
+from dataclasses import asdict
 
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
