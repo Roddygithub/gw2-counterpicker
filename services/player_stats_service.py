@@ -305,8 +305,31 @@ class GuildStats:
     recent_fights: List[Dict]
     monthly_activity: Dict[str, int]
     
+    @property
+    def win_rate(self) -> float:
+        """Calculate win rate percentage"""
+        if self.total_fights == 0:
+            return 0.0
+        return (self.total_victories / self.total_fights) * 100
+    
     def to_dict(self) -> Dict:
-        return asdict(self)
+        # Manual conversion to avoid TinyDB Document serialization issues
+        return {
+            'guild_id': self.guild_id,
+            'guild_name': self.guild_name,
+            'guild_tag': self.guild_tag,
+            'total_fights': self.total_fights,
+            'total_victories': self.total_victories,
+            'member_count': self.member_count,
+            'active_members': self.active_members,
+            'avg_squad_size': self.avg_squad_size,
+            'role_distribution': dict(self.role_distribution),
+            'spec_distribution': dict(self.spec_distribution),
+            'top_performers': list(self.top_performers),
+            'recent_fights': [dict(f) for f in self.recent_fights],
+            'monthly_activity': dict(self.monthly_activity),
+            'win_rate': self.win_rate
+        }
 
 
 def record_guild_fight(

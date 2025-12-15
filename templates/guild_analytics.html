@@ -75,10 +75,11 @@
                 <div class="space-y-2">
                     {% for spec, count in stats.spec_distribution[:8] %}
                     {% set pct = (count / stats.total_fights * 100)|round(1) if stats.total_fights > 0 else 0 %}
+                    {% set profession = spec_to_profession.get(spec, 'Warrior') %}
                     <div class="flex items-center gap-3">
-                        <img src="/static/icons/{{ spec_to_profession.get(spec, 'warrior')|lower }}.png" 
+                        <img src="/static/icons/{{ spec|lower }}.png" 
                              alt="{{ spec }}" class="w-6 h-6"
-                             onerror="this.style.display='none'">
+                             onerror="this.src='/static/icons/{{ profession|lower }}.png'">
                         <div class="flex-1">
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-300">{{ spec }}</span>
