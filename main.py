@@ -45,6 +45,7 @@ from counter_ai import (
     get_ai_status,
     counter_ai
 )
+from services.performance_stats_service import record_player_performance
 from translations import get_all_translations
 from scheduler import setup_scheduled_tasks
 from rate_limiter import check_upload_rate_limit
@@ -368,6 +369,16 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
             
             if response.status_code == 200 and response.text.strip().startswith('{'):
                 log_data = response.json()
+                
+                # Filter: Only accept WvW logs
+                if not is_wvw_log(log_data):
+                    fight_name = log_data.get('fightName', 'Unknown')
+                    logger.warning(f"Rejected non-WvW log: {fight_name}")
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Ce rapport n'est pas un combat WvW. Détecté: {fight_name}. Seuls les logs WvW sont acceptés."
+                    )
+                
                 players_data = extract_players_from_ei_json(log_data)
                 
                 enemy_composition = build_composition_from_enemies(players_data['enemies'])
@@ -447,12 +458,27 @@ async def analyze_evtc_files(
                         
                         if json_response.status_code == 200 and json_response.text.strip().startswith('{'):
                             log_data = json_response.json()
+                            
+                            # Filter: Only accept WvW logs
+                            if not is_wvw_log(log_data):
+                                fight_name = log_data.get('fightName', 'Unknown')
+                                logger.warning(f"Rejected non-WvW log: {fight_name}")
+                                raise HTTPException(
+                                    status_code=400, 
+                                    detail=f"Ce rapport n'est pas un combat WvW. Détecté: {fight_name}. Seuls les logs WvW sont acceptés."
+                                )
+                            
                             players_data = extract_players_from_ei_json(log_data)
                             
                             # Record fight for AI learning
                             players_data['source'] = 'dps_report'
                             players_data['source_name'] = permalink
                             record_fight_for_learning(players_data)
+                            
+                            # Record performance stats for global comparison
+                            duration_sec = players_data.get('duration_sec', 0)
+                            for ally in players_data.get('allies', []):
+                                record_player_performance(ally, duration_sec)
                             
                             # Record stats for connected user
                             await record_user_fight_stats(request, players_data, log_data)
@@ -492,6 +518,11 @@ async def analyze_evtc_files(
             players_data['source_name'] = file.filename
             record_fight_for_learning(players_data, filename=file.filename, filesize=file.size)
             
+            # Record performance stats for global comparison
+            duration_sec = players_data.get('duration_sec', 0)
+            for ally in players_data.get('allies', []):
+                record_player_performance(ally, duration_sec)
+            
             # Record stats for connected user
             await record_user_fight_stats(request, players_data)
             
@@ -521,6 +552,89 @@ async def analyze_evtc_files(
     # Multiple files mode - redirect to evening analysis
     else:
         return await analyze_evening_files(request, files)
+
+
+def is_wvw_log(data: dict) -> bool:
+    """
+    Detect if an Elite Insights JSON log is from WvW content.
+    
+    WvW logs have specific characteristics:
+    - targets contain enemyPlayer: true (player enemies, not NPCs)
+    - No raid/fractal/strike boss IDs
+    - fightName typically contains player names or generic WvW identifiers
+    - isCM is false or absent (no Challenge Mode in WvW)
+    
+    PvE logs have:
+    - Boss targets with specific triggerID/encounterID
+    - targets with enemyPlayer: false (NPCs)
+    - fightName contains boss names like "Vale Guardian", "Dhuum", etc.
+    
+    Returns True if WvW, False otherwise.
+    """
+    # Known PvE boss encounter IDs (partial list of common raids/fractals/strikes)
+    PVE_BOSS_IDS = {
+        # Raids
+        15438, 15429, 15375, 15251,  # Wing 1: VG, Gorseval, Sabetha
+        16123, 16115, 16235, 16246,  # Wing 2: Slothasor, Trio, Matthias
+        16286, 16253, 16247,         # Wing 3: Escort, KC, Xera
+        17194, 17172, 17188, 17154,  # Wing 4: Cairn, MO, Samarog, Deimos
+        19767, 19828, 19691, 19536,  # Wing 5: SH, Dhuum
+        21105, 21089, 20934, 21041,  # Wing 6: CA, Largos, Qadim
+        22006, 21964, 22000,         # Wing 7: Adina, Sabir, QTP
+        # Fractals CM
+        17021, 17028,                # MAMA, Siax, Ensolyss
+        17949, 17759,                # Skorvald, Artsariiv, Arkk
+        23254, 23223,                # Ai, Kanaxai
+        # Strikes
+        22154, 22492, 22711, 22521,  # IBS Strikes
+        24033, 24266, 24660, 25413,  # EoD Strikes
+        25577, 25989, 26087,         # SotO Strikes
+    }
+    
+    # Check for PvE boss by triggerID or encounterID
+    trigger_id = data.get('triggerID', 0)
+    if trigger_id in PVE_BOSS_IDS:
+        return False
+    
+    # Check targets for enemy players
+    targets = data.get('targets', [])
+    has_enemy_players = any(t.get('enemyPlayer', False) for t in targets)
+    
+    # If there are enemy players, it's likely WvW
+    if has_enemy_players:
+        return True
+    
+    # Check fightName for known PvE indicators
+    fight_name = data.get('fightName', '').lower()
+    pve_indicators = [
+        'vale guardian', 'gorseval', 'sabetha', 'slothasor', 'matthias',
+        'keep construct', 'xera', 'cairn', 'mursaat', 'samarog', 'deimos',
+        'soulless horror', 'dhuum', 'conjured amalgamate', 'largos', 'qadim',
+        'adina', 'sabir', 'mama', 'siax', 'ensolyss', 'skorvald', 'artsariiv',
+        'arkk', 'kanaxai', 'boneskinner', 'whisper', 'fraenir', 'icebrood',
+        'mai trin', 'ankka', 'minister li', 'harvest temple', 'old lion',
+        'cerus', 'dagda', 'golem', 'standard kitty', 'medium kitty', 'large kitty'
+    ]
+    
+    for indicator in pve_indicators:
+        if indicator in fight_name:
+            return False
+    
+    # Check if it's a golem (training area)
+    if 'golem' in fight_name or data.get('isTrainingGolem', False):
+        return False
+    
+    # Check for Challenge Mode (only in PvE)
+    if data.get('isCM', False):
+        return False
+    
+    # Default: if no enemy players and no clear WvW indicators, reject
+    # WvW logs should always have enemy players
+    if not has_enemy_players and len(targets) > 0:
+        return False
+    
+    # Empty targets could be a parsing issue, allow it
+    return True
 
 
 def is_player_afk(player) -> bool:
@@ -815,11 +929,14 @@ def extract_players_from_ei_json(data: dict) -> dict:
         cc_out = 0
         deaths = 0
         downs = 0
+        kills = 0
         stats_all = player.get('statsAll', [{}])
         if stats_all and len(stats_all) > 0:
             stats = stats_all[0] if isinstance(stats_all[0], dict) else {}
             down_contrib = stats.get('downContribution', 0)
             cc_out = stats.get('interrupts', 0) + stats.get('knockdowns', 0)
+            # Extract kills - EI uses 'killed' for final blows
+            kills = stats.get('killed', 0) + stats.get('killedDowned', 0)
         
         if defenses and len(defenses) > 0:
             d = defenses[0] if isinstance(defenses[0], dict) else {}
@@ -925,6 +1042,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'cc_per_sec': cc_per_sec,
             'deaths': deaths,
             'downs': downs,
+            'kills': kills,
             # Support stats
             'cleanses': condi_cleanse,
             'cleanses_self': condi_cleanse_self,
@@ -1144,6 +1262,7 @@ async def analyze_evening_files(
     victories = 0
     defeats = 0
     draws = 0
+    skipped_non_wvw = 0  # Count of non-WvW logs skipped
     parse_mode = "offline"  # Track which mode was used
     
     # Try dps.report first, then fallback to local parser
@@ -1183,6 +1302,12 @@ async def analyze_evening_files(
                             if json_response.status_code == 200:
                                 log_data = json_response.json()
                                 if 'error' not in log_data:
+                                    # Filter: Only accept WvW logs
+                                    if not is_wvw_log(log_data):
+                                        fight_name = log_data.get('fightName', 'Unknown')
+                                        logger.warning(f"Skipped non-WvW log in batch: {fight_name}")
+                                        skipped_non_wvw += 1
+                                        continue
                                     players_data = extract_players_from_ei_json(log_data)
                                     parse_mode = "online"
                 except Exception as e:
@@ -1224,21 +1349,36 @@ async def analyze_evening_files(
                     enemy_composition['role_counts'][role] = enemy_composition['role_counts'].get(role, 0) + count
                 enemy_composition['total'] += enemy_comp.get('total', 0)
             
-            # Track player stats for top 10
+            # Track player stats for top 10 - USE ACCOUNT NAME for deduplication
             for ally in players_data.get('allies', []):
-                name = ally.get('name', 'Unknown')
-                if name not in player_stats:
-                    player_stats[name] = {
+                # Use account name for deduplication, fallback to character name
+                account = ally.get('account', ally.get('name', 'Unknown'))
+                char_name = ally.get('name', 'Unknown')
+                
+                if account not in player_stats:
+                    player_stats[account] = {
+                        'account': account,
+                        'name': char_name,  # Keep one character name for display
                         'spec': ally.get('elite_spec', ally.get('profession', 'Unknown')),
+                        'specs_played': {},
                         'damage': 0,
                         'kills': 0,
                         'deaths': 0,
                         'appearances': 0
                     }
-                player_stats[name]['damage'] += ally.get('dps', 0) * players_data.get('duration_sec', 0)
-                player_stats[name]['kills'] += ally.get('kills', 0)
-                player_stats[name]['deaths'] += ally.get('deaths', 0)
-                player_stats[name]['appearances'] += 1
+                
+                # Track specs played by this account
+                spec = ally.get('elite_spec', ally.get('profession', 'Unknown'))
+                player_stats[account]['specs_played'][spec] = player_stats[account]['specs_played'].get(spec, 0) + 1
+                
+                # Update most played spec
+                most_played = max(player_stats[account]['specs_played'].items(), key=lambda x: x[1])
+                player_stats[account]['spec'] = most_played[0]
+                
+                player_stats[account]['damage'] += ally.get('dps', 0) * players_data.get('duration_sec', 0)
+                player_stats[account]['kills'] += ally.get('kills', 0)
+                player_stats[account]['deaths'] += ally.get('deaths', 0)
+                player_stats[account]['appearances'] += 1
             
             # Track map/zone
             fight_name = players_data.get('fight_name', 'Unknown')
@@ -1278,12 +1418,15 @@ async def analyze_evening_files(
         avg_players = 0
         avg_duration = 0
     
-    # Calculate top 10 players by damage
+    # Calculate top 10 players by damage (using account name for deduplication)
     top_players = sorted(
-        [{'name': name, **stats} for name, stats in player_stats.items()],
+        [{'name': stats.get('account', name), 'display_name': stats.get('name', name), **stats} for name, stats in player_stats.items()],
         key=lambda x: x['damage'],
         reverse=True
     )[:10]
+    
+    # Count unique players (by account)
+    unique_players_count = len(player_stats)
     
     # Calculate most played build per class (use centralized SPEC_TO_CLASS)
     class_to_specs = {}
@@ -1320,9 +1463,11 @@ async def analyze_evening_files(
         "total_duration_min": round(total_duration / 60, 1),
         "avg_duration_sec": round(avg_duration, 1),
         "avg_players": avg_players,
+        "unique_players": unique_players_count,
         "victories": victories,
         "defeats": defeats,
         "draws": draws,
+        "skipped_non_wvw": skipped_non_wvw,
         "parse_mode": parse_mode
     }
     

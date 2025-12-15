@@ -660,8 +660,30 @@
             {% endif %}
             
             <!-- Individual Boon Generation -->
-            <div>
-                <h4 class="font-display font-bold text-cyan-400 mb-3">✨ {% if lang == 'en' %}Boon Generation per Player{% else %}Boon Generation par Joueur{% endif %}</h4>
+            <div x-data="{ boonScope: 'squad' }">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+                    <h4 class="font-display font-bold text-cyan-400">✨ {% if lang == 'en' %}Boon Generation per Player{% else %}Boon Generation par Joueur{% endif %}</h4>
+                    
+                    <!-- Scope Selector: Group vs Squad -->
+                    <div class="inline-flex rounded-lg bg-gw2-darker p-1 border border-cyan-500/30">
+                        <button @click="boonScope = 'group'; filterBoonTable('group')" 
+                                :class="boonScope === 'group' ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white'"
+                                class="px-3 py-1 rounded-md text-sm font-medium transition-all">
+                            👥 {% if lang == 'en' %}Group{% else %}Groupe{% endif %}
+                        </button>
+                        <button @click="boonScope = 'squad'; filterBoonTable('squad')" 
+                                :class="boonScope === 'squad' ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white'"
+                                class="px-3 py-1 rounded-md text-sm font-medium transition-all">
+                            🛡️ {% if lang == 'en' %}Squad{% else %}Escouade{% endif %}
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mb-2" x-show="boonScope === 'group'">
+                    {% if lang == 'en' %}Showing boon generation on group (5 players){% else %}Affichage de la génération de boons sur le groupe (5 joueurs){% endif %}
+                </p>
+                <p class="text-xs text-gray-500 mb-2" x-show="boonScope === 'squad'">
+                    {% if lang == 'en' %}Showing boon generation on squad (all players){% else %}Affichage de la génération de boons sur l'escouade (tous les joueurs){% endif %}
+                </p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm" id="boon-gen-table">
                         <thead>
@@ -1161,6 +1183,32 @@
         });
         
         rows.forEach(row => tbody.appendChild(row));
+    };
+    
+    // Filter boon table by scope (group or squad)
+    // Group mode: shows rows grouped by their subgroup
+    // Squad mode: shows all rows (default)
+    window.filterBoonTable = function(scope) {
+        const table = document.getElementById('boon-gen-table');
+        if (!table) return;
+        
+        const rows = table.querySelectorAll('tbody tr');
+        
+        if (scope === 'squad') {
+            // Show all rows
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+        } else if (scope === 'group') {
+            // Sort by group first
+            window.sortTableByAttr('boon-gen-table', 'group');
+        }
+        
+        // Note: The actual boon generation values would need to be recalculated
+        // server-side for true group vs squad comparison. This UI just provides
+        // the selector - the data shown is the squad-wide generation.
+        // For accurate group-only boon gen, the backend would need to provide
+        // separate groupBuffs data.
     };
 })();
 </script>

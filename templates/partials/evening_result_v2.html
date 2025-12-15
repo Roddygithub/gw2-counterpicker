@@ -20,7 +20,7 @@
     </div>
     
     <!-- Stats Overview -->
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <div class="glow-card rounded-xl p-4 text-center">
             <div class="text-3xl font-display font-bold text-gw2-purple">{{ stats.total_fights }}</div>
             <div class="text-xs text-gray-400 mt-1">Combats</div>
@@ -34,16 +34,24 @@
             <div class="text-xs text-gray-400 mt-1">💀 Défaites</div>
         </div>
         <div class="glow-card rounded-xl p-4 text-center">
-            <div class="text-3xl font-display font-bold text-cyber-pink">{{ stats.total_duration_min }}</div>
-            <div class="text-xs text-gray-400 mt-1">Minutes totales</div>
+            <div class="text-3xl font-display font-bold text-yellow-400">{{ stats.draws|default(0) }}</div>
+            <div class="text-xs text-gray-400 mt-1">⚔️ Nuls</div>
         </div>
         <div class="glow-card rounded-xl p-4 text-center">
-            <div class="text-3xl font-display font-bold text-cyber-cyan">{{ stats.avg_players }}</div>
-            <div class="text-xs text-gray-400 mt-1">Joueurs moyens</div>
+            <div class="text-3xl font-display font-bold text-cyber-pink">{{ stats.total_duration_min }}</div>
+            <div class="text-xs text-gray-400 mt-1">Minutes</div>
+        </div>
+        <div class="glow-card rounded-xl p-4 text-center">
+            <div class="text-3xl font-display font-bold text-cyan-400">{{ stats.unique_players|default(stats.avg_players) }}</div>
+            <div class="text-xs text-gray-400 mt-1">👥 Joueurs</div>
+        </div>
+        <div class="glow-card rounded-xl p-4 text-center">
+            <div class="text-3xl font-display font-bold text-amber-400">{{ stats.avg_players }}</div>
+            <div class="text-xs text-gray-400 mt-1">Moy/Combat</div>
         </div>
         <div class="glow-card rounded-xl p-4 text-center">
             <div class="text-3xl font-display font-bold text-white">{{ composition.spec_counts|length }}</div>
-            <div class="text-xs text-gray-400 mt-1">Specs jouées</div>
+            <div class="text-xs text-gray-400 mt-1">Specs</div>
         </div>
     </div>
     

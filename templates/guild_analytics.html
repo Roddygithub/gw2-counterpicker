@@ -133,6 +133,54 @@
             </div>
         </div>
 
+        <!-- Best Group Compositions -->
+        {% if group_comparison and group_comparison.best_groups %}
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-yellow-500/20 p-6 mb-6">
+            <h3 class="text-xl font-display font-bold text-yellow-400 mb-4">
+                🏆 {% if lang == 'en' %}Best Group Compositions{% else %}Meilleures Compositions de Groupe{% endif %}
+            </h3>
+            <p class="text-sm text-gray-400 mb-4">
+                {% if lang == 'en' %}Optimal 5-player groups based on performance metrics and role balance ({{ group_comparison.total_players }} players analyzed){% else %}Groupes optimaux de 5 joueurs basés sur les métriques de performance et l'équilibre des rôles ({{ group_comparison.total_players }} joueurs analysés){% endif %}
+            </p>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for group in group_comparison.best_groups %}
+                <div class="bg-gw2-darker/50 rounded-xl p-4 border border-yellow-500/20 hover:border-yellow-500/40 transition-colors">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-lg font-bold text-yellow-400">
+                            {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}#{{ loop.index }}{% endif %}
+                            {% if lang == 'en' %}Group{% else %}Groupe{% endif %} {{ loop.index }}
+                        </span>
+                        <span class="px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 text-sm font-bold">
+                            {{ group.combined_score }}%
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-2 mb-3">
+                        {% for i in range(group.players|length) %}
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-300">{{ group.players[i] }}</span>
+                            <span class="px-2 py-0.5 rounded text-xs
+                                {% if group.roles[i] == 'healer' %}bg-green-500/20 text-green-400
+                                {% elif group.roles[i] == 'stab' %}bg-yellow-500/20 text-yellow-400
+                                {% elif group.roles[i] == 'dps_strip' %}bg-purple-500/20 text-purple-400
+                                {% else %}bg-orange-500/20 text-orange-400{% endif %}">
+                                {{ group.roles[i]|replace('_', ' ')|title }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="flex justify-between text-xs text-gray-500 border-t border-gray-700 pt-2">
+                        <span>{% if lang == 'en' %}Perf{% else %}Perf{% endif %}: {{ group.performance_score }}%</span>
+                        <span>{% if lang == 'en' %}Balance{% else %}Équilibre{% endif %}: {{ group.role_balance_score }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Monthly Activity Chart -->
         <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-blue-500/20 p-6">
             <h3 class="text-xl font-display font-bold text-blue-400 mb-4">

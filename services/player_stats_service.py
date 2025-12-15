@@ -373,8 +373,15 @@ def record_guild_fight(
         return False
 
 
-def get_guild_stats(guild_id: str) -> Optional[GuildStats]:
-    """Calculate statistics for a guild"""
+def get_guild_stats(guild_id: str, guild_members: List[str] = None) -> Optional[GuildStats]:
+    """
+    Calculate statistics for a guild
+    
+    Args:
+        guild_id: The guild ID to get stats for
+        guild_members: Optional list of account names that are actual guild members.
+                      If provided, only these accounts will be counted as members.
+    """
     try:
         Guild = Query()
         fights = guild_stats_table.search(Guild.guild_id == guild_id)
@@ -388,33 +395,50 @@ def get_guild_stats(guild_id: str) -> Optional[GuildStats]:
         total_fights = len(fights)
         total_victories = sum(1 for f in fights if f.get('outcome') == 'victory')
         
-        # Collect all unique members
+        # Collect all unique members - USE ACCOUNT NAME for deduplication
         all_members = {}
         role_dist = {}
         spec_dist = {}
         
+        # Normalize guild members list for comparison
+        guild_members_normalized = set()
+        if guild_members:
+            guild_members_normalized = {m.lower() for m in guild_members}
+        
         for fight in fights:
             for p in fight.get('participants', []):
-                acc_id = p.get('account_id', '')
-                if acc_id:
-                    if acc_id not in all_members:
-                        all_members[acc_id] = {
-                            'account_name': p.get('account_name', ''),
-                            'fights': 0, 'recent': False
-                        }
-                    all_members[acc_id]['fights'] += 1
-                    
-                    # Check if recent (last 30 days)
-                    fight_date = fight.get('fight_date', '')
-                    if fight_date:
-                        try:
-                            fd = datetime.fromisoformat(fight_date)
-                            if datetime.now() - fd < timedelta(days=30):
-                                all_members[acc_id]['recent'] = True
-                        except:
-                            pass
+                # Use account_name as primary key for deduplication
+                acc_name = p.get('account_name', '')
+                if not acc_name:
+                    continue
                 
-                # Role and spec distribution
+                # If guild_members list is provided, filter to only include actual members
+                if guild_members_normalized:
+                    if acc_name.lower() not in guild_members_normalized:
+                        continue
+                
+                # Use account_name as key (normalized)
+                acc_key = acc_name.lower()
+                
+                if acc_key not in all_members:
+                    all_members[acc_key] = {
+                        'account_name': acc_name,
+                        'fights': 0, 
+                        'recent': False
+                    }
+                all_members[acc_key]['fights'] += 1
+                
+                # Check if recent (last 30 days)
+                fight_date = fight.get('fight_date', '')
+                if fight_date:
+                    try:
+                        fd = datetime.fromisoformat(fight_date)
+                        if datetime.now() - fd < timedelta(days=30):
+                            all_members[acc_key]['recent'] = True
+                    except:
+                        pass
+                
+                # Role and spec distribution (only for guild members if filtered)
                 role = p.get('role', 'dps')
                 spec = p.get('elite_spec', 'Unknown')
                 role_dist[role] = role_dist.get(role, 0) + 1
@@ -423,7 +447,7 @@ def get_guild_stats(guild_id: str) -> Optional[GuildStats]:
         # Calculate averages
         avg_squad = sum(f.get('ally_count', 0) for f in fights) / total_fights if total_fights > 0 else 0
         
-        # Top performers by participation
+        # Top performers by participation (using account_name)
         top_performers = sorted(
             [{'account_name': m['account_name'], 'fights': m['fights']} 
              for m in all_members.values()],

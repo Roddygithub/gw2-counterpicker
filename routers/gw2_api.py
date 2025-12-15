@@ -20,6 +20,11 @@ from services.player_stats_service import (
     get_guild_stats, record_player_fight, import_fights_from_ai_database,
     import_guild_fights_from_ai_database
 )
+from services.performance_stats_service import (
+    get_role_comparison_summary, extract_player_metrics, get_stats_summary,
+    ROLE_METRICS, get_guild_group_comparison
+)
+from services.player_stats_service import guild_stats_table
 from logger import get_logger
 
 logger = get_logger('gw2_api_routes')
@@ -378,11 +383,11 @@ async def dashboard_page(request: Request):
     
     lang = request.cookies.get("lang", "fr")
     
-    # Get guild info if connected
+    # Get guild info if connected - show ALL guilds
     guilds_info = []
     if connected and account_info:
         api_key = get_api_key_by_session(session_id)
-        for guild_id in account_info.get("guilds", [])[:3]:  # Max 3 guilds
+        for guild_id in account_info.get("guilds", []):  # All guilds, no limit
             guild_data = await gw2_api.get_guild_info(guild_id, api_key)
             if guild_data:
                 guilds_info.append({
@@ -664,9 +669,15 @@ async def guild_analytics_page(request: Request, guild_id: str):
         "tag": guild_info.get("tag", "")
     }
     
-    # Get guild stats
-    stats = get_guild_stats(guild_id)
+    # Try to get guild members list (requires guild leader/officer permissions)
+    # If not available, stats will include all participants
+    guild_members = await gw2_api.get_guild_members(guild_id, api_key)
+    
+    # Get guild stats - pass guild_members to filter only actual members
+    stats = get_guild_stats(guild_id, guild_members=guild_members if guild_members else None)
     stats_dict = None
+    group_comparison = None
+    
     if stats:
         stats_dict = stats.to_dict()
         # Sort spec distribution for display
@@ -676,6 +687,13 @@ async def guild_analytics_page(request: Request, guild_id: str):
                 key=lambda x: x[1],
                 reverse=True
             )
+        
+        # Get guild fights for group comparison
+        from tinydb import Query
+        Guild = Query()
+        guild_fights = guild_stats_table.search(Guild.guild_id == guild_id)
+        if guild_fights:
+            group_comparison = get_guild_group_comparison(guild_fights)
     
     return templates.TemplateResponse(
         "guild_analytics.html",
@@ -683,6 +701,7 @@ async def guild_analytics_page(request: Request, guild_id: str):
             "request": request,
             "guild": guild,
             "stats": stats_dict,
+            "group_comparison": group_comparison,
             "spec_to_profession": SPEC_TO_PROFESSION,
             "lang": lang
         }
@@ -693,13 +712,14 @@ async def guild_analytics_page(request: Request, guild_id: str):
 
 @router.get("/history", response_class=HTMLResponse)
 async def history_page(request: Request):
-    """Fight history page"""
+    """Fight history page with performance comparison"""
     session_id = request.cookies.get("session_id")
     connected = False
     account_info = None
     career_stats = None
     spec_stats = None
-    recent_fights = []
+    performance_comparison = None
+    perf_stats_summary = None
     
     if session_id:
         api_key = get_api_key_by_session(session_id)
@@ -712,7 +732,52 @@ async def history_page(request: Request):
                 # Get stats
                 career_stats = get_player_career_stats(account.account_id)
                 spec_stats = get_player_spec_stats(account.account_id)
-                recent_fights = get_player_fights(account.account_id, limit=20)
+                
+                # Calculate performance comparison from recent fights
+                recent_fights = get_player_fights(account.account_id, limit=50)
+                if recent_fights:
+                    # Aggregate player metrics from recent fights
+                    aggregated_metrics = {}
+                    fight_count = 0
+                    for fight in recent_fights:
+                        fight_count += 1
+                        duration = fight.get('fight_duration', 1) or 1
+                        
+                        # Build metrics from fight data
+                        metrics = {
+                            'damage_per_sec': fight.get('dps', 0),
+                            'down_contrib_per_sec': fight.get('damage_out', 0) / duration * 0.1 if duration > 0 else 0,
+                            'strips_per_sec': fight.get('strips', 0) / duration if duration > 0 else 0,
+                            'cc_per_sec': 0,  # Not tracked individually
+                            'healing_per_sec': fight.get('healing', 0) / duration if duration > 0 else 0,
+                            'barrier_per_sec': fight.get('barrier', 0) / duration if duration > 0 else 0,
+                            'cleanses_per_sec': fight.get('cleanses', 0) / duration if duration > 0 else 0,
+                            'resurrects_per_sec': 0,
+                        }
+                        
+                        # Add boon gen from boon_uptime (approximation)
+                        boon_uptime = fight.get('boon_uptime', {})
+                        for boon in ['quickness', 'resistance', 'aegis', 'superspeed', 'stability', 
+                                     'protection', 'vigor', 'might', 'fury', 'regeneration', 
+                                     'resolution', 'swiftness', 'alacrity']:
+                            metrics[f'{boon}_gen'] = boon_uptime.get(boon, 0)
+                        
+                        # Aggregate
+                        for key, value in metrics.items():
+                            if key not in aggregated_metrics:
+                                aggregated_metrics[key] = 0
+                            aggregated_metrics[key] += value
+                    
+                    # Average the metrics
+                    if fight_count > 0:
+                        for key in aggregated_metrics:
+                            aggregated_metrics[key] /= fight_count
+                    
+                    # Get comparison against global stats
+                    performance_comparison = get_role_comparison_summary(aggregated_metrics)
+                
+                # Get global stats summary
+                perf_stats_summary = get_stats_summary()
     
     lang = request.cookies.get("lang", "fr")
     
@@ -724,7 +789,9 @@ async def history_page(request: Request):
             "account": account_info,
             "career_stats": career_stats.to_dict() if career_stats else None,
             "spec_stats": spec_stats,
-            "recent_fights": recent_fights,
+            "performance_comparison": performance_comparison,
+            "perf_stats_summary": perf_stats_summary,
+            "role_metrics": ROLE_METRICS,
             "lang": lang
         }
     )

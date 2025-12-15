@@ -302,6 +302,39 @@ class GW2APIService:
             logger.error(f"Get guild info error: {e}")
             return None
     
+    async def get_guild_members(self, guild_id: str, api_key: str) -> List[str]:
+        """
+        Get list of guild member account names.
+        Requires API key with 'guilds' permission and user must be guild leader/officer.
+        Returns empty list if not authorized or error.
+        """
+        try:
+            if not api_key:
+                return []
+            
+            response = await self.client.get(
+                f"{GW2_API_BASE}/guild/{guild_id}/members",
+                headers={"Authorization": f"Bearer {api_key}"}
+            )
+            
+            if response.status_code == 200:
+                members = response.json()
+                # Extract account names from member list
+                return [m.get('name', '') for m in members if m.get('name')]
+            
+            # 403 = not authorized (not guild leader/officer)
+            # This is expected for most users
+            if response.status_code == 403:
+                logger.debug(f"Not authorized to view guild {guild_id} members")
+            else:
+                logger.warning(f"Failed to get guild members: {response.status_code}")
+            
+            return []
+            
+        except Exception as e:
+            logger.error(f"Get guild members error: {e}")
+            return []
+    
     def get_available_elite_specs(self, account: GW2Account) -> List[str]:
         """Get list of elite specs available based on account expansions"""
         available = []
