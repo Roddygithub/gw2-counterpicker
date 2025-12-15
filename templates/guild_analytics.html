@@ -40,25 +40,29 @@
             </div>
         </div>
 
+        {% set total_participations = stats.role_distribution.values()|sum %}
         <div class="grid md:grid-cols-2 gap-6 mb-6">
             <!-- Role Distribution -->
             <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
                 <h3 class="text-xl font-display font-bold text-purple-400 mb-4">
                     {% if lang == 'en' %}Role Distribution{% else %}Répartition des Rôles{% endif %}
+                    <span class="text-sm font-normal text-gray-500 ml-2">({{ total_participations }} {% if lang == 'en' %}participations{% else %}participations{% endif %})</span>
                 </h3>
                 <div class="space-y-3">
                     {% for role, count in stats.role_distribution.items() %}
-                    {% set pct = (count / stats.total_fights * 100)|round(1) if stats.total_fights > 0 else 0 %}
+                    {% set pct = (count / total_participations * 100)|round(1) if total_participations > 0 else 0 %}
                     <div>
                         <div class="flex justify-between text-sm mb-1">
-                            <span class="text-gray-300 capitalize">{{ role }}</span>
-                            <span class="text-gray-400">{{ count }} ({{ pct }}%)</span>
+                            <span class="text-gray-300 capitalize">{{ role|replace('_', ' ') }}</span>
+                            <span class="text-gray-400">{{ pct }}%</span>
                         </div>
                         <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
                             <div class="h-full rounded-full
                                 {% if role == 'dps' %}bg-red-500
-                                {% elif role == 'support' %}bg-green-500
+                                {% elif role == 'stab' %}bg-yellow-500
                                 {% elif role == 'healer' %}bg-cyan-500
+                                {% elif role == 'boon' %}bg-green-500
+                                {% elif role == 'dps_strip' %}bg-orange-500
                                 {% else %}bg-purple-500{% endif %}"
                                 style="width: {{ pct }}%"></div>
                         </div>
@@ -68,13 +72,15 @@
             </div>
 
             <!-- Spec Distribution -->
+            {% set total_spec_participations = stats.spec_distribution|sum(attribute='1') if stats.spec_distribution else 0 %}
             <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-6">
                 <h3 class="text-xl font-display font-bold text-amber-400 mb-4">
                     {% if lang == 'en' %}Top Specializations{% else %}Top Spécialisations{% endif %}
                 </h3>
                 <div class="space-y-2">
+                    {% set max_spec_count = stats.spec_distribution[0][1] if stats.spec_distribution else 1 %}
                     {% for spec, count in stats.spec_distribution[:8] %}
-                    {% set pct = (count / stats.total_fights * 100)|round(1) if stats.total_fights > 0 else 0 %}
+                    {% set pct = (count / max_spec_count * 100)|round(1) if max_spec_count > 0 else 0 %}
                     {% set profession = spec_to_profession.get(spec, 'Warrior') %}
                     <div class="flex items-center gap-3">
                         <img src="/static/icons/{{ spec|lower }}.png" 
@@ -83,7 +89,7 @@
                         <div class="flex-1">
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-300">{{ spec }}</span>
-                                <span class="text-gray-400">{{ count }}</span>
+                                <span class="text-gray-400">{{ count }} {% if lang == 'en' %}plays{% else %}jouées{% endif %}</span>
                             </div>
                             <div class="h-1.5 bg-gray-700 rounded-full overflow-hidden mt-1">
                                 <div class="h-full bg-amber-500 rounded-full" style="width: {{ pct }}%"></div>
@@ -131,17 +137,36 @@
         <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-blue-500/20 p-6">
             <h3 class="text-xl font-display font-bold text-blue-400 mb-4">
                 {% if lang == 'en' %}Monthly Activity{% else %}Activité Mensuelle{% endif %}
+                <span class="text-sm font-normal text-gray-500 ml-2">({% if lang == 'en' %}fights per month{% else %}combats par mois{% endif %})</span>
             </h3>
-            <div class="h-48 flex items-end gap-2">
-                {% set max_monthly = stats.monthly_activity.values()|max if stats.monthly_activity else 1 %}
-                {% for month, count in stats.monthly_activity.items() %}
-                {% set height = (count / max_monthly * 100)|round %}
-                <div class="flex-1 flex flex-col items-center gap-1">
-                    <div class="w-full bg-blue-500/80 rounded-t transition-all hover:bg-blue-400" 
-                         style="height: {{ height }}%" title="{{ count }} combats"></div>
-                    <span class="text-xs text-gray-500 transform -rotate-45 origin-left">{{ month }}</span>
+            {% set sorted_months = stats.monthly_activity|dictsort %}
+            {% set max_monthly = stats.monthly_activity.values()|max if stats.monthly_activity else 1 %}
+            <div class="relative">
+                <!-- Y-axis labels -->
+                <div class="absolute left-0 top-0 h-48 flex flex-col justify-between text-xs text-gray-500 pr-2">
+                    <span>{{ max_monthly }}</span>
+                    <span>{{ (max_monthly / 2)|int }}</span>
+                    <span>0</span>
                 </div>
-                {% endfor %}
+                <!-- Chart -->
+                <div class="ml-10 h-48 flex items-end gap-1 border-l border-b border-gray-700">
+                    {% for month, count in sorted_months[-12:] %}
+                    {% set height = (count / max_monthly * 100)|round if max_monthly > 0 else 0 %}
+                    <div class="flex-1 flex flex-col items-center" style="min-width: 30px;">
+                        <span class="text-xs text-cyan-400 mb-1">{{ count }}</span>
+                        <div class="w-full bg-gradient-to-t from-blue-600 to-cyan-400 rounded-t transition-all hover:from-blue-500 hover:to-cyan-300 cursor-pointer" 
+                             style="height: {{ height }}%" title="{{ month }}: {{ count }} combats"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <!-- X-axis labels -->
+                <div class="ml-10 flex gap-1 mt-2">
+                    {% for month, count in sorted_months[-12:] %}
+                    <div class="flex-1 text-center" style="min-width: 30px;">
+                        <span class="text-xs text-gray-500">{{ month[5:7] }}/{{ month[2:4] }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
