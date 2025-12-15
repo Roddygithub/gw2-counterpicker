@@ -9,7 +9,7 @@ import struct
 import zipfile
 import io
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional, Tuple, BinaryIO
 from datetime import datetime
 from enum import IntEnum
