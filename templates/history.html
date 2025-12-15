@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}{% if lang == 'en' %}Fight History{% else %}Historique des Combats{% endif %} - GW2 CounterPicker{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-b from-gw2-darker via-gw2-dark to-gw2-darker">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-500 mb-2">
+                {% if lang == 'en' %}My WvW Career{% else %}Ma Carrière WvW{% endif %}
+            </h1>
+            <p class="text-gray-400">
+                {% if lang == 'en' %}Track your progression across all your fights{% else %}Suivez votre progression à travers tous vos combats{% endif %}
+            </p>
+        </div>
+
+        {% if not connected %}
+        <!-- Not Connected -->
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-blue-500/20 p-8 text-center">
+            <div class="text-6xl mb-4">🔒</div>
+            <h2 class="text-2xl font-display font-bold text-blue-400 mb-4">
+                {% if lang == 'en' %}Connect to view your history{% else %}Connectez-vous pour voir votre historique{% endif %}
+            </h2>
+            <p class="text-gray-400 mb-6">
+                {% if lang == 'en' %}Link your GW2 API key to track your personal WvW statistics.{% else %}Liez votre clé API GW2 pour suivre vos statistiques WvW personnelles.{% endif %}
+            </p>
+            <a href="/api/gw2/dashboard" class="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all">
+                {% if lang == 'en' %}Go to Dashboard{% else %}Aller au Dashboard{% endif %}
+            </a>
+        </div>
+
+        {% elif not career_stats %}
+        <!-- No Data Yet -->
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-8 text-center">
+            <div class="text-6xl mb-4">📊</div>
+            <h2 class="text-2xl font-display font-bold text-amber-400 mb-4">
+                {% if lang == 'en' %}No fights recorded yet{% else %}Aucun combat enregistré{% endif %}
+            </h2>
+            <p class="text-gray-400 mb-6">
+                {% if lang == 'en' %}Start analyzing your WvW logs to track your statistics!{% else %}Commencez à analyser vos logs WvW pour tracker vos statistiques !{% endif %}
+            </p>
+            <a href="/analyze" class="inline-block px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all">
+                {% if lang == 'en' %}Analyze a Log{% else %}Analyser un Log{% endif %}
+            </a>
+        </div>
+
+        {% else %}
+        <!-- Career Stats -->
+        <div class="space-y-6">
+            
+            <!-- Overview Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-blue-500/20 p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-400">{{ career_stats.total_fights }}</div>
+                    <div class="text-sm text-gray-400">{% if lang == 'en' %}Total Fights{% else %}Combats Total{% endif %}</div>
+                </div>
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-green-500/20 p-4 text-center">
+                    <div class="text-3xl font-bold text-green-400">{{ career_stats.total_victories }}</div>
+                    <div class="text-sm text-gray-400">{% if lang == 'en' %}Victories{% else %}Victoires{% endif %}</div>
+                </div>
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-red-500/20 p-4 text-center">
+                    <div class="text-3xl font-bold text-red-400">{{ career_stats.total_defeats }}</div>
+                    <div class="text-sm text-gray-400">{% if lang == 'en' %}Defeats{% else %}Défaites{% endif %}</div>
+                </div>
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-amber-500/20 p-4 text-center">
+                    {% set win_rate = (career_stats.total_victories / career_stats.total_fights * 100) if career_stats.total_fights > 0 else 0 %}
+                    <div class="text-3xl font-bold text-amber-400">{{ "%.1f"|format(win_rate) }}%</div>
+                    <div class="text-sm text-gray-400">{% if lang == 'en' %}Win Rate{% else %}Taux de Victoire{% endif %}</div>
+                </div>
+            </div>
+
+            <!-- Detailed Stats -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Combat Stats -->
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
+                    <h3 class="text-xl font-display font-bold text-purple-400 mb-4 flex items-center gap-2">
+                        <span>⚔️</span> {% if lang == 'en' %}Combat Stats{% else %}Stats de Combat{% endif %}
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">{% if lang == 'en' %}Total Kills{% else %}Kills Total{% endif %}</span>
+                            <span class="font-bold text-white">{{ "{:,}".format(career_stats.total_kills) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">{% if lang == 'en' %}Total Deaths{% else %}Morts Total{% endif %}</span>
+                            <span class="font-bold text-white">{{ "{:,}".format(career_stats.total_deaths) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">{% if lang == 'en' %}K/D Ratio{% else %}Ratio K/D{% endif %}</span>
+                            {% set kd = (career_stats.total_kills / career_stats.total_deaths) if career_stats.total_deaths > 0 else career_stats.total_kills %}
+                            <span class="font-bold {% if kd >= 1 %}text-green-400{% else %}text-red-400{% endif %}">{{ "%.2f"|format(kd) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">{% if lang == 'en' %}Avg Kills/Fight{% else %}Kills Moy/Combat{% endif %}</span>
+                            <span class="font-bold text-white">{{ career_stats.avg_kills_per_fight }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">{% if lang == 'en' %}Avg DPS{% else %}DPS Moyen{% endif %}</span>
+                            <span class="font-bold text-cyan-400">{{ "{:,.0f}".format(career_stats.avg_dps) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">{% if lang == 'en' %}Total Damage{% else %}Dégâts Total{% endif %}</span>
+                            <span class="font-bold text-orange-400">{{ "{:,}".format(career_stats.total_damage_out) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Favorites -->
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-6">
+                    <h3 class="text-xl font-display font-bold text-amber-400 mb-4 flex items-center gap-2">
+                        <span>⭐</span> {% if lang == 'en' %}Favorites{% else %}Favoris{% endif %}
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="bg-gw2-darker/50 rounded-lg p-3">
+                            <div class="text-sm text-gray-400 mb-1">{% if lang == 'en' %}Favorite Spec{% else %}Spé Favorite{% endif %}</div>
+                            <div class="text-xl font-bold text-white">{{ career_stats.favorite_elite_spec }}</div>
+                            <div class="text-xs text-gray-500">{{ career_stats.specs_played.get(career_stats.favorite_elite_spec, 0) }} {% if lang == 'en' %}fights{% else %}combats{% endif %}</div>
+                        </div>
+                        <div class="bg-gw2-darker/50 rounded-lg p-3">
+                            <div class="text-sm text-gray-400 mb-1">{% if lang == 'en' %}Favorite Role{% else %}Rôle Favori{% endif %}</div>
+                            <div class="text-xl font-bold text-white capitalize">{{ career_stats.favorite_role }}</div>
+                            <div class="text-xs text-gray-500">{{ career_stats.roles_played.get(career_stats.favorite_role, 0) }} {% if lang == 'en' %}fights{% else %}combats{% endif %}</div>
+                        </div>
+                        <div class="bg-gw2-darker/50 rounded-lg p-3">
+                            <div class="text-sm text-gray-400 mb-1">{% if lang == 'en' %}Time Played{% else %}Temps Joué{% endif %}</div>
+                            {% set hours = (career_stats.total_time_played / 3600)|round(1) %}
+                            <div class="text-xl font-bold text-white">{{ hours }}h</div>
+                            <div class="text-xs text-gray-500">{% if lang == 'en' %}in WvW fights{% else %}en combats WvW{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Specs Breakdown -->
+            {% if spec_stats %}
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-cyan-500/20 p-6">
+                <h3 class="text-xl font-display font-bold text-cyan-400 mb-4 flex items-center gap-2">
+                    <span>📊</span> {% if lang == 'en' %}Stats by Specialization{% else %}Stats par Spécialisation{% endif %}
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-700">
+                                <th class="text-left py-2 px-3">{% if lang == 'en' %}Spec{% else %}Spé{% endif %}</th>
+                                <th class="text-center py-2 px-3">{% if lang == 'en' %}Fights{% else %}Combats{% endif %}</th>
+                                <th class="text-center py-2 px-3">{% if lang == 'en' %}Win Rate{% else %}% Victoire{% endif %}</th>
+                                <th class="text-center py-2 px-3">{% if lang == 'en' %}Avg DPS{% else %}DPS Moy{% endif %}</th>
+                                <th class="text-center py-2 px-3">{% if lang == 'en' %}Avg K/D{% else %}K/D Moy{% endif %}</th>
+                                <th class="text-center py-2 px-3">{% if lang == 'en' %}Hours{% else %}Heures{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for spec, stats in spec_stats.items() %}
+                            <tr class="border-b border-gray-800 hover:bg-gw2-darker/30">
+                                <td class="py-2 px-3 font-medium text-white">{{ spec }}</td>
+                                <td class="py-2 px-3 text-center">{{ stats.fights }}</td>
+                                <td class="py-2 px-3 text-center">
+                                    <span class="{% if stats.win_rate >= 50 %}text-green-400{% else %}text-red-400{% endif %}">
+                                        {{ stats.win_rate }}%
+                                    </span>
+                                </td>
+                                <td class="py-2 px-3 text-center text-cyan-400">{{ "{:,.0f}".format(stats.avg_dps) }}</td>
+                                <td class="py-2 px-3 text-center">
+                                    {% set kd = (stats.avg_kills / stats.avg_deaths) if stats.avg_deaths > 0 else stats.avg_kills %}
+                                    <span class="{% if kd >= 1 %}text-green-400{% else %}text-red-400{% endif %}">
+                                        {{ "%.2f"|format(kd) }}
+                                    </span>
+                                </td>
+                                <td class="py-2 px-3 text-center text-gray-400">{{ stats.hours_played }}h</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Fights -->
+            {% if recent_fights %}
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-green-500/20 p-6">
+                <h3 class="text-xl font-display font-bold text-green-400 mb-4 flex items-center gap-2">
+                    <span>🕒</span> {% if lang == 'en' %}Recent Fights{% else %}Combats Récents{% endif %}
+                </h3>
+                <div class="space-y-2">
+                    {% for fight in recent_fights %}
+                    <div class="bg-gw2-darker/50 rounded-lg p-3 flex items-center justify-between hover:bg-gw2-darker/70 transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg
+                                {% if fight.outcome == 'victory' %}bg-green-500/20 text-green-400
+                                {% elif fight.outcome == 'defeat' %}bg-red-500/20 text-red-400
+                                {% else %}bg-gray-500/20 text-gray-400{% endif %}">
+                                {% if fight.outcome == 'victory' %}✓{% elif fight.outcome == 'defeat' %}✗{% else %}—{% endif %}
+                            </div>
+                            <div>
+                                <div class="font-medium text-white">{{ fight.elite_spec }}</div>
+                                <div class="text-xs text-gray-400">{{ fight.character_name }} • {{ fight.role }}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm">
+                                <span class="text-green-400">{{ fight.kills }}K</span> / 
+                                <span class="text-red-400">{{ fight.deaths }}D</span>
+                            </div>
+                            <div class="text-xs text-gray-500">{{ fight.fight_date[:10] }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

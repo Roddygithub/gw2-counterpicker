@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}{{ guild.name }} - Analytics{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-8">
+    <div class="max-w-6xl mx-auto px-4">
+        
+        <!-- Header -->
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-cyan-500/30 p-6 mb-6">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                    [{{ guild.tag }}]
+                </div>
+                <div>
+                    <h1 class="text-3xl font-display font-bold text-white">{{ guild.name }}</h1>
+                    <p class="text-gray-400">[{{ guild.tag }}] - {% if lang == 'en' %}Guild Analytics{% else %}Analytics de Guilde{% endif %}</p>
+                </div>
+            </div>
+        </div>
+
+        {% if stats %}
+        <!-- Stats Overview -->
+        <div class="grid md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-cyan-500/20 p-4 text-center">
+                <div class="text-3xl font-bold text-cyan-400">{{ stats.total_fights }}</div>
+                <div class="text-sm text-gray-400">{% if lang == 'en' %}Total Fights{% else %}Combats Totaux{% endif %}</div>
+            </div>
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-green-500/20 p-4 text-center">
+                <div class="text-3xl font-bold text-green-400">{{ stats.win_rate|round(1) }}%</div>
+                <div class="text-sm text-gray-400">{% if lang == 'en' %}Win Rate{% else %}Taux de Victoire{% endif %}</div>
+            </div>
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-purple-500/20 p-4 text-center">
+                <div class="text-3xl font-bold text-purple-400">{{ stats.member_count }}</div>
+                <div class="text-sm text-gray-400">{% if lang == 'en' %}Members Tracked{% else %}Membres Suivis{% endif %}</div>
+            </div>
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-amber-500/20 p-4 text-center">
+                <div class="text-3xl font-bold text-amber-400">{{ stats.active_members }}</div>
+                <div class="text-sm text-gray-400">{% if lang == 'en' %}Active (30d){% else %}Actifs (30j){% endif %}</div>
+            </div>
+        </div>
+
+        {% set total_participations = stats.role_distribution.values()|sum %}
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Role Distribution -->
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
+                <h3 class="text-xl font-display font-bold text-purple-400 mb-4">
+                    {% if lang == 'en' %}Role Distribution{% else %}Répartition des Rôles{% endif %}
+                    <span class="text-sm font-normal text-gray-500 ml-2">({{ total_participations }} {% if lang == 'en' %}participations{% else %}participations{% endif %})</span>
+                </h3>
+                <div class="space-y-3">
+                    {% for role, count in stats.role_distribution.items() %}
+                    {% set pct = (count / total_participations * 100)|round(1) if total_participations > 0 else 0 %}
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-300 capitalize">{{ role|replace('_', ' ') }}</span>
+                            <span class="text-gray-400">{{ pct }}%</span>
+                        </div>
+                        <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full
+                                {% if role == 'dps' %}bg-red-500
+                                {% elif role == 'stab' %}bg-yellow-500
+                                {% elif role == 'healer' %}bg-cyan-500
+                                {% elif role == 'boon' %}bg-green-500
+                                {% elif role == 'dps_strip' %}bg-orange-500
+                                {% else %}bg-purple-500{% endif %}"
+                                style="width: {{ pct }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Spec Distribution -->
+            {% set total_spec_participations = stats.spec_distribution|sum(attribute='1') if stats.spec_distribution else 0 %}
+            <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-6">
+                <h3 class="text-xl font-display font-bold text-amber-400 mb-4">
+                    {% if lang == 'en' %}Top Specializations{% else %}Top Spécialisations{% endif %}
+                </h3>
+                <div class="space-y-2">
+                    {% set max_spec_count = stats.spec_distribution[0][1] if stats.spec_distribution else 1 %}
+                    {% for spec, count in stats.spec_distribution[:8] %}
+                    {% set pct = (count / max_spec_count * 100)|round(1) if max_spec_count > 0 else 0 %}
+                    {% set profession = spec_to_profession.get(spec, 'Warrior') %}
+                    <div class="flex items-center gap-3">
+                        <img src="/static/icons/{{ spec|lower }}.png" 
+                             alt="{{ spec }}" class="w-6 h-6"
+                             onerror="this.src='/static/icons/{{ profession|lower }}.png'">
+                        <div class="flex-1">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-300">{{ spec }}</span>
+                                <span class="text-gray-400">{{ count }} {% if lang == 'en' %}plays{% else %}jouées{% endif %}</span>
+                            </div>
+                            <div class="h-1.5 bg-gray-700 rounded-full overflow-hidden mt-1">
+                                <div class="h-full bg-amber-500 rounded-full" style="width: {{ pct }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performers -->
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-green-500/20 p-6 mb-6">
+            <h3 class="text-xl font-display font-bold text-green-400 mb-4">
+                {% if lang == 'en' %}Top Participants{% else %}Top Participants{% endif %}
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left border-b border-gray-700">
+                            <th class="py-2 px-3 text-gray-400">#</th>
+                            <th class="py-2 px-3 text-gray-400">{% if lang == 'en' %}Player{% else %}Joueur{% endif %}</th>
+                            <th class="py-2 px-3 text-gray-400 text-right">{% if lang == 'en' %}Fights{% else %}Combats{% endif %}</th>
+                            <th class="py-2 px-3 text-gray-400 text-right">{% if lang == 'en' %}Participation{% else %}Participation{% endif %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for player in stats.top_performers[:10] %}
+                        <tr class="border-b border-gray-800 hover:bg-gray-800/30">
+                            <td class="py-2 px-3 text-gray-500">{{ loop.index }}</td>
+                            <td class="py-2 px-3 text-white font-medium">{{ player.account_name }}</td>
+                            <td class="py-2 px-3 text-right text-cyan-400">{{ player.fights }}</td>
+                            <td class="py-2 px-3 text-right">
+                                {% set pct = (player.fights / stats.total_fights * 100)|round(1) if stats.total_fights > 0 else 0 %}
+                                <span class="text-green-400">{{ pct }}%</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Monthly Activity Chart -->
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-blue-500/20 p-6">
+            <h3 class="text-xl font-display font-bold text-blue-400 mb-4">
+                {% if lang == 'en' %}Monthly Activity{% else %}Activité Mensuelle{% endif %}
+                <span class="text-sm font-normal text-gray-500 ml-2">({% if lang == 'en' %}fights per month{% else %}combats par mois{% endif %})</span>
+            </h3>
+            {% set sorted_months = stats.monthly_activity|dictsort %}
+            {% set max_monthly = stats.monthly_activity.values()|max if stats.monthly_activity else 1 %}
+            <div class="relative">
+                <!-- Y-axis labels -->
+                <div class="absolute left-0 top-0 h-48 flex flex-col justify-between text-xs text-gray-500 pr-2">
+                    <span>{{ max_monthly }}</span>
+                    <span>{{ (max_monthly / 2)|int }}</span>
+                    <span>0</span>
+                </div>
+                <!-- Chart -->
+                <div class="ml-10 h-48 flex items-end gap-1 border-l border-b border-gray-700">
+                    {% for month, count in sorted_months[-12:] %}
+                    {% set height = (count / max_monthly * 100)|round if max_monthly > 0 else 0 %}
+                    <div class="flex-1 flex flex-col items-center" style="min-width: 30px;">
+                        <span class="text-xs text-cyan-400 mb-1">{{ count }}</span>
+                        <div class="w-full bg-gradient-to-t from-blue-600 to-cyan-400 rounded-t transition-all hover:from-blue-500 hover:to-cyan-300 cursor-pointer" 
+                             style="height: {{ height }}%" title="{{ month }}: {{ count }} combats"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <!-- X-axis labels -->
+                <div class="ml-10 flex gap-1 mt-2">
+                    {% for month, count in sorted_months[-12:] %}
+                    <div class="flex-1 text-center" style="min-width: 30px;">
+                        <span class="text-xs text-gray-500">{{ month[5:7] }}/{{ month[2:4] }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- No Data - Import Section -->
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-blue-500/20 p-12 text-center">
+            <div class="text-6xl mb-4">📊</div>
+            <h3 class="text-xl font-bold text-gray-300 mb-2">
+                {% if lang == 'en' %}No Data Yet{% else %}Pas encore de données{% endif %}
+            </h3>
+            <p class="text-gray-500 mb-6">
+                {% if lang == 'en' %}
+                    Import your existing fight history from analyzed logs to start tracking guild statistics.
+                {% else %}
+                    Importez votre historique de combats depuis les logs déjà analysés pour suivre les statistiques de guilde.
+                {% endif %}
+            </p>
+            <button onclick="importGuildFights()" id="import-btn"
+                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all disabled:opacity-50">
+                <span id="import-btn-text">{% if lang == 'en' %}Import Fight History{% else %}Importer l'Historique{% endif %}</span>
+                <span id="import-btn-loading" class="hidden">
+                    <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+            </button>
+            <div id="import-result" class="mt-4 hidden"></div>
+        </div>
+        {% endif %}
+
+        <!-- Back Link -->
+        <div class="mt-6 text-center">
+            <a href="/api/gw2/dashboard" class="text-cyan-400 hover:text-cyan-300 transition-colors">
+                ← {% if lang == 'en' %}Back to Dashboard{% else %}Retour au Dashboard{% endif %}
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+async function importGuildFights() {
+    const btn = document.getElementById('import-btn');
+    const btnText = document.getElementById('import-btn-text');
+    const btnLoading = document.getElementById('import-btn-loading');
+    const resultDiv = document.getElementById('import-result');
+    
+    btn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    resultDiv.classList.add('hidden');
+    
+    try {
+        const response = await fetch('/api/gw2/guild/{{ guild.id }}/import', { method: 'POST' });
+        const data = await response.json();
+        
+        resultDiv.classList.remove('hidden');
+        
+        if (data.success) {
+            if (data.imported > 0) {
+                resultDiv.innerHTML = `
+                    <div class="bg-green-500/20 border border-green-500/30 rounded-lg p-4 text-green-400">
+                        <div class="text-2xl mb-2">✅</div>
+                        <p class="font-bold">${data.imported} {% if lang == 'en' %}fights imported!{% else %}combats importés !{% endif %}</p>
+                        <p class="text-sm text-gray-400 mt-1">${data.skipped} {% if lang == 'en' %}duplicates skipped{% else %}doublons ignorés{% endif %}</p>
+                        <button onclick="location.reload()" class="mt-3 px-4 py-2 bg-green-500/30 rounded-lg hover:bg-green-500/40 transition-colors">
+                            {% if lang == 'en' %}Refresh Page{% else %}Rafraîchir{% endif %}
+                        </button>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="bg-amber-500/20 border border-amber-500/30 rounded-lg p-4 text-amber-400">
+                        <div class="text-2xl mb-2">ℹ️</div>
+                        <p>{% if lang == 'en' %}No new fights found{% else %}Aucun nouveau combat trouvé{% endif %}</p>
+                        <p class="text-sm text-gray-400 mt-1">${data.total_in_db} {% if lang == 'en' %}logs analyzed{% else %}logs analysés{% endif %}, ${data.skipped} {% if lang == 'en' %}already imported{% else %}déjà importés{% endif %}</p>
+                    </div>
+                `;
+            }
+        } else {
+            resultDiv.innerHTML = `
+                <div class="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-red-400">
+                    <p>{% if lang == 'en' %}Error{% else %}Erreur{% endif %}: ${data.error}</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `
+            <div class="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-red-400">
+                <p>{% if lang == 'en' %}Network error{% else %}Erreur réseau{% endif %}: ${error.message}</p>
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+    }
+}
+</script>
+{% endblock %}

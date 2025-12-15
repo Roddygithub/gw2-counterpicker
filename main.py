@@ -49,6 +49,9 @@ from translations import get_all_translations
 from scheduler import setup_scheduled_tasks
 from rate_limiter import check_upload_rate_limit
 from logger import get_logger
+from routers.gw2_api import router as gw2_api_router
+from services.gw2_api_service import get_api_key_by_session, get_account_by_session, gw2_api
+from services.player_stats_service import record_player_fight
 import zipfile
 import io
 
@@ -77,6 +80,9 @@ real_parser = RealEVTCParser()
 
 # Initialize scheduled tasks (fingerprint cleanup on Fridays at 18h55)
 setup_scheduled_tasks()
+
+# Include GW2 API router
+app.include_router(gw2_api_router)
 
 # Auto-deployment system active - Changes sync to GitHub and server automatically
 
@@ -290,6 +296,60 @@ async def meta_page(request: Request):
     })
 
 
+async def record_user_fight_stats(request: Request, players_data: Dict, log_data: Dict = None):
+    """Record fight stats for connected user if they appear in the log"""
+    try:
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            return
+        
+        account_info = get_account_by_session(session_id)
+        if not account_info:
+            return
+        
+        account_id = account_info["account_id"]
+        account_name = account_info["account_name"]
+        
+        # Find user in allies list
+        for ally in players_data.get('allies', []):
+            # Match by account name (format: "Name.1234")
+            ally_name = ally.get('name', '')
+            if account_name.split('.')[0].lower() in ally_name.lower():
+                # Found the user in the log
+                fight_data = {
+                    'duration': players_data.get('duration_seconds', 0),
+                    'damage_out': ally.get('damage', 0),
+                    'damage_in': ally.get('damage_in', 0),
+                    'kills': ally.get('kills', 0),
+                    'deaths': ally.get('deaths', 0),
+                    'downs': ally.get('downs', 0),
+                    'cleanses': ally.get('cleanses', 0),
+                    'strips': ally.get('boon_strips', 0),
+                    'healing': ally.get('healing', 0),
+                    'barrier': ally.get('barrier', 0),
+                    'boon_uptime': ally.get('boon_uptime', {}),
+                    'outcome': players_data.get('outcome', 'draw'),
+                    'enemy_count': len(players_data.get('enemies', [])),
+                    'ally_count': len(players_data.get('allies', [])),
+                    'dps': ally.get('dps', 0)
+                }
+                
+                record_player_fight(
+                    account_id=account_id,
+                    account_name=account_name,
+                    character_name=ally_name,
+                    profession=ally.get('profession', 'Unknown'),
+                    elite_spec=ally.get('profession', 'Unknown'),
+                    role=ally.get('role', 'dps'),
+                    fight_data=fight_data
+                )
+                logger.info(f"Recorded fight stats for {account_name}")
+                return
+                
+    except Exception as e:
+        logger.error(f"Failed to record user fight stats: {e}")
+
+
 @app.post("/api/analyze/url")
 async def analyze_dps_report(request: Request, url: str = Form(...)):
     """
@@ -394,6 +454,9 @@ async def analyze_evtc_files(
                             players_data['source_name'] = permalink
                             record_fight_for_learning(players_data)
                             
+                            # Record stats for connected user
+                            await record_user_fight_stats(request, players_data, log_data)
+                            
                             # Generate AI counter
                             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
                             ai_counter = await get_ai_counter(enemy_spec_counts)
@@ -428,6 +491,9 @@ async def analyze_evtc_files(
             players_data['source'] = 'evtc'
             players_data['source_name'] = file.filename
             record_fight_for_learning(players_data, filename=file.filename, filesize=file.size)
+            
+            # Record stats for connected user
+            await record_user_fight_stats(request, players_data)
             
             # Generate AI counter
             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
