@@ -14,6 +14,10 @@ from services.gw2_api_service import (
     store_api_key, get_api_key_by_session, get_account_by_session,
     delete_api_key, REQUIRED_SCOPES, ELITE_SPEC_EXPANSIONS
 )
+from services.player_stats_service import (
+    get_player_fights, get_player_career_stats, get_player_spec_stats,
+    get_guild_stats, record_player_fight
+)
 from logger import get_logger
 
 logger = get_logger('gw2_api_routes')
@@ -380,5 +384,211 @@ async def dashboard_page(request: Request):
             "account": account_info,
             "lang": lang,
             "required_scopes": REQUIRED_SCOPES
+        }
+    )
+
+
+# ==================== PLAYER STATS ENDPOINTS ====================
+
+@router.get("/stats")
+async def get_my_stats(request: Request):
+    """Get career stats for connected account"""
+    try:
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            return JSONResponse({
+                "success": False,
+                "error": "Non connecté"
+            }, status_code=401)
+        
+        account_info = get_account_by_session(session_id)
+        if not account_info:
+            return JSONResponse({
+                "success": False,
+                "error": "Compte non trouvé"
+            }, status_code=401)
+        
+        career_stats = get_player_career_stats(account_info["account_id"])
+        
+        if not career_stats:
+            return JSONResponse({
+                "success": True,
+                "has_data": False,
+                "message": "Aucun combat enregistré. Analysez des logs pour commencer à tracker vos stats !"
+            })
+        
+        return JSONResponse({
+            "success": True,
+            "has_data": True,
+            "stats": career_stats.to_dict()
+        })
+        
+    except Exception as e:
+        logger.error(f"Get stats error: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+
+@router.get("/stats/specs")
+async def get_my_spec_stats(request: Request):
+    """Get stats per specialization for connected account"""
+    try:
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            return JSONResponse({"success": False, "error": "Non connecté"}, status_code=401)
+        
+        account_info = get_account_by_session(session_id)
+        if not account_info:
+            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=401)
+        
+        spec_stats = get_player_spec_stats(account_info["account_id"])
+        
+        return JSONResponse({
+            "success": True,
+            "specs": spec_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"Get spec stats error: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/fights")
+async def get_my_fights(request: Request, limit: int = 50):
+    """Get recent fights for connected account"""
+    try:
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            return JSONResponse({"success": False, "error": "Non connecté"}, status_code=401)
+        
+        account_info = get_account_by_session(session_id)
+        if not account_info:
+            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=401)
+        
+        fights = get_player_fights(account_info["account_id"], limit=min(limit, 100))
+        
+        return JSONResponse({
+            "success": True,
+            "fights": fights,
+            "total": len(fights)
+        })
+        
+    except Exception as e:
+        logger.error(f"Get fights error: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+# ==================== GUILD STATS ENDPOINTS ====================
+
+@router.get("/guild/{guild_id}/stats")
+async def get_guild_statistics(request: Request, guild_id: str):
+    """Get statistics for a guild"""
+    try:
+        session_id = request.cookies.get("session_id")
+        api_key = get_api_key_by_session(session_id) if session_id else None
+        
+        # Get guild info from API
+        guild_info = await gw2_api.get_guild_info(guild_id, api_key)
+        
+        # Get aggregated stats
+        stats = get_guild_stats(guild_id)
+        
+        if not stats and not guild_info:
+            return JSONResponse({
+                "success": False,
+                "error": "Guilde non trouvée"
+            }, status_code=404)
+        
+        return JSONResponse({
+            "success": True,
+            "guild_info": guild_info,
+            "stats": stats.to_dict() if stats else None
+        })
+        
+    except Exception as e:
+        logger.error(f"Get guild stats error: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/guilds")
+async def get_my_guilds(request: Request):
+    """Get guilds for connected account"""
+    try:
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            return JSONResponse({"success": False, "error": "Non connecté"}, status_code=401)
+        
+        api_key = get_api_key_by_session(session_id)
+        if not api_key:
+            return JSONResponse({"success": False, "error": "Clé API non trouvée"}, status_code=401)
+        
+        account = await gw2_api.get_account(api_key)
+        if not account:
+            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=401)
+        
+        # Get guild details for each guild
+        guilds = []
+        for guild_id in account.guilds[:5]:  # Limit to 5 guilds
+            guild_info = await gw2_api.get_guild_info(guild_id, api_key)
+            if guild_info:
+                # Get stats if available
+                stats = get_guild_stats(guild_id)
+                guilds.append({
+                    "id": guild_id,
+                    "name": guild_info.get("name", "Unknown"),
+                    "tag": guild_info.get("tag", ""),
+                    "has_stats": stats is not None,
+                    "fight_count": stats.total_fights if stats else 0
+                })
+        
+        return JSONResponse({
+            "success": True,
+            "guilds": guilds
+        })
+        
+    except Exception as e:
+        logger.error(f"Get guilds error: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+# ==================== HISTORY PAGE ====================
+
+@router.get("/history", response_class=HTMLResponse)
+async def history_page(request: Request):
+    """Fight history page"""
+    session_id = request.cookies.get("session_id")
+    connected = False
+    account_info = None
+    career_stats = None
+    spec_stats = None
+    recent_fights = []
+    
+    if session_id:
+        api_key = get_api_key_by_session(session_id)
+        if api_key:
+            account = await gw2_api.get_account(api_key)
+            if account:
+                connected = True
+                account_info = account.to_dict()
+                
+                # Get stats
+                career_stats = get_player_career_stats(account.account_id)
+                spec_stats = get_player_spec_stats(account.account_id)
+                recent_fights = get_player_fights(account.account_id, limit=20)
+    
+    lang = request.cookies.get("lang", "fr")
+    
+    return templates.TemplateResponse(
+        "history.html",
+        {
+            "request": request,
+            "connected": connected,
+            "account": account_info,
+            "career_stats": career_stats.to_dict() if career_stats else None,
+            "spec_stats": spec_stats,
+            "recent_fights": recent_fights,
+            "lang": lang
         }
     )
