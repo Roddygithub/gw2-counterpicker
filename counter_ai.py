@@ -8,7 +8,7 @@ import json
 import httpx
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from tinydb import TinyDB, Query
 from logger import get_logger
