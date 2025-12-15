@@ -7,7 +7,7 @@ Powered by Llama 3.2 8B via Ollama
 import json
 import httpx
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from pathlib import Path
 from tinydb import TinyDB, Query
