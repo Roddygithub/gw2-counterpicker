@@ -16,7 +16,7 @@ from services.gw2_api_service import (
 )
 from services.player_stats_service import (
     get_player_fights, get_player_career_stats, get_player_spec_stats,
-    get_guild_stats, record_player_fight
+    get_guild_stats, record_player_fight, import_fights_from_ai_database
 )
 from logger import get_logger
 
@@ -477,6 +477,32 @@ async def get_my_fights(request: Request, limit: int = 50):
         
     except Exception as e:
         logger.error(f"Get fights error: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+# ==================== IMPORT EXISTING FIGHTS ====================
+
+@router.post("/import-fights")
+async def import_existing_fights(request: Request):
+    """Import fights from AI database into player stats"""
+    try:
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            return JSONResponse({"success": False, "error": "Non connecté"}, status_code=401)
+        
+        account_info = get_account_by_session(session_id)
+        if not account_info:
+            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=401)
+        
+        result = import_fights_from_ai_database(
+            account_id=account_info["account_id"],
+            account_name=account_info["account_name"]
+        )
+        
+        return JSONResponse(result)
+        
+    except Exception as e:
+        logger.error(f"Import fights error: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 

@@ -454,3 +454,104 @@ def get_guilds_for_account(account_id: str) -> List[str]:
     except Exception as e:
         logger.error(f"Failed to get guilds for account: {e}")
         return []
+
+
+def import_fights_from_ai_database(account_id: str, account_name: str) -> Dict[str, Any]:
+    """
+    Import existing fights from the AI learning database into player stats.
+    Matches fights where the account name appears in ally_builds.
+    """
+    try:
+        from counter_ai import fights_table as ai_fights_table
+        
+        # Get all fights from AI database
+        all_fights = ai_fights_table.all()
+        
+        imported_count = 0
+        skipped_count = 0
+        matched_fights = []
+        
+        # Extract account name prefix for matching (e.g., "Roddy" from "Roddy.1234")
+        account_prefix = account_name.split('.')[0].lower()
+        
+        for fight in all_fights:
+            ally_builds = fight.get('ally_builds', [])
+            
+            # Search for account in ally builds
+            player_data = None
+            for ally in ally_builds:
+                ally_name = ally.get('player_name', '').lower()
+                ally_account = ally.get('account', '').lower()
+                
+                # Match by account name or player name containing account prefix
+                if account_prefix in ally_name or account_prefix in ally_account:
+                    player_data = ally
+                    break
+            
+            if not player_data:
+                continue
+            
+            # Check if already imported (by fight timestamp + account)
+            fight_date = fight.get('timestamp', '')
+            Fight = Query()
+            existing = fights_table.search(
+                (Fight.account_id == account_id) & 
+                (Fight.fight_date == fight_date)
+            )
+            
+            if existing:
+                skipped_count += 1
+                continue
+            
+            # Create fight record
+            record = PlayerFightRecord(
+                account_id=account_id,
+                account_name=account_name,
+                character_name=player_data.get('player_name', 'Unknown'),
+                profession=player_data.get('profession', 'Unknown'),
+                elite_spec=player_data.get('elite_spec', player_data.get('profession', 'Unknown')),
+                role=player_data.get('role', 'dps'),
+                fight_date=fight_date,
+                fight_duration=int(fight.get('duration_sec', 0)),
+                damage_out=player_data.get('damage_out', 0),
+                damage_in=player_data.get('damage_in', 0),
+                kills=fight.get('ally_kills', 0) // max(len(ally_builds), 1),  # Estimate per player
+                deaths=player_data.get('deaths', 0),
+                downs=player_data.get('down_contrib', 0),
+                cleanses=player_data.get('cleanses', 0),
+                strips=player_data.get('boon_strips', 0),
+                healing=player_data.get('healing', 0),
+                barrier=0,
+                boon_uptime=player_data.get('boon_gen', {}),
+                outcome=fight.get('outcome', 'draw'),
+                enemy_count=sum(fight.get('enemy_composition', {}).values()),
+                ally_count=len(ally_builds),
+                map_name='',
+                dps=int(player_data.get('dps', 0))
+            )
+            
+            fights_table.insert(record.to_dict())
+            imported_count += 1
+            matched_fights.append({
+                'date': fight_date,
+                'spec': record.elite_spec,
+                'outcome': record.outcome
+            })
+        
+        logger.info(f"Imported {imported_count} fights for {account_name}, skipped {skipped_count} duplicates")
+        
+        return {
+            'success': True,
+            'imported': imported_count,
+            'skipped': skipped_count,
+            'total_in_db': len(all_fights),
+            'sample_fights': matched_fights[:5]
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to import fights: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'imported': 0
+        }

@@ -192,16 +192,31 @@
                 </div>
             </div>
 
-            <!-- Stats Placeholder -->
+            <!-- Stats Import -->
             <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-blue-500/20 p-6">
                 <h3 class="text-xl font-display font-bold text-blue-400 mb-4 flex items-center gap-2">
                     <span>📈</span>
                     {% if lang == 'en' %}Your WvW Stats{% else %}Vos Stats WvW{% endif %}
                 </h3>
-                <div class="text-center py-8 text-gray-400">
-                    <div class="text-4xl mb-2">🚧</div>
-                    <p>{% if lang == 'en' %}Coming soon: Your personal WvW statistics{% else %}Bientôt : Vos statistiques WvW personnelles{% endif %}</p>
-                    <p class="text-sm mt-2">{% if lang == 'en' %}Upload logs to start tracking your progress{% else %}Uploadez des logs pour commencer à suivre votre progression{% endif %}</p>
+                <div id="stats-container" class="text-center py-6">
+                    <div class="text-4xl mb-4">📊</div>
+                    <p class="text-gray-300 mb-4">
+                        {% if lang == 'en' %}Import your existing fight history from analyzed logs{% else %}Importez votre historique de combats depuis les logs déjà analysés{% endif %}
+                    </p>
+                    <button onclick="importFights()" id="import-btn"
+                            class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all disabled:opacity-50">
+                        <span id="import-btn-text">{% if lang == 'en' %}Import My Fight History{% else %}Importer Mon Historique{% endif %}</span>
+                        <span id="import-btn-loading" class="hidden">
+                            <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                    </button>
+                    <div id="import-result" class="mt-4 hidden"></div>
+                    <p class="text-xs text-gray-500 mt-4">
+                        {% if lang == 'en' %}This will scan all previously analyzed logs and import fights where you participated{% else %}Cela va scanner tous les logs déjà analysés et importer les combats où vous avez participé{% endif %}
+                    </p>
                 </div>
             </div>
         </div>
@@ -280,6 +295,66 @@ async function disconnectAccount() {
         }
     } catch (error) {
         alert('{% if lang == "en" %}Network error{% else %}Erreur réseau{% endif %}');
+    }
+}
+
+// Import fights function
+async function importFights() {
+    const btn = document.getElementById('import-btn');
+    const btnText = document.getElementById('import-btn-text');
+    const btnLoading = document.getElementById('import-btn-loading');
+    const resultDiv = document.getElementById('import-result');
+    
+    btn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    resultDiv.classList.add('hidden');
+    
+    try {
+        const response = await fetch('/api/gw2/import-fights', { method: 'POST' });
+        const data = await response.json();
+        
+        resultDiv.classList.remove('hidden');
+        
+        if (data.success) {
+            if (data.imported > 0) {
+                resultDiv.innerHTML = `
+                    <div class="bg-green-500/20 border border-green-500/30 rounded-lg p-4 text-green-400">
+                        <div class="text-2xl mb-2">✅</div>
+                        <p class="font-bold">${data.imported} combats importés !</p>
+                        <p class="text-sm text-gray-400 mt-1">${data.skipped} doublons ignorés sur ${data.total_in_db} logs analysés</p>
+                        <a href="/api/gw2/history" class="inline-block mt-3 px-4 py-2 bg-green-500/30 rounded-lg hover:bg-green-500/40 transition-colors">
+                            Voir mon historique →
+                        </a>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="bg-amber-500/20 border border-amber-500/30 rounded-lg p-4 text-amber-400">
+                        <div class="text-2xl mb-2">ℹ️</div>
+                        <p>Aucun nouveau combat trouvé</p>
+                        <p class="text-sm text-gray-400 mt-1">${data.total_in_db} logs analysés, ${data.skipped} déjà importés</p>
+                    </div>
+                `;
+            }
+        } else {
+            resultDiv.innerHTML = `
+                <div class="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-red-400">
+                    <p>Erreur: ${data.error}</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `
+            <div class="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-red-400">
+                <p>Erreur réseau: ${error.message}</p>
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
     }
 }
 
