@@ -48,17 +48,17 @@
         
         <div class="text-sm font-medium text-white mb-2">🏆 {% if lang == 'en' %}OBSERVED DATA: Best performing specs{% else %}DONNÉES OBSERVÉES: Specs les plus performantes{% endif %}</div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {% for build in ai_counter.best_builds[:6] %}
+            {% for role, build in ai_counter.best_builds.items() %}
             <div class="bg-gray-800/50 rounded-lg p-2 text-xs">
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="font-medium text-white">{{ build.count }}x</span>
-                    <span class="text-{{ build.spec|lower }}-400">{{ build.spec }}</span>
+                    <span class="font-medium text-white">{{ build.recommended_count|default(1) }}x</span>
+                    <span class="text-white">{{ build.spec }}</span>
                     <span class="text-gray-500">{{ build.role }}</span>
                 </div>
                 <div class="text-gray-400">
                     {{ "%.1f"|format(build.win_rate) }}% {% if lang == 'en' %}win rate{% else %}victoires{% endif %}
-                    {% if build.fights > 0 %}
-                    <span class="text-gray-600">• Sur {{ build.fights }} fights réels</span>
+                    {% if build.fights_played > 0 %}
+                    <span class="text-gray-600">• Sur {{ build.fights_played }} fights réels</span>
                     {% endif %}
                 </div>
                 {% if build.avg_dps or build.avg_healing %}
