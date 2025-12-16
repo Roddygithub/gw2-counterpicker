@@ -697,6 +697,10 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
         healing = player.healing_done or 0
         downs = player.downs if hasattr(player, 'downs') else 0
         
+        # Debug: log first player's damage
+        if len(all_ally_data) == 0:
+            logger.info(f"DEBUG LOCAL PARSER - First player {player.character_name}: damage_dealt={damage}, type={type(player.damage_dealt)}")
+        
         player_data = {
             'name': player.character_name,
             'account': player.account_name,
