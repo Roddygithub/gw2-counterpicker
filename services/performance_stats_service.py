@@ -515,12 +515,13 @@ def find_best_group_compositions(player_performances: List[Dict], group_size: in
     return best_groups[:5]
 
 
-def get_guild_group_comparison(guild_fights: List[Dict]) -> Dict[str, Any]:
+def get_guild_group_comparison(guild_fights: List[Dict], guild_members: List[str] = None) -> Dict[str, Any]:
     """
     Analyze guild fights to find the best performing group compositions.
     
     Args:
         guild_fights: List of fight records with participants
+        guild_members: Optional list of guild member account names to filter by
     
     Returns:
         Dict with best groups and performance analysis
@@ -533,6 +534,10 @@ def get_guild_group_comparison(guild_fights: List[Dict]) -> Dict[str, Any]:
             for participant in fight.get('participants', []):
                 account = participant.get('account_name', '')
                 if not account:
+                    continue
+                
+                # Filter by guild members if provided
+                if guild_members and account not in guild_members:
                     continue
                 
                 if account not in player_stats:

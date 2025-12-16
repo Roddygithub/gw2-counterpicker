@@ -714,7 +714,11 @@ async def guild_analytics_page(request: Request, guild_id: str):
             if guild_fights and len(guild_fights) > 100:
                 guild_fights = sorted(guild_fights, key=lambda x: x.get('fight_date', ''), reverse=True)[:100]
             if guild_fights:
-                group_comparison = get_guild_group_comparison(guild_fights)
+                # Extract member account names for filtering
+                member_accounts = None
+                if guild_members:
+                    member_accounts = [m.get('name', '') for m in guild_members if m.get('name')]
+                group_comparison = get_guild_group_comparison(guild_fights, guild_members=member_accounts)
         
         return templates.TemplateResponse(
             "guild_analytics.html",
