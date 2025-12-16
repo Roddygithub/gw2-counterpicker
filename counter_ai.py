@@ -132,6 +132,9 @@ class AllyBuildRecord:
     # Boon generation
     boon_gen: Dict[str, float]  # {boon_name: generation %}
     
+    # Optional fields with defaults (must be at the end)
+    kills: int = 0  # Added kills tracking
+    
     def to_dict(self) -> dict:
         return asdict(self)
 
@@ -379,6 +382,7 @@ class CounterAI:
                 boon_strips=ally.get('boon_strips', 0),
                 down_contrib=ally.get('down_contrib', 0),
                 deaths=ally.get('deaths', 0),
+                kills=ally.get('kills', 0),  # Added kills
                 boon_gen=ally.get('boon_gen', {})
             )
             ally_builds.append(build_record.to_dict())
@@ -765,7 +769,12 @@ Voici les 30 derniers fights similaires que nous avons joués :
 Donne-moi en 4 lignes maximum le counter parfait à jouer avec un groupe de 25-50 joueurs.
 Focus sur: timing de push, coordination AOE, survie dans le blob, cibles prioritaires.
 Sois brutal, précis, et donne les priorités cibles.
-Réponds UNIQUEMENT le counter, rien d'autre.""",
+
+IMPORTANT: Format de réponse obligatoire:
+- Commence par "CONTER:" 
+- Puis liste les specs à ajouter avec leur nombre
+- Exemple: "CONTER: 3x Firebrand, 2x Druid, 1x Spellbreaker"
+Réponds UNIQUEMENT dans ce format, rien d'autre.""",
 
             'guild_raid': f"""Tu es le meilleur raid leader de guilde WvW EU. Tu as analysé plus de 10 000 fights réels.
 Contexte: RAID GUILDE (10-25 joueurs, compo structurée et coordonnée)
@@ -776,18 +785,27 @@ Voici les 30 derniers fights similaires que nous avons joués :
 Donne-moi en 4 lignes maximum le counter parfait pour un raid guilde de 15-25 joueurs.
 Focus sur: synergies de compo, rôles précis, discipline et coordination, burst windows.
 Sois brutal, précis, et donne les priorités cibles.
-Réponds UNIQUEMENT le counter, rien d'autre.""",
+
+IMPORTANT: Format de réponse obligatoire:
+- Commence par "CONTER:" 
+- Puis liste les specs à ajouter avec leur nombre
+- Exemple: "CONTER: 3x Firebrand, 2x Druid, 1x Spellbreaker"
+Réponds UNIQUEMENT dans ce format, rien d'autre.""",
 
             'roam': f"""Tu es le meilleur roamer WvW EU. Tu as analysé plus de 10 000 fights réels.
 Contexte: ROAMING (1-10 joueurs, petit comité, mobilité)
 Composition ennemie actuelle : {enemy_str}
 Voici les 30 derniers fights similaires que nous avons joués :
-{fights_summary}
 
 Donne-moi en 4 lignes maximum le counter parfait pour un groupe de 2-8 joueurs.
 Focus sur: burst, mobilité, disengage, 1v1/2v2 matchups, kiting.
 Sois brutal, précis, et donne les priorités cibles.
-Réponds UNIQUEMENT le counter, rien d'autre."""
+
+IMPORTANT: Format de réponse obligatoire:
+- Commence par "CONTER:" 
+- Puis liste les specs à ajouter avec leur nombre
+- Exemple: "CONTER: 3x Firebrand, 2x Druid, 1x Spellbreaker"
+Réponds UNIQUEMENT dans ce format, rien d'autre."""
         }
         
         prompt = context_prompts.get(context, context_prompts['zerg'])

@@ -141,6 +141,28 @@
                 <div class="text-xs text-gray-400" title="{% if lang == 'en' %}Allied players who participated but were not in your squad{% else %}Joueurs alliés ayant participé mais hors de ton escouade{% endif %}">{% if lang == 'en' %}Allied Pugs{% else %}Pugs Alliés{% endif %}</div>
             </div>
         </div>
+        
+        <!-- Context Modifier -->
+        <div class="mt-4 flex items-center justify-center gap-2">
+            <span class="text-sm text-gray-400">{% if lang == 'en' %}Fight Context:{% else %}Contexte du combat:{% endif %}</span>
+            <div class="flex gap-2" x-data="{ context: '{{ players.context_detected|default('auto') }}' }">
+                <button @click="context = 'zerg'" 
+                        :class="context === 'zerg' ? 'bg-purple-500/30 border-purple-500' : 'bg-gw2-darker border-gray-700 hover:border-purple-500/50'"
+                        class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
+                    🏰 Zerg
+                </button>
+                <button @click="context = 'guild_raid'" 
+                        :class="context === 'guild_raid' ? 'bg-cyan-500/30 border-cyan-500' : 'bg-gw2-darker border-gray-700 hover:border-cyan-500/50'"
+                        class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
+                    ⚔️ {% if lang == 'en' %}Guild{% else %}Guilde{% endif %}
+                </button>
+                <button @click="context = 'roam'" 
+                        :class="context === 'roam' ? 'bg-orange-500/30 border-orange-500' : 'bg-gw2-darker border-gray-700 hover:border-orange-500/50'"
+                        class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
+                    🗡️ Roam
+                </button>
+            </div>
+        </div>
     </div>
     
     <!-- Squad Composition Summary -->
@@ -1025,7 +1047,7 @@
                     <div class="flex items-center gap-2 mb-3">
                         <div class="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
                             <div class="h-full rounded-full {% if build.win_rate >= 80 %}bg-green-500{% elif build.win_rate >= 60 %}bg-yellow-500{% else %}bg-red-500{% endif %}" 
-                                 style="width: {{ build.win_rate }}%"></div>
+                                 style="width: {{ build.win_rate }}%;"></div>
                         </div>
                         <span class="text-sm font-bold {% if build.win_rate >= 80 %}text-green-400{% elif build.win_rate >= 60 %}text-yellow-400{% else %}text-red-400{% endif %}">
                             {{ build.win_rate }}%
@@ -1186,29 +1208,62 @@
     };
     
     // Filter boon table by scope (group or squad)
-    // Group mode: shows rows grouped by their subgroup
-    // Squad mode: shows all rows (default)
+    // Group mode: highlights groups and shows group separators
+    // Squad mode: shows all rows normally
     window.filterBoonTable = function(scope) {
         const table = document.getElementById('boon-gen-table');
         if (!table) return;
         
-        const rows = table.querySelectorAll('tbody tr');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        // Remove any existing separators
+        tbody.querySelectorAll('.group-separator').forEach(el => el.remove());
         
         if (scope === 'squad') {
-            // Show all rows
+            // Show all rows normally
             rows.forEach(row => {
                 row.style.display = '';
+                row.style.backgroundColor = '';
             });
         } else if (scope === 'group') {
             // Sort by group first
-            window.sortTableByAttr('boon-gen-table', 'group');
+            rows.sort((a, b) => {
+                const groupA = parseInt(a.dataset.group || '0');
+                const groupB = parseInt(b.dataset.group || '0');
+                return groupA - groupB;
+            });
+            
+            // Reorder rows
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Add separators and highlight groups
+            let currentGroup = null;
+            rows.forEach((row, index) => {
+                const group = parseInt(row.dataset.group || '0');
+                
+                // Add separator before new group
+                if (currentGroup !== null && group !== currentGroup) {
+                    const separator = document.createElement('tr');
+                    separator.className = 'group-separator';
+                    separator.innerHTML = `
+                        <td colspan="12" class="py-2 text-center text-xs text-cyan-400 bg-gw2-darker/50 border-t border-cyan-500/30">
+                            ─── GROUPE ${group} ───
+                        </td>
+                    `;
+                    tbody.insertBefore(separator, row);
+                }
+                
+                // Highlight alternating groups
+                if (group % 2 === 0) {
+                    row.style.backgroundColor = 'rgba(6, 182, 212, 0.05)';
+                } else {
+                    row.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
+                }
+                
+                currentGroup = group;
+            });
         }
-        
-        // Note: The actual boon generation values would need to be recalculated
-        // server-side for true group vs squad comparison. This UI just provides
-        // the selector - the data shown is the squad-wide generation.
-        // For accurate group-only boon gen, the backend would need to provide
-        // separate groupBuffs data.
     };
 })();
 </script>

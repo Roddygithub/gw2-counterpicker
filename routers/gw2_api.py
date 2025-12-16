@@ -625,7 +625,16 @@ async def import_guild_fights(request: Request, guild_id: str):
         guild_name = guild_info.get("name", "Unknown")
         guild_tag = guild_info.get("tag", "")
         
-        result = import_guild_fights_from_ai_database(guild_id, guild_name, guild_tag)
+        # Try to get guild members list for proper filtering
+        guild_members = None
+        try:
+            members_data = await gw2_api.get_guild_members(guild_id, api_key)
+            if members_data:
+                guild_members = [m.get('name', '') for m in members_data if m.get('name')]
+        except Exception as member_error:
+            logger.warning(f"Could not get guild members (requires permissions): {member_error}")
+        
+        result = import_guild_fights_from_ai_database(guild_id, guild_name, guild_tag, guild_members)
         
         return JSONResponse(result)
         
@@ -638,74 +647,91 @@ async def import_guild_fights(request: Request, guild_id: str):
 
 @router.get("/guild/{guild_id}", response_class=HTMLResponse)
 async def guild_analytics_page(request: Request, guild_id: str):
-    """Guild analytics page"""
+    """Guild analytics page - optimized to avoid infinite loading"""
     session_id = request.cookies.get("session_id")
     lang = request.cookies.get("lang", "fr")
     
+    # Default context for error cases
+    error_context = {
+        "request": request, 
+        "guild": None, 
+        "stats": None, 
+        "group_comparison": None,
+        "spec_to_profession": SPEC_TO_PROFESSION,
+        "lang": lang, 
+        "error": None
+    }
+    
     if not session_id:
-        return templates.TemplateResponse(
-            "guild_analytics.html",
-            {"request": request, "guild": None, "stats": None, "lang": lang, "error": "Non connecté"}
-        )
+        error_context["error"] = "Non connecté"
+        return templates.TemplateResponse("guild_analytics.html", error_context)
     
     api_key = get_api_key_by_session(session_id)
     if not api_key:
-        return templates.TemplateResponse(
-            "guild_analytics.html",
-            {"request": request, "guild": None, "stats": None, "lang": lang, "error": "Clé API non trouvée"}
-        )
+        error_context["error"] = "Clé API non trouvée"
+        return templates.TemplateResponse("guild_analytics.html", error_context)
     
-    # Get guild info
-    guild_info = await gw2_api.get_guild_info(guild_id, api_key)
-    if not guild_info:
-        return templates.TemplateResponse(
-            "guild_analytics.html",
-            {"request": request, "guild": None, "stats": None, "lang": lang, "error": "Guilde non trouvée"}
-        )
-    
-    guild = {
-        "id": guild_id,
-        "name": guild_info.get("name", "Unknown"),
-        "tag": guild_info.get("tag", "")
-    }
-    
-    # Try to get guild members list (requires guild leader/officer permissions)
-    # If not available, stats will include all participants
-    guild_members = await gw2_api.get_guild_members(guild_id, api_key)
-    
-    # Get guild stats - pass guild_members to filter only actual members
-    stats = get_guild_stats(guild_id, guild_members=guild_members if guild_members else None)
-    stats_dict = None
-    group_comparison = None
-    
-    if stats:
-        stats_dict = stats.to_dict()
-        # Sort spec distribution for display
-        if stats_dict.get('spec_distribution'):
-            stats_dict['spec_distribution'] = sorted(
-                stats_dict['spec_distribution'].items(),
-                key=lambda x: x[1],
-                reverse=True
-            )
+    try:
+        # Get guild info with timeout protection
+        guild_info = await gw2_api.get_guild_info(guild_id, api_key)
+        if not guild_info:
+            error_context["error"] = "Guilde non trouvée"
+            return templates.TemplateResponse("guild_analytics.html", error_context)
         
-        # Get guild fights for group comparison
-        from tinydb import Query
-        Guild = Query()
-        guild_fights = guild_stats_table.search(Guild.guild_id == guild_id)
-        if guild_fights:
-            group_comparison = get_guild_group_comparison(guild_fights)
-    
-    return templates.TemplateResponse(
-        "guild_analytics.html",
-        {
-            "request": request,
-            "guild": guild,
-            "stats": stats_dict,
-            "group_comparison": group_comparison,
-            "spec_to_profession": SPEC_TO_PROFESSION,
-            "lang": lang
+        guild = {
+            "id": guild_id,
+            "name": guild_info.get("name", "Unknown"),
+            "tag": guild_info.get("tag", "")
         }
-    )
+        
+        # Try to get guild members list (requires guild leader/officer permissions)
+        # If not available, stats will include all participants
+        try:
+            guild_members = await gw2_api.get_guild_members(guild_id, api_key)
+        except Exception:
+            guild_members = None
+        
+        # Get guild stats - pass guild_members to filter only actual members
+        stats = get_guild_stats(guild_id, guild_members=guild_members if guild_members else None)
+        stats_dict = None
+        group_comparison = None
+        
+        if stats:
+            stats_dict = stats.to_dict()
+            # Sort spec distribution for display
+            if stats_dict.get('spec_distribution'):
+                stats_dict['spec_distribution'] = sorted(
+                    stats_dict['spec_distribution'].items(),
+                    key=lambda x: x[1],
+                    reverse=True
+                )
+            
+            # Get guild fights for group comparison - limit to avoid performance issues
+            from tinydb import Query
+            Guild = Query()
+            guild_fights = guild_stats_table.search(Guild.guild_id == guild_id)
+            # Limit to last 100 fights for performance
+            if guild_fights and len(guild_fights) > 100:
+                guild_fights = sorted(guild_fights, key=lambda x: x.get('fight_date', ''), reverse=True)[:100]
+            if guild_fights:
+                group_comparison = get_guild_group_comparison(guild_fights)
+        
+        return templates.TemplateResponse(
+            "guild_analytics.html",
+            {
+                "request": request,
+                "guild": guild,
+                "stats": stats_dict,
+                "group_comparison": group_comparison,
+                "spec_to_profession": SPEC_TO_PROFESSION,
+                "lang": lang
+            }
+        )
+    except Exception as e:
+        logger.error(f"Guild analytics error: {e}")
+        error_context["error"] = f"Erreur lors du chargement: {str(e)[:100]}"
+        error_context["guild"] = {"id": guild_id, "name": "Unknown", "tag": ""}
+        return templates.TemplateResponse("guild_analytics.html", error_context)
 
 
 # ==================== HISTORY PAGE ====================

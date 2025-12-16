@@ -145,6 +145,10 @@ class GW2APIService:
     
     def __init__(self):
         self.client = httpx.AsyncClient(timeout=30.0)
+        # Cache for guild info to avoid repeated API calls
+        self._guild_cache = {}  # {guild_id: {data, timestamp}}
+        self._world_cache = {}  # {world_id: world_name}
+        self._cache_ttl = 300  # 5 minutes cache
     
     async def validate_api_key(self, api_key: str) -> Dict[str, Any]:
         """Validate an API key and return token info"""
@@ -211,7 +215,7 @@ class GW2APIService:
             return None
     
     async def get_characters(self, api_key: str) -> List[GW2Character]:
-        """Get all characters with their builds"""
+        """Get all characters with their builds - optimized with parallel requests"""
         try:
             # Get character names
             response = await self.client.get(
@@ -223,13 +227,20 @@ class GW2APIService:
                 return []
             
             char_names = response.json()
-            characters = []
             
-            # Get details for each character
-            for name in char_names:
-                char_data = await self._get_character_details(api_key, name)
-                if char_data:
-                    characters.append(char_data)
+            # Fetch all characters in parallel (batch of 5 to avoid rate limiting)
+            import asyncio
+            characters = []
+            batch_size = 5
+            
+            for i in range(0, len(char_names), batch_size):
+                batch = char_names[i:i + batch_size]
+                tasks = [self._get_character_details(api_key, name) for name in batch]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                for result in results:
+                    if isinstance(result, GW2Character):
+                        characters.append(result)
             
             return characters
             
@@ -271,19 +282,33 @@ class GW2APIService:
             return None
     
     async def _get_world_name(self, world_id: int) -> str:
-        """Get world name from ID"""
+        """Get world name from ID with caching"""
+        # Check cache first
+        if world_id in self._world_cache:
+            return self._world_cache[world_id]
+        
         try:
             response = await self.client.get(
                 f"{GW2_API_BASE}/worlds/{world_id}"
             )
             if response.status_code == 200:
-                return response.json().get("name", "")
+                name = response.json().get("name", "")
+                self._world_cache[world_id] = name
+                return name
             return ""
         except:
             return ""
     
     async def get_guild_info(self, guild_id: str, api_key: str = None) -> Optional[Dict]:
-        """Get guild information"""
+        """Get guild information with caching"""
+        import time
+        
+        # Check cache first
+        if guild_id in self._guild_cache:
+            cached = self._guild_cache[guild_id]
+            if time.time() - cached['timestamp'] < self._cache_ttl:
+                return cached['data']
+        
         try:
             headers = {}
             if api_key:
@@ -295,7 +320,13 @@ class GW2APIService:
             )
             
             if response.status_code == 200:
-                return response.json()
+                data = response.json()
+                # Cache the result
+                self._guild_cache[guild_id] = {
+                    'data': data,
+                    'timestamp': time.time()
+                }
+                return data
             return None
             
         except Exception as e:

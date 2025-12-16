@@ -1,11 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}{{ guild.name }} - Analytics{% endblock %}
+{% block title %}{% if guild %}{{ guild.name }} - Analytics{% else %}Guild Analytics{% endif %}{% endblock %}
 
 {% block content %}
 <div class="min-h-screen py-8">
     <div class="max-w-6xl mx-auto px-4">
         
+        {% if error %}
+        <!-- Error State -->
+        <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-red-500/30 p-8 text-center mb-6">
+            <div class="text-6xl mb-4">⚠️</div>
+            <h2 class="text-2xl font-display font-bold text-red-400 mb-4">
+                {% if lang == 'en' %}Error{% else %}Erreur{% endif %}
+            </h2>
+            <p class="text-gray-400 mb-6">{{ error }}</p>
+            <a href="/api/gw2/dashboard" class="inline-block px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all">
+                {% if lang == 'en' %}Back to Dashboard{% else %}Retour au Dashboard{% endif %}
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if guild %}
         <!-- Header -->
         <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-cyan-500/30 p-6 mb-6">
             <div class="flex items-center gap-4">
@@ -252,15 +267,19 @@
                 ← {% if lang == 'en' %}Back to Dashboard{% else %}Retour au Dashboard{% endif %}
             </a>
         </div>
+        {% endif %}
     </div>
 </div>
 
 <script>
+{% if guild %}
 async function importGuildFights() {
     const btn = document.getElementById('import-btn');
     const btnText = document.getElementById('import-btn-text');
     const btnLoading = document.getElementById('import-btn-loading');
     const resultDiv = document.getElementById('import-result');
+    
+    if (!btn) return;
     
     btn.disabled = true;
     btnText.classList.add('hidden');
@@ -314,5 +333,6 @@ async function importGuildFights() {
         btnLoading.classList.add('hidden');
     }
 }
+{% endif %}
 </script>
 {% endblock %}

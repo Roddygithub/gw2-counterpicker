@@ -18,7 +18,7 @@ from pathlib import Path
 from dataclasses import asdict
 
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import httpx
@@ -571,7 +571,8 @@ async def analyze_evtc_files(
                 "t": get_all_translations(lang)
             })
         except Exception as parse_error:
-            logger.error(f"Local parser failed: {parse_error}")
+            import traceback
+            logger.error(f"Local parser failed: {parse_error}\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(parse_error)}")
     
     # Multiple files mode - redirect to evening analysis
@@ -665,15 +666,16 @@ def is_wvw_log(data: dict) -> bool:
 def is_player_afk(player) -> bool:
     """
     Determine if a player was AFK/inactive during the fight.
-    AFK criteria: no damage dealt, no healing, no damage taken, no kills
+    AFK criteria: no damage dealt, no healing done, no kills
+    More lenient to include players who took damage but didn't contribute.
     """
     damage = getattr(player, 'damage_dealt', 0) or 0
-    healing = getattr(player, 'healing', 0) or 0
-    damage_taken = getattr(player, 'damage_taken', 0) or 0
+    healing = getattr(player, 'healing_done', 0) or 0
     kills = getattr(player, 'kills', 0) or 0
     
-    # Player is AFK if they contributed nothing
-    return damage == 0 and healing == 0 and damage_taken == 0 and kills == 0
+    # Player is AFK if they contributed nothing offensively or supportively
+    # Being more lenient - only exclude if truly zero contribution
+    return damage == 0 and healing == 0 and kills == 0
 
 
 def convert_parsed_log_to_players_data(parsed_log) -> dict:
@@ -682,31 +684,65 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
     allies_afk = []  # Track AFK players separately
     enemies = []
     
+    duration_sec = max(parsed_log.duration_seconds, 1)
+    
+    # First pass: collect all ally data
+    all_ally_data = []
     for player in parsed_log.players:
+        damage = player.damage_dealt or 0
+        healing = player.healing_done or 0
+        downs = player.downs if hasattr(player, 'downs') else 0
+        
         player_data = {
             'name': player.character_name,
             'account': player.account_name,
             'profession': player.elite_spec or player.profession,
             'elite_spec': player.elite_spec,
             'group': player.subgroup,
-            'damage': player.damage_dealt,
-            'dps': player.damage_dealt // max(parsed_log.duration_seconds, 1),
-            'is_commander': False,
+            # Damage stats
+            'damage': damage,
+            'damage_out': damage,
+            'damage_in': 0,
+            'dps': damage // duration_sec,
+            'down_contrib': downs,
+            'down_contrib_per_sec': round(downs / duration_sec, 2) if downs else 0,
+            'damage_ratio': 0,
+            # Combat stats
+            'kills': player.kills or 0,
+            'deaths': player.deaths or 0,
+            'downs': downs,
+            'cc_out': 0,
+            'boon_strips': 0,
+            'strips_per_sec': 0,
+            # Support stats
+            'healing': healing,
+            'healing_per_sec': round(healing / duration_sec, 2) if healing else 0,
             'cleanses': 0,
             'cleanses_per_sec': 0,
             'resurrects': 0,
-            'boon_strips': 0,
+            'barrier': 0,
+            # Boon generation
+            'boon_gen': {},
+            'boon_uptime': {},
+            # Meta
+            'is_commander': False,
             'role': player.estimated_role.lower() if player.estimated_role else 'dps',
-            'kills': player.kills,
-            'deaths': player.deaths,
             'is_afk': is_player_afk(player),
             'in_squad': player.subgroup > 0,  # Group 0 = not in squad
         }
-        
-        if player_data['is_afk']:
-            allies_afk.append(player_data)
-        else:
-            allies.append(player_data)
+        all_ally_data.append(player_data)
+    
+    # Separate AFK from active - but if all would be AFK, include them anyway
+    active_allies = [p for p in all_ally_data if not p['is_afk']]
+    afk_allies = [p for p in all_ally_data if p['is_afk']]
+    
+    if active_allies:
+        allies = active_allies
+        allies_afk = afk_allies
+    else:
+        # No active allies found - include all players to avoid empty results
+        allies = all_ally_data
+        allies_afk = []
     
     for enemy in parsed_log.enemies:
         role = estimate_role_from_profession(enemy.elite_spec or enemy.profession)
@@ -720,6 +756,7 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
     # Build composition summaries
     spec_counts = {}
     role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    specs_by_role = {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}}
     
     for p in allies:
         spec = p['profession']
@@ -727,9 +764,11 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
         role = p.get('role', 'dps')
         if role in role_counts:
             role_counts[role] += 1
+            specs_by_role[role][spec] = specs_by_role[role].get(spec, 0) + 1
     
     enemy_spec_counts = {}
     enemy_role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    enemy_specs_by_role = {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}}
     
     for e in enemies:
         spec = e['profession']
@@ -737,6 +776,7 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
         role = e.get('role', 'dps')
         if role in enemy_role_counts:
             enemy_role_counts[role] += 1
+            enemy_specs_by_role[role][spec] = enemy_specs_by_role[role].get(spec, 0) + 1
     
     # Calculate stats from ACTIVE players only (exclude AFK)
     active_deaths = sum(p.get('deaths', 0) for p in allies)
@@ -778,6 +818,9 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
     
     fight_outcome = determine_fight_outcome(allies, parsed_log.players, parsed_log.duration_seconds)
     
+    # Calculate ally_downs from the allies dict (already converted)
+    total_ally_downs = sum(p.get('downs', 0) for p in allies)
+    
     return {
         'allies': allies,
         'allies_afk': allies_afk,  # AFK players tracked separately
@@ -787,7 +830,7 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
         'fight_outcome': fight_outcome,
         'fight_stats': {
             'ally_deaths': active_deaths,
-            'ally_downs': sum(p.downs for p in parsed_log.players if not is_player_afk(p)),
+            'ally_downs': total_ally_downs,
             'ally_kills': active_kills,
             'ally_damage': active_damage,
             'enemy_damage_taken': sum(e.damage_taken for e in parsed_log.enemies),
@@ -797,13 +840,13 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
         'composition': {
             'spec_counts': spec_counts,
             'role_counts': role_counts,
-            'specs_by_role': {},
+            'specs_by_role': specs_by_role,
             'total': len(allies)  # Only active allies
         },
         'enemy_composition': {
             'spec_counts': enemy_spec_counts,
             'role_counts': enemy_role_counts,
-            'specs_by_role': {},
+            'specs_by_role': enemy_specs_by_role,
             'total': len(enemies)
         }
     }
@@ -1576,6 +1619,12 @@ async def health_check():
 async def ai_status_endpoint():
     """Get AI learning status"""
     return get_ai_status()
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    """Return empty response for favicon to avoid 404 errors"""
+    return Response(status_code=204)
 
 
 def get_default_meta_data() -> dict:

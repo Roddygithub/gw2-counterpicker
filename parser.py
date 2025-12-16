@@ -824,10 +824,19 @@ class EVTCParser:
             pov_agent = self.agents[self._pov_agent]
             pov_team = pov_agent.team_id
             
-            # In WvW, allies are players with subgroup > 0 (in squad) or same team
+            # In WvW, allies are:
+            # 1. Players with subgroup > 0 (in our squad)
+            # 2. Players with same team_id (if team_id is valid)
+            # 3. The POV player themselves
+            allied_agents.add(self._pov_agent)  # Always include POV
+            
             for agent in self.agents.values():
                 if agent.is_player:
-                    if agent.subgroup > 0 or agent.team_id == pov_team:
+                    # Players in our squad (subgroup > 0) are always allies
+                    if agent.subgroup > 0:
+                        allied_agents.add(agent.address)
+                    # Same team (if team is valid and non-zero)
+                    elif pov_team > 0 and agent.team_id == pov_team:
                         allied_agents.add(agent.address)
         
         # For WvW: detect enemies by analyzing damage events

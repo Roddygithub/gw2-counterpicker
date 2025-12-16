@@ -153,15 +153,35 @@ def get_player_career_stats(account_id: str) -> Optional[PlayerCareerStats]:
         if not fights:
             return None
         
-        # Aggregate stats
+        # Check for aggregated stats from dps.report (more accurate kills/deaths)
+        aggregated_table = player_stats_db.table('aggregated_career_stats')
+        account_name = fights[0].get('account_name', '')
+        
+        Q = Query()
+        aggregated = aggregated_table.get(Q.account_name == account_name)
+        
+        # Also try with account_id if account_name lookup fails
+        if not aggregated:
+            aggregated = aggregated_table.get(Q.account_name == account_id)
+        
+        # Aggregate stats from fights
         total_fights = len(fights)
         total_victories = sum(1 for f in fights if f.get('outcome') == 'victory')
         total_defeats = sum(1 for f in fights if f.get('outcome') == 'defeat')
         total_time = sum(f.get('fight_duration', 0) for f in fights)
-        total_kills = sum(f.get('kills', 0) for f in fights)
-        total_deaths = sum(f.get('deaths', 0) for f in fights)
         total_damage_out = sum(f.get('damage_out', 0) for f in fights)
         total_damage_in = sum(f.get('damage_in', 0) for f in fights)
+        
+        # Use dps.report stats if available (more accurate), otherwise fall back to local
+        if aggregated:
+            total_kills = aggregated.get('total_kills', 0)
+            total_deaths = aggregated.get('total_deaths', 0)
+            # Use dps.report fight count if higher (more complete)
+            if aggregated.get('total_fights', 0) > total_fights:
+                total_fights = aggregated.get('total_fights', 0)
+        else:
+            total_kills = sum(f.get('kills', 0) for f in fights)
+            total_deaths = sum(f.get('deaths', 0) for f in fights)
         
         # Calculate averages
         avg_dps = sum(f.get('dps', 0) for f in fights) / total_fights if total_fights > 0 else 0
@@ -551,6 +571,13 @@ def import_fights_from_ai_database(account_id: str, account_name: str) -> Dict[s
                 continue
             
             # Create fight record
+            # Get kills from player data first, fallback to estimated from fight
+            player_kills = player_data.get('kills', 0)
+            if player_kills == 0:
+                # Fallback: estimate kills per player from total enemy deaths
+                total_enemy_deaths = fight.get('enemy_deaths', 0) or fight.get('ally_kills', 0)
+                player_kills = total_enemy_deaths // max(len(ally_builds), 1)
+            
             record = PlayerFightRecord(
                 account_id=account_id,
                 account_name=account_name,
@@ -562,7 +589,7 @@ def import_fights_from_ai_database(account_id: str, account_name: str) -> Dict[s
                 fight_duration=int(fight.get('duration_sec', 0)),
                 damage_out=player_data.get('damage_out', 0),
                 damage_in=player_data.get('damage_in', 0),
-                kills=fight.get('enemy_deaths', 0) // max(len(ally_builds), 1),  # Estimate kills per player
+                kills=player_kills,
                 deaths=player_data.get('deaths', 0),
                 downs=0,  # Not tracked individually
                 cleanses=player_data.get('cleanses', 0),
@@ -604,10 +631,16 @@ def import_fights_from_ai_database(account_id: str, account_name: str) -> Dict[s
         }
 
 
-def import_guild_fights_from_ai_database(guild_id: str, guild_name: str, guild_tag: str) -> Dict[str, Any]:
+def import_guild_fights_from_ai_database(guild_id: str, guild_name: str, guild_tag: str, guild_members: List[str] = None) -> Dict[str, Any]:
     """
     Import existing fights from the AI learning database into guild stats.
-    Matches fights where guild members participated.
+    Only imports fights where actual guild members participated.
+    
+    Args:
+        guild_id: The guild ID
+        guild_name: The guild name
+        guild_tag: The guild tag
+        guild_members: List of account names that are members of this guild (required for filtering)
     """
     try:
         from counter_ai import fights_table as ai_fights_table
@@ -616,6 +649,12 @@ def import_guild_fights_from_ai_database(guild_id: str, guild_name: str, guild_t
         
         imported_count = 0
         skipped_count = 0
+        no_members_count = 0
+        
+        # Normalize guild members for comparison
+        guild_members_normalized = set()
+        if guild_members:
+            guild_members_normalized = {m.lower() for m in guild_members}
         
         for fight in all_fights:
             ally_builds = fight.get('ally_builds', [])
@@ -623,27 +662,46 @@ def import_guild_fights_from_ai_database(guild_id: str, guild_name: str, guild_t
             if not ally_builds:
                 continue
             
-            # Check if already imported
+            # Filter to only guild members if we have a members list
+            guild_participants = []
+            for ally in ally_builds:
+                account = ally.get('account', ally.get('player_name', ''))
+                # If we have a members list, only include actual members
+                if guild_members_normalized:
+                    if account.lower() in guild_members_normalized:
+                        guild_participants.append(ally)
+                else:
+                    # No members list - include all (legacy behavior)
+                    guild_participants.append(ally)
+            
+            # Skip fights with no guild members
+            if not guild_participants:
+                no_members_count += 1
+                continue
+            
+            # Check if already imported (use fight_id for deduplication)
+            fight_id = fight.get('fight_id', '')
             fight_date = fight.get('timestamp', '')
             Fight = Query()
             existing = guild_stats_table.search(
                 (Fight.guild_id == guild_id) & 
-                (Fight.fight_date == fight_date)
+                ((Fight.fight_date == fight_date) | (Fight.fight_id == fight_id))
             )
             
             if existing:
                 skipped_count += 1
                 continue
             
-            # Create guild fight record
+            # Create guild fight record with only guild members
             participants = []
-            for ally in ally_builds:
+            for ally in guild_participants:
                 participants.append({
                     'account_id': ally.get('account', ''),
                     'account_name': ally.get('account', ally.get('player_name', '')),
                     'elite_spec': ally.get('elite_spec', ally.get('profession', '')),
                     'role': ally.get('role', 'dps'),
                     'damage_out': ally.get('damage_out', 0),
+                    'kills': ally.get('kills', 0),
                     'deaths': ally.get('deaths', 0)
                 })
             
@@ -651,13 +709,14 @@ def import_guild_fights_from_ai_database(guild_id: str, guild_name: str, guild_t
                 'guild_id': guild_id,
                 'guild_name': guild_name,
                 'guild_tag': guild_tag,
+                'fight_id': fight_id,
                 'fight_date': fight_date,
                 'duration': int(fight.get('duration_sec', 0)),
                 'outcome': fight.get('outcome', 'draw'),
-                'ally_count': len(ally_builds),
+                'ally_count': len(guild_participants),
                 'enemy_count': sum(fight.get('enemy_composition', {}).values()),
                 'total_damage': sum(p.get('damage_out', 0) for p in participants),
-                'total_kills': fight.get('enemy_deaths', 0),
+                'total_kills': sum(p.get('kills', 0) for p in participants),
                 'total_deaths': sum(p.get('deaths', 0) for p in participants),
                 'participants': participants
             }
@@ -665,12 +724,13 @@ def import_guild_fights_from_ai_database(guild_id: str, guild_name: str, guild_t
             guild_stats_table.insert(record)
             imported_count += 1
         
-        logger.info(f"Imported {imported_count} fights for guild [{guild_tag}], skipped {skipped_count} duplicates")
+        logger.info(f"Imported {imported_count} fights for guild [{guild_tag}], skipped {skipped_count} duplicates, {no_members_count} had no members")
         
         return {
             'success': True,
             'imported': imported_count,
             'skipped': skipped_count,
+            'no_members': no_members_count,
             'total_in_db': len(all_fights)
         }
         
