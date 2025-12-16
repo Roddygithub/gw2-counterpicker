@@ -1341,11 +1341,15 @@ async def analyze_evening_files(
         try:
             test_response = await client.get("https://dps.report/", timeout=5.0)
             dps_report_available = test_response.status_code == 200
-        except:
+            logger.info(f"dps.report available: {dps_report_available}")
+        except Exception as e:
             dps_report_available = False
-            logger.info("dps.report unavailable, using OFFLINE mode")
+            logger.info(f"dps.report unavailable: {e}, using OFFLINE mode")
+        
+        logger.info(f"Processing {len(validated_files)} files...")
         
         for filename, file_data in validated_files:
+            logger.info(f"Processing file: {filename} ({len(file_data)} bytes)")
             players_data = None
             permalink = ""
             
@@ -1369,15 +1373,21 @@ async def analyze_evening_files(
                             
                             if json_response.status_code == 200:
                                 log_data = json_response.json()
+                                logger.info(f"Got JSON for {filename}, error={log_data.get('error', 'none')}")
                                 if 'error' not in log_data:
                                     # Filter: Only accept WvW logs
-                                    if not is_wvw_log(log_data):
+                                    is_wvw = is_wvw_log(log_data)
+                                    logger.info(f"is_wvw_log({filename}): {is_wvw}, fightName={log_data.get('fightName', 'Unknown')}")
+                                    if not is_wvw:
                                         fight_name = log_data.get('fightName', 'Unknown')
                                         logger.warning(f"Skipped non-WvW log in batch: {fight_name}")
                                         skipped_non_wvw += 1
                                         continue
                                     players_data = extract_players_from_ei_json(log_data)
+                                    logger.info(f"Extracted {len(players_data.get('allies', []))} allies, {len(players_data.get('enemies', []))} enemies")
                                     parse_mode = "online"
+                            else:
+                                logger.warning(f"JSON fetch failed for {filename}: status={json_response.status_code}")
                 except Exception as e:
                     logger.warning(f"dps.report failed for {filename}: {e}")
                     dps_report_available = False  # Switch to offline for remaining files
