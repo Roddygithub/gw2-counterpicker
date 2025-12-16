@@ -811,19 +811,21 @@ Réponds UNIQUEMENT dans ce format, rien d'autre."""
         prompt = context_prompts.get(context, context_prompts['zerg'])
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:  # 30s timeout - balanced for AI quality
+            # Use longer timeout for first request (model loading) and retry
+            timeout = httpx.Timeout(60.0, connect=10.0)  # 60s read, 10s connect
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
                     f"{OLLAMA_URL}/api/generate",
                     json={
                         "model": MODEL_NAME,
                         "prompt": prompt,
                         "stream": False,
-                        "keep_alive": "10m",  # Keep model in memory for 10 minutes
+                        "keep_alive": "30m",  # Keep model in memory for 30 minutes
                         "options": {
                             "temperature": 0.7,
                             "top_p": 0.9,
-                            "num_predict": 200,  # Reduced for faster response
-                            "num_ctx": 2048  # Smaller context for speed
+                            "num_predict": 150,  # Shorter response for speed
+                            "num_ctx": 1024  # Minimal context for speed
                         }
                     }
                 )
@@ -857,8 +859,14 @@ Réponds UNIQUEMENT dans ce format, rien d'autre."""
                     logger.error(f"Ollama error: {response.status_code}")
                     return self._fallback_counter(enemy_comp, stats, context)
                     
+        except httpx.TimeoutException as e:
+            logger.error(f"Ollama timeout after 60s: {type(e).__name__}")
+            return self._fallback_counter(enemy_comp, stats, context)
+        except httpx.ConnectError as e:
+            logger.error(f"Cannot connect to Ollama: {e}")
+            return self._fallback_counter(enemy_comp, stats, context)
         except Exception as e:
-            logger.error(f"Generation error: {e}")
+            logger.error(f"Generation error ({type(e).__name__}): {e}")
             return self._fallback_counter(enemy_comp, stats, context)
     
     def _fallback_counter(self, enemy_comp: Dict[str, int], stats: dict, context: str = "zerg") -> dict:
@@ -972,6 +980,31 @@ Réponds UNIQUEMENT dans ce format, rien d'autre."""
 
 # Global instance
 counter_ai = CounterAI()
+
+
+async def warmup_ollama():
+    """
+    Preload the Ollama model into memory at startup.
+    This prevents timeout on the first user request.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            logger.info("Warming up Ollama model...")
+            response = await client.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={
+                    "model": MODEL_NAME,
+                    "prompt": "Hello",
+                    "stream": False,
+                    "keep_alive": "30m"
+                }
+            )
+            if response.status_code == 200:
+                logger.info("✓ Ollama model warmed up and ready")
+            else:
+                logger.warning(f"Ollama warmup returned {response.status_code}")
+    except Exception as e:
+        logger.warning(f"Ollama warmup failed: {e} - first request may be slow")
 
 
 # === API Functions ===

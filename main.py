@@ -43,7 +43,8 @@ from counter_ai import (
     record_fight_for_learning,
     get_ai_counter,
     get_ai_status,
-    counter_ai
+    counter_ai,
+    warmup_ollama
 )
 from services.performance_stats_service import record_player_performance
 from translations import get_all_translations
@@ -61,10 +62,22 @@ logger = get_logger('main')
 
 # Note: GitHub link removed from footer in base.html
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan - warmup Ollama at startup"""
+    # Startup: Warmup Ollama model
+    import asyncio
+    asyncio.create_task(warmup_ollama())
+    yield
+    # Shutdown: nothing to do
+
 app = FastAPI(
     title="GW2 CounterPicker",
     description="The most powerful WvW intelligence tool ever created - IA VIVANTE powered by Llama 3.2",
-    version="3.0.0"
+    version="3.0.0",
+    lifespan=lifespan
 )
 
 # Mount static files
