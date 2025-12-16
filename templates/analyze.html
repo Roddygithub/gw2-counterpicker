@@ -104,29 +104,29 @@
                 <input type="hidden" name="context" :value="fightContext">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <!-- Auto -->
-                    <button type="button" @click="fightContext = 'auto'"
-                            :class="fightContext === 'auto' ? 'border-gw2-purple bg-gw2-purple/20 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
+                    <button type="button" @click="fightContext = 'auto'; $dispatch('context-changed', {context: 'auto'})"
+                            :class="fightContext === 'auto' ? 'border-gw2-purple bg-gw2-purple/20 text-white ring-2 ring-gw2-purple/50' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
                             class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all">
                         <span class="text-xl">🔄</span>
                         <span class="text-sm font-medium">Auto</span>
                     </button>
                     <!-- Zerg -->
-                    <button type="button" @click="fightContext = 'zerg'"
-                            :class="fightContext === 'zerg' ? 'border-red-500 bg-red-500/20 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
+                    <button type="button" @click="fightContext = 'zerg'; $dispatch('context-changed', {context: 'zerg'})"
+                            :class="fightContext === 'zerg' ? 'border-red-500 bg-red-500/20 text-white ring-2 ring-red-500/50' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
                             class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all">
                         <span class="text-xl">⚔️</span>
                         <span class="text-sm font-medium">Zerg</span>
                     </button>
                     <!-- Guild Raid -->
-                    <button type="button" @click="fightContext = 'guild_raid'"
-                            :class="fightContext === 'guild_raid' ? 'border-blue-500 bg-blue-500/20 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
+                    <button type="button" @click="fightContext = 'guild_raid'; $dispatch('context-changed', {context: 'guild_raid'})"
+                            :class="fightContext === 'guild_raid' ? 'border-blue-500 bg-blue-500/20 text-white ring-2 ring-blue-500/50' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
                             class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all">
                         <span class="text-xl">🛡️</span>
                         <span class="text-sm font-medium">{% if lang == 'en' %}Guild{% else %}Guilde{% endif %}</span>
                     </button>
                     <!-- Roam -->
-                    <button type="button" @click="fightContext = 'roam'"
-                            :class="fightContext === 'roam' ? 'border-green-500 bg-green-500/20 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
+                    <button type="button" @click="fightContext = 'roam'; $dispatch('context-changed', {context: 'roam'})"
+                            :class="fightContext === 'roam' ? 'border-green-500 bg-green-500/20 text-white ring-2 ring-green-500/50' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
                             class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all">
                         <span class="text-xl">🗡️</span>
                         <span class="text-sm font-medium">Roam</span>

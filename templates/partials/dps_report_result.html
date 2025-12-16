@@ -143,24 +143,40 @@
         </div>
         
         <!-- Context Modifier -->
-        <div class="mt-4 flex items-center justify-center gap-2">
-            <span class="text-sm text-gray-400">{% if lang == 'en' %}Fight Context:{% else %}Contexte du combat:{% endif %}</span>
-            <div class="flex gap-2" x-data="{ context: '{{ players.context_detected|default('auto') }}' }">
+        <div class="mt-4 flex flex-col items-center gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">{% if lang == 'en' %}Fight Context:{% else %}Contexte du combat:{% endif %}</span>
+                {% if players.context_detected %}
+                <span class="px-2 py-0.5 rounded text-xs bg-gw2-purple/20 text-gw2-purple border border-gw2-purple/30">
+                    {% if lang == 'en' %}Auto-detected:{% else %}Détecté:{% endif %} 
+                    {% if players.context_detected == 'zerg' %}🏰 Zerg
+                    {% elif players.context_detected == 'guild_raid' %}⚔️ Guilde
+                    {% elif players.context_detected == 'roam' %}🗡️ Roam
+                    {% else %}{{ players.context_detected }}{% endif %}
+                </span>
+                {% endif %}
+            </div>
+            <div class="flex gap-2" x-data="{ context: '{{ players.context_detected|default('zerg') }}', showNotification: false, notificationText: '' }"
+                 @click="showNotification = true; notificationText = '{% if lang == 'en' %}Context changed to{% else %}Contexte changé en{% endif %} ' + (context === 'zerg' ? 'Zerg' : context === 'guild_raid' ? 'Guilde' : 'Roam'); setTimeout(() => showNotification = false, 2000)">
                 <button @click="context = 'zerg'" 
-                        :class="context === 'zerg' ? 'bg-purple-500/30 border-purple-500' : 'bg-gw2-darker border-gray-700 hover:border-purple-500/50'"
+                        :class="context === 'zerg' ? 'bg-purple-500/30 border-purple-500 ring-2 ring-purple-500/50' : 'bg-gw2-darker border-gray-700 hover:border-purple-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     🏰 Zerg
                 </button>
                 <button @click="context = 'guild_raid'" 
-                        :class="context === 'guild_raid' ? 'bg-cyan-500/30 border-cyan-500' : 'bg-gw2-darker border-gray-700 hover:border-cyan-500/50'"
+                        :class="context === 'guild_raid' ? 'bg-cyan-500/30 border-cyan-500 ring-2 ring-cyan-500/50' : 'bg-gw2-darker border-gray-700 hover:border-cyan-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     ⚔️ {% if lang == 'en' %}Guild{% else %}Guilde{% endif %}
                 </button>
                 <button @click="context = 'roam'" 
-                        :class="context === 'roam' ? 'bg-orange-500/30 border-orange-500' : 'bg-gw2-darker border-gray-700 hover:border-orange-500/50'"
+                        :class="context === 'roam' ? 'bg-orange-500/30 border-orange-500 ring-2 ring-orange-500/50' : 'bg-gw2-darker border-gray-700 hover:border-orange-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     🗡️ Roam
                 </button>
+                <!-- Notification toast -->
+                <div x-show="showNotification" x-transition class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+                    <span x-text="notificationText"></span>
+                </div>
             </div>
         </div>
     </div>

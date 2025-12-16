@@ -1041,6 +1041,11 @@ class EVTCParser:
                 # Kill tracking
                 if event.result == 8:  # CBTR_KILLINGBLOW
                     parsed.kills += 1
+                
+                # Barrier detection - skill ID 51693 is barrier application
+                # Also check for is_shields flag which indicates barrier
+                if event.is_shields and event.value > 0:
+                    parsed.barrier_out += event.value
             
             # Target is this player (damage taken)
             if event.dst_agent == agent.address:
@@ -1048,6 +1053,12 @@ class EVTCParser:
                     parsed.damage_taken += event.value
                 elif event.buff and event.buff_dmg > 0:
                     parsed.damage_taken += event.buff_dmg
+            
+            # Resurrect detection - statechange CHANGE_UP (3) when target was down
+            if event.is_statechange == 3:  # CHANGE_UP
+                # If this player caused someone to get up (resurrect)
+                if event.src_agent == agent.address:
+                    parsed.resurrects += 1
     
     def _detect_role_and_build(self, player: ParsedPlayer):
         """Detect player's role and build based on combat data"""

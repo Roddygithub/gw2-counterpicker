@@ -872,7 +872,9 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
             'role_counts': enemy_role_counts,
             'specs_by_role': enemy_specs_by_role,
             'total': len(enemies)
-        }
+        },
+        # Auto-detect fight context based on squad size
+        'context_detected': 'zerg' if len(allies) >= 25 else ('guild_raid' if len(allies) >= 10 else 'roam'),
     }
 
 
@@ -1305,6 +1307,8 @@ def extract_players_from_ei_json(data: dict) -> dict:
         },
         'squad_totals': squad_totals,
         'group_boon_uptimes': group_boon_avg,
+        # Auto-detect fight context based on squad size
+        'context_detected': 'zerg' if len(players) >= 25 else ('guild_raid' if len(players) >= 10 else 'roam'),
         'composition': {
             'spec_counts': spec_counts,
             'role_counts': role_counts,
@@ -1805,4 +1809,18 @@ def get_meta_from_database(context: str = None) -> dict:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    import multiprocessing
+    
+    # Use multiple workers for better concurrency (2 workers for small server)
+    # Each worker can handle multiple async requests
+    workers = min(2, multiprocessing.cpu_count())
+    
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8001,
+        workers=workers,
+        limit_concurrency=100,  # Max concurrent connections
+        timeout_keep_alive=30,  # Keep-alive timeout
+        access_log=False,  # Disable access log for performance
+    )
