@@ -1452,7 +1452,8 @@ async def analyze_evening_files(
                 most_played = max(player_stats[account]['specs_played'].items(), key=lambda x: x[1])
                 player_stats[account]['spec'] = most_played[0]
                 
-                player_stats[account]['damage'] += ally.get('dps', 0) * players_data.get('duration_sec', 0)
+                # Use damage_out directly (already total damage), not dps * duration
+                player_stats[account]['damage'] += ally.get('damage_out', ally.get('dps', 0))
                 player_stats[account]['kills'] += ally.get('kills', 0)
                 player_stats[account]['deaths'] += ally.get('deaths', 0)
                 player_stats[account]['appearances'] += 1
