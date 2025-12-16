@@ -692,9 +692,16 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
     
     duration_sec = max(parsed_log.duration_seconds, 1)
     
-    # First pass: collect all ally data
+    # First pass: collect all ally data, deduplicated by account
     all_ally_data = []
+    seen_accounts = set()
     for player in parsed_log.players:
+        # Deduplicate by account
+        if player.account_name and player.account_name in seen_accounts:
+            continue
+        if player.account_name:
+            seen_accounts.add(player.account_name)
+        
         damage = player.damage_dealt or 0
         healing = player.healing_done or 0
         downs = player.downs if hasattr(player, 'downs') else 0
@@ -712,19 +719,22 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
             # Damage stats
             'damage': damage,
             'damage_out': damage,
-            'damage_in': 0,
+            'damage_in': getattr(player, 'damage_taken', 0) or 0,
             'dps': damage // duration_sec,
             'down_contrib': downs,
             'down_contrib_per_sec': round(downs / duration_sec, 2) if downs else 0,
-            'damage_ratio': 0,
+            'damage_ratio': round(damage / max(getattr(player, 'damage_taken', 1) or 1, 1), 2),
             # Combat stats
             'kills': player.kills or 0,
             'deaths': player.deaths or 0,
             'downs': downs,
             'cc_out': 0,
+            'cc_in': 0,
             'boon_strips': 0,
+            'boon_strip_in': 0,
             'strips_per_sec': 0,
             # Support stats
+            'heal_only': healing,
             'healing': healing,
             'healing_per_sec': round(healing / duration_sec, 2) if healing else 0,
             'cleanses': 0,
@@ -953,10 +963,18 @@ def extract_players_from_ei_json(data: dict) -> dict:
     duration_sec = parse_duration_string(data.get('duration', '0'))
 
     players = []
+    seen_accounts = set()  # Deduplicate by account
     group_boon_uptimes = {}  # {group_num: {boon_name: uptime %}}
 
     for player in data.get('players', []):
         player_name = player.get('name', 'Unknown')
+        account = player.get('account', '')
+        
+        # Deduplicate by account - skip if already seen
+        if account and account in seen_accounts:
+            continue
+        if account:
+            seen_accounts.add(account)
         
         # === DAMAGE OUT ===
         dps_entries = player.get('dpsAll', [])
@@ -1027,11 +1045,13 @@ def extract_players_from_ei_json(data: dict) -> dict:
             # Extract kills - EI uses 'killed' for final blows
             kills = stats.get('killed', 0) + stats.get('killedDowned', 0)
         
+        cc_in = 0
         if defenses and len(defenses) > 0:
             d = defenses[0] if isinstance(defenses[0], dict) else {}
             deaths = d.get('deadCount', 0)
             downs = d.get('downCount', 0)
             # CC received (stuns, knockdowns, etc.)
+            cc_in = d.get('interrupts', 0) + d.get('knockdowns', 0)
         
         # === BOON STRIP IN (received from enemies) ===
         boon_strip_in = 0
@@ -1144,6 +1164,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'strips_per_sec': strips_per_sec,
             'resurrects': resurrects,
             # Defensive
+            'cc_in': cc_in,
             'boon_strip_in': boon_strip_in,
             'strip_in_per_sec': strip_in_per_sec,
             # Boons
