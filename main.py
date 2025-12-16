@@ -1337,18 +1337,13 @@ async def analyze_evening_files(
     skipped_non_wvw = 0  # Count of non-WvW logs skipped
     parse_mode = "offline"  # Track which mode was used
     
-    # Try dps.report first, then fallback to local parser
-    dps_report_available = True
+    # Use local parser for evening analysis (faster and more reliable for batch processing)
+    dps_report_available = False
+    logger.info("Using OFFLINE mode for batch analysis (faster)")
     
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        # Quick check if dps.report is available
-        try:
-            test_response = await client.get("https://dps.report/", timeout=5.0)
-            dps_report_available = test_response.status_code == 200
-            logger.info(f"dps.report available: {dps_report_available}")
-        except Exception as e:
-            dps_report_available = False
-            logger.info(f"dps.report unavailable: {e}, using OFFLINE mode")
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        # Skip dps.report check - use local parser directly for batch processing
+        pass
         
         logger.info(f"Processing {len(validated_files)} files...")
         
