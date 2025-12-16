@@ -766,9 +766,13 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
         spec = p['profession']
         spec_counts[spec] = spec_counts.get(spec, 0) + 1
         role = p.get('role', 'dps')
-        if role in role_counts:
-            role_counts[role] += 1
-            specs_by_role[role][spec] = specs_by_role[role].get(spec, 0) + 1
+        # Always count the role, even if not in the predefined list
+        if role not in role_counts:
+            role_counts[role] = 0
+        role_counts[role] += 1
+        if role not in specs_by_role:
+            specs_by_role[role] = {}
+        specs_by_role[role][spec] = specs_by_role[role].get(spec, 0) + 1
     
     enemy_spec_counts = {}
     enemy_role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
