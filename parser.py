@@ -997,12 +997,12 @@ class EVTCParser:
                 if event.skill_id not in parsed.skills_used:
                     parsed.skills_used.append(event.skill_id)
                 
-                # Direct damage
-                if event.buff == 0 and event.value > 0:
+                # Direct damage - filter out impossible values (max 500k per hit is very generous)
+                if event.buff == 0 and 0 < event.value < 500000:
                     parsed.damage_dealt += event.value
                 
-                # Buff damage (conditions)
-                if event.buff and event.buff_dmg > 0:
+                # Buff damage (conditions) - same filter
+                if event.buff and 0 < event.buff_dmg < 500000:
                     parsed.damage_dealt += event.buff_dmg
                 
                 # Buff application (boons/conditions)

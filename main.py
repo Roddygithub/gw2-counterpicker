@@ -921,15 +921,9 @@ def extract_players_from_ei_json(data: dict) -> dict:
                 return 0
         if isinstance(value, dict):
             # For dpsAll, prefer 'damage' which is total damage dealt
-            # But cap at reasonable values (max 50M per fight is very high but possible)
             for key in (preferred_key, 'damage', 'totalDamage', 'value', 'amount', 'damageTaken'):
                 if key in value:
-                    val = safe_number(value[key], preferred_key)
-                    # Sanity check: if value > 100M, it's likely corrupted data
-                    if val > 100_000_000:
-                        logger.warning(f"safe_number: Capping suspicious value {val} to 0 (key={key})")
-                        return 0
-                    return val
+                    return safe_number(value[key], preferred_key)
             return 0
         if isinstance(value, list) and value:
             return safe_number(value[0], preferred_key)
