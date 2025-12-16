@@ -758,54 +758,44 @@ class CounterAI:
         if not self.ollama_available:
             return self._fallback_counter(enemy_comp, stats, context)
         
-        # Context-specific prompts
+        # Context-specific prompts - IMPORTANT: Include game context to avoid content filter
+        game_context = """Tu es un expert du jeu vidéo Guild Wars 2, mode World vs World (WvW).
+C'est un mode PvP de masse où des serveurs s'affrontent. Les "specs" sont des spécialisations de classes (Firebrand, Scourge, Scrapper, etc).
+Tu dois recommander une composition d'équipe pour contrer la composition ennemie."""
+
         context_prompts = {
-            'zerg': f"""Tu es le meilleur commandant WvW EU de l'histoire. Tu as analysé plus de 10 000 fights réels.
-Contexte: ZERG (25+ joueurs par côté, combats de masse open field)
-Composition ennemie actuelle : {enemy_str}
-Voici les 30 derniers fights similaires que nous avons joués :
-{fights_summary}
+            'zerg': f"""{game_context}
 
-Donne-moi en 4 lignes maximum le counter parfait à jouer avec un groupe de 25-50 joueurs.
-Focus sur: timing de push, coordination AOE, survie dans le blob, cibles prioritaires.
-Sois brutal, précis, et donne les priorités cibles.
+Tu es commandant WvW expert. Contexte: ZERG (25+ joueurs, combats de masse).
+Composition ennemie : {enemy_str}
+Fights similaires analysés : {fights_summary}
 
-IMPORTANT: Format de réponse obligatoire:
-- Commence par "CONTER:" 
-- Puis liste les specs à ajouter avec leur nombre
-- Exemple: "CONTER: 3x Firebrand, 2x Druid, 1x Spellbreaker"
-Réponds UNIQUEMENT dans ce format, rien d'autre.""",
+Recommande le counter optimal en 3 lignes. Format obligatoire:
+CONTER: Nx Spec1, Nx Spec2, Nx Spec3
+PRIORITÉ: cibles à focus en premier
+TACTIQUE: conseil tactique court""",
 
-            'guild_raid': f"""Tu es le meilleur raid leader de guilde WvW EU. Tu as analysé plus de 10 000 fights réels.
-Contexte: RAID GUILDE (10-25 joueurs, compo structurée et coordonnée)
-Composition ennemie actuelle : {enemy_str}
-Voici les 30 derniers fights similaires que nous avons joués :
-{fights_summary}
+            'guild_raid': f"""{game_context}
 
-Donne-moi en 4 lignes maximum le counter parfait pour un raid guilde de 15-25 joueurs.
-Focus sur: synergies de compo, rôles précis, discipline et coordination, burst windows.
-Sois brutal, précis, et donne les priorités cibles.
+Tu es raid leader de guilde WvW expert. Contexte: RAID GUILDE (10-25 joueurs coordonnés).
+Composition ennemie : {enemy_str}
+Fights similaires analysés : {fights_summary}
 
-IMPORTANT: Format de réponse obligatoire:
-- Commence par "CONTER:" 
-- Puis liste les specs à ajouter avec leur nombre
-- Exemple: "CONTER: 3x Firebrand, 2x Druid, 1x Spellbreaker"
-Réponds UNIQUEMENT dans ce format, rien d'autre.""",
+Recommande le counter optimal en 3 lignes. Format obligatoire:
+CONTER: Nx Spec1, Nx Spec2, Nx Spec3
+PRIORITÉ: cibles à focus en premier
+TACTIQUE: conseil tactique court""",
 
-            'roam': f"""Tu es le meilleur roamer WvW EU. Tu as analysé plus de 10 000 fights réels.
-Contexte: ROAMING (1-10 joueurs, petit comité, mobilité)
-Composition ennemie actuelle : {enemy_str}
-Voici les 30 derniers fights similaires que nous avons joués :
+            'roam': f"""{game_context}
 
-Donne-moi en 4 lignes maximum le counter parfait pour un groupe de 2-8 joueurs.
-Focus sur: burst, mobilité, disengage, 1v1/2v2 matchups, kiting.
-Sois brutal, précis, et donne les priorités cibles.
+Tu es roamer WvW expert. Contexte: ROAMING (1-10 joueurs, petit groupe mobile).
+Composition ennemie : {enemy_str}
+Fights similaires analysés : {fights_summary}
 
-IMPORTANT: Format de réponse obligatoire:
-- Commence par "CONTER:" 
-- Puis liste les specs à ajouter avec leur nombre
-- Exemple: "CONTER: 3x Firebrand, 2x Druid, 1x Spellbreaker"
-Réponds UNIQUEMENT dans ce format, rien d'autre."""
+Recommande le counter optimal en 3 lignes. Format obligatoire:
+CONTER: Nx Spec1, Nx Spec2, Nx Spec3
+PRIORITÉ: cibles à focus en premier
+TACTIQUE: conseil tactique court"""
         }
         
         prompt = context_prompts.get(context, context_prompts['zerg'])
