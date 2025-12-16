@@ -910,7 +910,7 @@ def build_composition_from_enemies(enemies: list) -> CompositionAnalysis:
 def extract_players_from_ei_json(data: dict) -> dict:
     """Extract player information from Elite Insights JSON with comprehensive stats"""
 
-    def safe_number(value):
+    def safe_number(value, preferred_key='damage'):
         """Convert nested EI values (lists/dicts) to a numeric scalar"""
         if isinstance(value, (int, float)):
             return value
@@ -920,12 +920,19 @@ def extract_players_from_ei_json(data: dict) -> dict:
             except ValueError:
                 return 0
         if isinstance(value, dict):
-            for key in ('damage', 'totalDamage', 'value', 'amount', 'damageTaken'):
+            # For dpsAll, prefer 'damage' which is total damage dealt
+            # But cap at reasonable values (max 50M per fight is very high but possible)
+            for key in (preferred_key, 'damage', 'totalDamage', 'value', 'amount', 'damageTaken'):
                 if key in value:
-                    return safe_number(value[key])
+                    val = safe_number(value[key], preferred_key)
+                    # Sanity check: if value > 100M, it's likely corrupted data
+                    if val > 100_000_000:
+                        logger.warning(f"safe_number: Capping suspicious value {val} to 0 (key={key})")
+                        return 0
+                    return val
             return 0
         if isinstance(value, list) and value:
-            return safe_number(value[0])
+            return safe_number(value[0], preferred_key)
         return 0
 
     # Boon IDs for tracking (from GW2 API)
