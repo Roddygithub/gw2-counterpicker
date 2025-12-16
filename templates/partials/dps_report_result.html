@@ -156,23 +156,39 @@
                 </span>
                 {% endif %}
             </div>
-            <div class="flex gap-2" x-data="{ context: '{{ players.context_detected|default('zerg') }}', showNotification: false, notificationText: '' }"
-                 @click="showNotification = true; notificationText = '{% if lang == 'en' %}Context changed to{% else %}Contexte changé en{% endif %} ' + (context === 'zerg' ? 'Zerg' : context === 'guild_raid' ? 'Guilde' : 'Roam'); setTimeout(() => showNotification = false, 2000)">
-                <button @click="context = 'zerg'" 
+            <!-- Explanation tooltip -->
+            <p class="text-xs text-gray-500 text-center max-w-md">
+                💡 {% if lang == 'en' %}Click a button below to correct the context if auto-detection was wrong. This will update the AI recommendations and help it learn better.{% else %}Clique sur un bouton ci-dessous pour corriger le contexte si la détection automatique est incorrecte. Cela mettra à jour les recommandations de l'IA et l'aidera à mieux apprendre.{% endif %}
+            </p>
+            <div class="flex gap-2" x-data="{ 
+                context: '{{ players.context_detected|default('zerg') }}', 
+                loading: false,
+                showNotification: false, 
+                notificationText: '',
+                enemyComp: '{{ players.enemy_composition.spec_counts|tojson|e if players.enemy_composition else '{}' }}'
+            }">
+                <button @click="if(context !== 'zerg') { context = 'zerg'; loading = true; htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: enemyComp, new_context: 'zerg'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}Context changed to Zerg - AI updated!{% else %}Contexte changé en Zerg - IA mise à jour !{% endif %}'; setTimeout(() => showNotification = false, 3000); }); }" 
                         :class="context === 'zerg' ? 'bg-purple-500/30 border-purple-500 ring-2 ring-purple-500/50' : 'bg-gw2-darker border-gray-700 hover:border-purple-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     🏰 Zerg
                 </button>
-                <button @click="context = 'guild_raid'" 
+                <button @click="if(context !== 'guild_raid') { context = 'guild_raid'; loading = true; htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: enemyComp, new_context: 'guild_raid'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}Context changed to Guild - AI updated!{% else %}Contexte changé en Guilde - IA mise à jour !{% endif %}'; setTimeout(() => showNotification = false, 3000); }); }" 
                         :class="context === 'guild_raid' ? 'bg-cyan-500/30 border-cyan-500 ring-2 ring-cyan-500/50' : 'bg-gw2-darker border-gray-700 hover:border-cyan-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     ⚔️ {% if lang == 'en' %}Guild{% else %}Guilde{% endif %}
                 </button>
-                <button @click="context = 'roam'" 
+                <button @click="if(context !== 'roam') { context = 'roam'; loading = true; htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: enemyComp, new_context: 'roam'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}Context changed to Roam - AI updated!{% else %}Contexte changé en Roam - IA mise à jour !{% endif %}'; setTimeout(() => showNotification = false, 3000); }); }" 
                         :class="context === 'roam' ? 'bg-orange-500/30 border-orange-500 ring-2 ring-orange-500/50' : 'bg-gw2-darker border-gray-700 hover:border-orange-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     🗡️ Roam
                 </button>
+                <!-- Loading indicator -->
+                <div x-show="loading" class="flex items-center">
+                    <svg class="animate-spin h-4 w-4 text-gw2-purple" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
                 <!-- Notification toast -->
                 <div x-show="showNotification" x-transition class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
                     <span x-text="notificationText"></span>
@@ -928,7 +944,7 @@
     
     <!-- IA VIVANTE Counter Section -->
     {% if ai_counter %}
-    <div class="glow-card rounded-2xl p-6 border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-900/20 to-gw2-darker">
+    <div id="ai-counter-section" class="glow-card rounded-2xl p-6 border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-900/20 to-gw2-darker">
         <!-- IA VIVANTE Header -->
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-3">

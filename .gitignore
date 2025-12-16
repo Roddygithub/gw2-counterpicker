@@ -41,7 +41,16 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
 *.log
+logs/
+
+# Data files (keep structure, ignore content)
+*.db
+*.json
+!package.json
+!package-lock.json
 
 # Environment variables
 .env

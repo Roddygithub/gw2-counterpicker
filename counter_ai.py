@@ -811,17 +811,19 @@ Réponds UNIQUEMENT dans ce format, rien d'autre."""
         prompt = context_prompts.get(context, context_prompts['zerg'])
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:  # Reduced timeout for faster fallback
+            async with httpx.AsyncClient(timeout=30.0) as client:  # 30s timeout - balanced for AI quality
                 response = await client.post(
                     f"{OLLAMA_URL}/api/generate",
                     json={
                         "model": MODEL_NAME,
                         "prompt": prompt,
                         "stream": False,
+                        "keep_alive": "10m",  # Keep model in memory for 10 minutes
                         "options": {
                             "temperature": 0.7,
                             "top_p": 0.9,
-                            "num_predict": 256
+                            "num_predict": 200,  # Reduced for faster response
+                            "num_ctx": 2048  # Smaller context for speed
                         }
                     }
                 )

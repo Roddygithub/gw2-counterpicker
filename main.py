@@ -268,6 +268,52 @@ async def evening_page_redirect(request: Request):
     return RedirectResponse(url="/analyze", status_code=301)
 
 
+@app.post("/api/recalculate-counter")
+async def recalculate_counter(
+    request: Request,
+    enemy_composition: str = Form(...),
+    new_context: str = Form(...),
+    fight_id: str = Form(None)
+):
+    """
+    Recalculate AI counter when user changes the fight context.
+    Also updates the fight record with the confirmed context.
+    
+    Args:
+        enemy_composition: JSON string of enemy spec counts
+        new_context: New context chosen by user - "zerg", "guild_raid", "roam"
+        fight_id: Optional fight ID to update with confirmed context
+    """
+    try:
+        enemy_comp = json.loads(enemy_composition)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid enemy composition format")
+    
+    # Validate context
+    valid_contexts = ['zerg', 'guild_raid', 'roam']
+    if new_context not in valid_contexts:
+        new_context = 'zerg'
+    
+    # Update fight record with confirmed context if fight_id provided
+    if fight_id:
+        from counter_ai import fights_table
+        Fight = Query()
+        fights_table.update({'context_confirmed': new_context}, Fight.fight_id == fight_id)
+        logger.info(f"Updated fight {fight_id} with confirmed context: {new_context}")
+    
+    # Recalculate AI counter with new context
+    ai_counter = await get_ai_counter(enemy_comp, context=new_context)
+    
+    lang = get_lang(request)
+    return templates.TemplateResponse("partials/ai_counter_result.html", {
+        "request": request,
+        "ai_counter": ai_counter,
+        "context": new_context,
+        "lang": lang,
+        "t": get_all_translations(lang)
+    })
+
+
 @app.get("/meta", response_class=HTMLResponse)
 @app.get("/meta/{context}", response_class=HTMLResponse)
 async def meta_page(request: Request, context: str = None):

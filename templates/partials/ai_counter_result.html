@@ -1,0 +1,87 @@
+<!-- AI Counter Result Partial - Updated when user changes context -->
+<div class="ai-counter-result" id="ai-counter-container">
+    {% if ai_counter and ai_counter.success %}
+    <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">🧠</span>
+        <span class="font-display font-bold text-gw2-purple">IA VIVANTE</span>
+        <span class="text-xs text-gray-500">Basée sur {{ ai_counter.fights_analyzed }} fights réels</span>
+    </div>
+    
+    {% if ai_counter.model == 'fallback_rules' %}
+    <div class="text-xs text-yellow-500 mb-2">🔄 Règles Fallback</div>
+    {% endif %}
+    
+    <!-- Enemy Composition Detected -->
+    <div class="bg-gw2-darker rounded-lg p-3 mb-3">
+        <div class="flex items-center gap-2 mb-2">
+            <span>👹</span>
+            <span class="font-medium text-red-400">{% if lang == 'en' %}Enemy composition detected{% else %}Composition ennemie détectée{% endif %}</span>
+        </div>
+        <p class="text-sm text-gray-300">{{ ai_counter.enemy_composition }}</p>
+    </div>
+    
+    <!-- Counter Recommendation -->
+    <div class="bg-gw2-darker rounded-lg p-3 mb-3">
+        <div class="flex items-center gap-2 mb-2">
+            <span>⚔️</span>
+            <span class="font-medium text-green-400">{% if lang == 'en' %}Recommended counter-composition{% else %}Contre-composition recommandée{% endif %}</span>
+        </div>
+        <div class="text-sm text-gray-300 whitespace-pre-line">{{ ai_counter.counter }}</div>
+    </div>
+    
+    <!-- Context indicator -->
+    <div class="text-xs text-gray-500 mt-2">
+        {% if context == 'zerg' %}
+        🏰 {% if lang == 'en' %}Zerg context{% else %}Contexte Zerg{% endif %}
+        {% elif context == 'guild_raid' %}
+        ⚔️ {% if lang == 'en' %}Guild context{% else %}Contexte Guilde{% endif %}
+        {% elif context == 'roam' %}
+        🗡️ {% if lang == 'en' %}Roam context{% else %}Contexte Roam{% endif %}
+        {% endif %}
+    </div>
+    
+    <!-- Best Builds Section -->
+    {% if ai_counter.best_builds %}
+    <div class="mt-4 pt-4 border-t border-gray-700">
+        <p class="text-xs text-gray-500 mb-2">📊 {% if lang == 'en' %}Stats from real fights against similar compositions{% else %}Stats issues de fights réels contre des compositions similaires{% endif %}</p>
+        <p class="text-xs text-cyan-400 mb-3">{% if lang == 'en' %}These specs have historically won against similar compositions{% else %}Ces specs ont historiquement gagné contre des compositions similaires{% endif %}</p>
+        
+        <div class="text-sm font-medium text-white mb-2">🏆 {% if lang == 'en' %}OBSERVED DATA: Best performing specs{% else %}DONNÉES OBSERVÉES: Specs les plus performantes{% endif %}</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {% for build in ai_counter.best_builds[:6] %}
+            <div class="bg-gray-800/50 rounded-lg p-2 text-xs">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium text-white">{{ build.count }}x</span>
+                    <span class="text-{{ build.spec|lower }}-400">{{ build.spec }}</span>
+                    <span class="text-gray-500">{{ build.role }}</span>
+                </div>
+                <div class="text-gray-400">
+                    {{ "%.1f"|format(build.win_rate) }}% {% if lang == 'en' %}win rate{% else %}victoires{% endif %}
+                    {% if build.fights > 0 %}
+                    <span class="text-gray-600">• Sur {{ build.fights }} fights réels</span>
+                    {% endif %}
+                </div>
+                {% if build.avg_dps or build.avg_healing %}
+                <div class="text-gray-500 mt-1">
+                    {% if build.avg_dps %}<span>{{ build.avg_dps|int }} DPS moy.</span>{% endif %}
+                    {% if build.avg_healing %}<span class="ml-2">{{ build.avg_healing|int }} Heal moy.</span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="text-xs text-gray-600 mt-3">
+        Powered by {{ ai_counter.model }}
+    </div>
+    
+    {% else %}
+    <!-- Fallback when AI is not available -->
+    <div class="text-center py-4">
+        <span class="text-2xl">🤖</span>
+        <p class="text-gray-400 mt-2">{% if lang == 'en' %}AI analysis unavailable{% else %}Analyse IA indisponible{% endif %}</p>
+    </div>
+    {% endif %}
+</div>
