@@ -1417,6 +1417,8 @@ async def analyze_evening_files(
                 for role, count in comp.get('role_counts', {}).items():
                     aggregated_composition['role_counts'][role] = aggregated_composition['role_counts'].get(role, 0) + count
                 for role, specs in comp.get('specs_by_role', {}).items():
+                    if role not in aggregated_composition['specs_by_role']:
+                        aggregated_composition['specs_by_role'][role] = {}
                     for spec, count in specs.items():
                         aggregated_composition['specs_by_role'][role][spec] = aggregated_composition['specs_by_role'][role].get(spec, 0) + count
                 aggregated_composition['total_players'] += comp.get('total', 0)
