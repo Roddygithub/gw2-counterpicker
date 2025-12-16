@@ -447,6 +447,10 @@ async def analyze_evtc_files(
     
     Security: Rate limited to 10 uploads/min, max 50MB per file, ZIP validation
     """
+    logger.info(f"analyze_evtc_files called with {len(files)} files")
+    for i, file in enumerate(files):
+        logger.info(f"  File {i+1}: {file.filename} ({file.content_type})")
+    
     # Rate limiting check
     await check_upload_rate_limit(request)
     
