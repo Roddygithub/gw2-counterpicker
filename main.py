@@ -682,6 +682,29 @@ def is_player_afk(player) -> bool:
     return damage == 0 and healing == 0 and kills == 0
 
 
+def _map_role_to_standard(role: str) -> str:
+    """Map parser roles to standard roles used in aggregation."""
+    if not role:
+        return 'dps'
+    role_lower = role.lower()
+    # Map parser roles to standard roles
+    role_mapping = {
+        'frontline': 'dps',
+        'backline': 'dps',
+        'roamer': 'dps',
+        'support': 'boon',
+        'healer': 'healer',
+        'heal': 'healer',
+        'dps': 'dps',
+        'dps_strip': 'dps_strip',
+        'strip': 'dps_strip',
+        'stab': 'stab',
+        'boon': 'boon',
+        'unknown': 'dps',
+    }
+    return role_mapping.get(role_lower, 'dps')
+
+
 def convert_parsed_log_to_players_data(parsed_log) -> dict:
     """Convert ParsedLog from local parser to players_data format used by templates."""
     allies = []
@@ -734,7 +757,7 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
             'boon_uptime': {},
             # Meta
             'is_commander': False,
-            'role': player.estimated_role.lower() if player.estimated_role else 'dps',
+            'role': _map_role_to_standard(player.estimated_role),
             'is_afk': is_player_afk(player),
             'in_squad': player.subgroup > 0,  # Group 0 = not in squad
         }
