@@ -811,7 +811,7 @@ Réponds UNIQUEMENT dans ce format, rien d'autre."""
         prompt = context_prompts.get(context, context_prompts['zerg'])
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=15.0) as client:  # Reduced timeout for faster fallback
                 response = await client.post(
                     f"{OLLAMA_URL}/api/generate",
                     json={

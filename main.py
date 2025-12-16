@@ -406,11 +406,12 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
                 # Record fight for AI learning
                 players_data['source'] = 'dps_report'
                 players_data['source_name'] = url
-                record_fight_for_learning(players_data)
+                context = players_data.get('context_detected', 'zerg')
+                record_fight_for_learning(players_data, context=context)
                 
-                # Generate AI counter
+                # Generate AI counter with context
                 enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-                ai_counter = await get_ai_counter(enemy_spec_counts)
+                ai_counter = await get_ai_counter(enemy_spec_counts, context=context)
                 
                 lang = get_lang(request)
                 return templates.TemplateResponse("partials/dps_report_result.html", {
@@ -512,9 +513,9 @@ async def analyze_evtc_files(
                             # Record stats for connected user
                             await record_user_fight_stats(request, players_data, log_data)
                             
-                            # Generate AI counter
+                            # Generate AI counter with context
                             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-                            ai_counter = await get_ai_counter(enemy_spec_counts)
+                            ai_counter = await get_ai_counter(enemy_spec_counts, context=context)
                             
                             logger.info(f"dps.report success: {len(players_data['enemies'])} enemies")
                             
@@ -555,9 +556,9 @@ async def analyze_evtc_files(
             # Record stats for connected user
             await record_user_fight_stats(request, players_data)
             
-            # Generate AI counter
+            # Generate AI counter with context
             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-            ai_counter = await get_ai_counter(enemy_spec_counts)
+            ai_counter = await get_ai_counter(enemy_spec_counts, context=context)
             
             logger.info(f"Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
             
