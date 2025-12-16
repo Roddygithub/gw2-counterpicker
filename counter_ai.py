@@ -96,7 +96,7 @@ def guess_fight_context(
 
 # === CONFIGURATION ===
 OLLAMA_URL = "http://localhost:11434"
-MODEL_NAME = "llama3.2"
+MODEL_NAME = "llama3.2:1b"  # Use 1B model for faster responses on limited hardware
 FIGHTS_DB_PATH = Path("data/fights.db")
 
 # Ensure data directory exists
