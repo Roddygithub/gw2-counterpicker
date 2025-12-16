@@ -1469,7 +1469,11 @@ async def analyze_evening_files(
                 player_stats[account]['spec'] = most_played[0]
                 
                 # Use damage_out directly (already total damage), not dps * duration
-                player_stats[account]['damage'] += ally.get('damage_out', ally.get('dps', 0))
+                damage_value = ally.get('damage_out', ally.get('damage', ally.get('dps', 0)))
+                # Debug: log if damage seems abnormally high (> 100M per fight is suspicious)
+                if damage_value > 100_000_000:
+                    logger.warning(f"SUSPICIOUS DAMAGE: {account} has {damage_value} damage in one fight - checking data: damage_out={ally.get('damage_out')}, damage={ally.get('damage')}, dps={ally.get('dps')}")
+                player_stats[account]['damage'] += damage_value
                 player_stats[account]['kills'] += ally.get('kills', 0)
                 player_stats[account]['deaths'] += ally.get('deaths', 0)
                 player_stats[account]['appearances'] += 1
