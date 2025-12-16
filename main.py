@@ -682,27 +682,6 @@ def is_player_afk(player) -> bool:
     return damage == 0 and healing == 0 and kills == 0
 
 
-def _map_role_to_standard(role: str) -> str:
-    """Map parser roles to standard roles used in aggregation."""
-    if not role:
-        return 'dps'
-    role_lower = role.lower()
-    # Map parser roles to standard roles
-    role_mapping = {
-        'frontline': 'dps',
-        'backline': 'dps',
-        'roamer': 'dps',
-        'support': 'boon',
-        'healer': 'healer',
-        'heal': 'healer',
-        'dps': 'dps',
-        'dps_strip': 'dps_strip',
-        'strip': 'dps_strip',
-        'stab': 'stab',
-        'boon': 'boon',
-        'unknown': 'dps',
-    }
-    return role_mapping.get(role_lower, 'dps')
 
 
 def convert_parsed_log_to_players_data(parsed_log) -> dict:
@@ -757,7 +736,7 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
             'boon_uptime': {},
             # Meta
             'is_commander': False,
-            'role': _map_role_to_standard(player.estimated_role),
+            'role': estimate_role_from_profession(player.elite_spec or player.profession),
             'is_afk': is_player_afk(player),
             'in_squad': player.subgroup > 0,  # Group 0 = not in squad
         }
@@ -1467,10 +1446,17 @@ async def analyze_evening_files(
                 enemy_composition['total'] += enemy_comp.get('total', 0)
             
             # Track player stats for top 10 - USE ACCOUNT NAME for deduplication
+            # Deduplicate allies by account within this fight to avoid counting same player multiple times
+            seen_accounts_this_fight = set()
             for ally in players_data.get('allies', []):
                 # Use account name for deduplication, fallback to character name
                 account = ally.get('account', ally.get('name', 'Unknown'))
                 char_name = ally.get('name', 'Unknown')
+                
+                # Skip if we already counted this account in this fight
+                if account in seen_accounts_this_fight:
+                    continue
+                seen_accounts_this_fight.add(account)
                 
                 if account not in player_stats:
                     player_stats[account] = {
