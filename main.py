@@ -955,6 +955,12 @@ def extract_players_from_ei_json(data: dict) -> dict:
         dps_entries = player.get('dpsAll', [])
         damage_out = safe_number(dps_entries)
         
+        # Debug: log first player's damage to understand the data
+        if len(players) == 0:
+            logger.info(f"DEBUG EI JSON - First player {player_name}: dpsAll type={type(dps_entries)}, damage_out={damage_out}")
+            if dps_entries:
+                logger.info(f"DEBUG EI JSON - dpsAll[0] = {dps_entries[0] if isinstance(dps_entries, list) else dps_entries}")
+        
         # Skip players who didn't participate (less than 1k damage)
         if damage_out < 1000:
             continue
