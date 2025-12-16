@@ -428,6 +428,13 @@ class ParsedPlayer:
     downs: int = 0
     kills: int = 0
     
+    # Advanced stats (extracted from EVTC events)
+    boon_strips: int = 0  # Boons removed from enemies
+    cleanses: int = 0  # Conditions removed from allies
+    cc_out: int = 0  # Crowd control dealt
+    barrier_out: int = 0  # Barrier applied
+    resurrects: int = 0  # Allies resurrected
+    
     # Build detection
     weapons_used: List[str] = field(default_factory=list)
     skills_used: List[int] = field(default_factory=list)
@@ -1013,6 +1020,23 @@ class EVTCParser:
                     elif event.skill_id in CONDITION_IDS:
                         parsed.conditions_applied[event.skill_id] = \
                             parsed.conditions_applied.get(event.skill_id, 0) + 1
+                
+                # Boon strip detection (removing boons from enemies)
+                # is_buffremove: 1 = strip, 2 = cleanse, 3 = manual
+                if event.buff and event.is_buffremove == 1:
+                    # Check if target is an enemy
+                    if event.dst_agent != agent.address and event.skill_id in BOON_IDS:
+                        parsed.boon_strips += 1
+                
+                # Cleanse detection (removing conditions from allies)
+                if event.buff and event.is_buffremove == 2:
+                    if event.skill_id in CONDITION_IDS:
+                        parsed.cleanses += 1
+                
+                # CC detection (stuns, knockdowns, etc.)
+                # Result codes: 0=normal, 1=crit, 2=glance, 3=block, 4=evade, 5=interrupt, 6=absorb, 7=blind, 8=killingblow, 9=downed
+                if event.result == 5:  # Interrupt
+                    parsed.cc_out += 1
                 
                 # Kill tracking
                 if event.result == 8:  # CBTR_KILLINGBLOW
