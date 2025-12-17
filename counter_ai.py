@@ -858,12 +858,15 @@ TACTIQUE: One tactical advice"""
         fights_summary = self._format_fights_summary(similar_fights)
         enemy_str = self._format_enemy_comp(enemy_comp)
         
-        # Check Ollama availability
-        if not self.ollama_available:
-            self._check_ollama()
+        # ALWAYS check Ollama availability before each call
+        self._check_ollama()
+        logger.info(f"Ollama check: available={self.ollama_available}, model={MODEL_NAME}")
         
         if not self.ollama_available:
+            logger.warning(f"Ollama not available, using fallback")
             return self._fallback_counter(enemy_comp, stats, context)
+        
+        logger.info(f"Calling Ollama with model {MODEL_NAME} for {enemy_str}")
         
         # Build prompt based on model format with API-enriched context
         prompt = self._build_prompt(enemy_str, fights_summary, context, enemy_comp)
