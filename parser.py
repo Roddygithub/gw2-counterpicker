@@ -127,28 +127,28 @@ ELITE_SPEC_NAMES = {
     66: "Virtuoso",
     64: "Harbinger",
     69: "Vindicator",
-    # Janthir Wilds
-    73: "Dragonslayer",  # Guardian
-    74: "Deathbringer",  # Warrior - placeholder name
-    75: "Riftstalker",   # Engineer - placeholder name
-    76: "Warden",        # Ranger - placeholder name
-    77: "Trickster",     # Thief - placeholder name
-    78: "Invoker",       # Elementalist - placeholder name
-    79: "Conduit",       # Revenant
-    80: "Evoker",        # Elementalist - confirmed
-    81: "Ritualist",     # Necromancer - placeholder name
+    # Visions of Eternity
+    73: "Luminary",      # Guardian - Radiant Forge
+    74: "Paragon",       # Warrior - Chants/Commands
+    75: "Amalgam",       # Engineer - Morphs
+    76: "Galeshot",      # Ranger - Cyclone Bow
+    77: "Antiquary",     # Thief - Skritt Swipe
+    79: "Conduit",       # Revenant - Legendary Entity
+    80: "Evoker",        # Elementalist - Familiars
+    81: "Troubadour",    # Mesmer - Instruments
+    82: "Ritualist",     # Necromancer - Spirits
 }
 
 ELITE_TO_PROFESSION = {
-    27: 1, 62: 1, 65: 1, 73: 1,  # Guardian
-    18: 2, 61: 2, 68: 2, 74: 2,  # Warrior
-    43: 3, 57: 3, 70: 3, 75: 3,  # Engineer
-    5: 4, 55: 4, 72: 4, 76: 4,   # Ranger
-    7: 5, 58: 5, 71: 5, 77: 5,   # Thief
-    48: 6, 56: 6, 67: 6, 78: 6, 80: 6,  # Elementalist
-    40: 7, 59: 7, 66: 7,  # Mesmer
-    34: 8, 60: 8, 64: 8, 81: 8,  # Necromancer
-    52: 9, 63: 9, 69: 9, 79: 9,  # Revenant
+    27: 1, 62: 1, 65: 1, 73: 1,  # Guardian (Dragonhunter, Firebrand, Willbender, Luminary)
+    18: 2, 61: 2, 68: 2, 74: 2,  # Warrior (Berserker, Spellbreaker, Bladesworn, Paragon)
+    43: 3, 57: 3, 70: 3, 75: 3,  # Engineer (Scrapper, Holosmith, Mechanist, Amalgam)
+    5: 4, 55: 4, 72: 4, 76: 4,   # Ranger (Druid, Soulbeast, Untamed, Galeshot)
+    7: 5, 58: 5, 71: 5, 77: 5,   # Thief (Daredevil, Deadeye, Specter, Antiquary)
+    48: 6, 56: 6, 67: 6, 80: 6,  # Elementalist (Tempest, Weaver, Catalyst, Evoker)
+    40: 7, 59: 7, 66: 7, 81: 7,  # Mesmer (Chronomancer, Mirage, Virtuoso, Troubadour)
+    34: 8, 60: 8, 64: 8, 82: 8,  # Necromancer (Reaper, Scourge, Harbinger, Ritualist)
+    52: 9, 63: 9, 69: 9, 79: 9,  # Revenant (Herald, Renegade, Vindicator, Conduit)
 }
 
 

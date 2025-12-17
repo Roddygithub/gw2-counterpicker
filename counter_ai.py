@@ -790,7 +790,7 @@ class CounterAI:
     
     def _build_prompt(self, enemy_str: str, fights_summary: str, context: str, enemy_comp: Dict[str, int] = None) -> str:
         """Build prompt based on current model's format with API-enriched context"""
-        valid_specs = "Firebrand, Willbender, Dragonhunter, Spellbreaker, Berserker, Bladesworn, Herald, Vindicator, Renegade, Scrapper, Holosmith, Mechanist, Druid, Soulbeast, Untamed, Daredevil, Deadeye, Specter, Tempest, Weaver, Catalyst, Chronomancer, Mirage, Virtuoso, Reaper, Scourge, Harbinger"
+        valid_specs = "Dragonhunter, Firebrand, Willbender, Luminary, Berserker, Spellbreaker, Bladesworn, Paragon, Scrapper, Holosmith, Mechanist, Amalgam, Druid, Soulbeast, Untamed, Galeshot, Daredevil, Deadeye, Specter, Antiquary, Tempest, Weaver, Catalyst, Evoker, Chronomancer, Mirage, Virtuoso, Troubadour, Reaper, Scourge, Harbinger, Ritualist, Herald, Renegade, Vindicator, Conduit"
         
         model_config = MODEL_CONFIGS.get(MODEL_NAME, MODEL_CONFIGS["qwen2.5:3b"])
         prompt_format = model_config.get("prompt_format", "qwen")

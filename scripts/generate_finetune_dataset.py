@@ -47,17 +47,26 @@ if WVW_SPECS_PATH.exists():
     with open(WVW_SPECS_PATH, 'r', encoding='utf-8') as f:
         WVW_SPEC_DATA = json.load(f)
 
-# Valid GW2 elite specs
+# Valid GW2 elite specs (including Visions of Eternity)
 VALID_SPECS = {
-    "Firebrand", "Willbender", "Dragonhunter",
-    "Spellbreaker", "Berserker", "Bladesworn",
-    "Herald", "Vindicator", "Renegade",
-    "Scrapper", "Holosmith", "Mechanist",
-    "Druid", "Soulbeast", "Untamed",
-    "Daredevil", "Deadeye", "Specter",
-    "Tempest", "Weaver", "Catalyst",
-    "Chronomancer", "Mirage", "Virtuoso",
-    "Reaper", "Scourge", "Harbinger"
+    # Guardian - HoT/PoF/EoD/VoE
+    "Dragonhunter", "Firebrand", "Willbender", "Luminary",
+    # Warrior - HoT/PoF/EoD/VoE
+    "Berserker", "Spellbreaker", "Bladesworn", "Paragon",
+    # Engineer - HoT/PoF/EoD/VoE
+    "Scrapper", "Holosmith", "Mechanist", "Amalgam",
+    # Ranger - HoT/PoF/EoD/VoE
+    "Druid", "Soulbeast", "Untamed", "Galeshot",
+    # Thief - HoT/PoF/EoD/VoE
+    "Daredevil", "Deadeye", "Specter", "Antiquary",
+    # Elementalist - HoT/PoF/EoD/VoE
+    "Tempest", "Weaver", "Catalyst", "Evoker",
+    # Mesmer - HoT/PoF/EoD/VoE
+    "Chronomancer", "Mirage", "Virtuoso", "Troubadour",
+    # Necromancer - HoT/PoF/EoD/VoE
+    "Reaper", "Scourge", "Harbinger", "Ritualist",
+    # Revenant - HoT/PoF/EoD/VoE
+    "Herald", "Renegade", "Vindicator", "Conduit"
 }
 
 # Role priorities for FOCUS targeting
@@ -71,6 +80,7 @@ ROLE_PRIORITY = {
 
 # Spec to role mapping
 SPEC_ROLES = {
+    # Core specs
     "Firebrand": "stab", "Druid": "heal", "Tempest": "heal", "Scrapper": "heal",
     "Herald": "boon", "Chronomancer": "boon", "Renegade": "boon",
     "Spellbreaker": "strip", "Reaper": "strip", "Scourge": "strip",
@@ -79,11 +89,22 @@ SPEC_ROLES = {
     "Mechanist": "dps", "Soulbeast": "dps", "Untamed": "dps",
     "Daredevil": "dps", "Deadeye": "dps", "Specter": "dps",
     "Weaver": "dps", "Catalyst": "dps", "Mirage": "dps",
-    "Virtuoso": "dps", "Harbinger": "dps"
+    "Virtuoso": "dps", "Harbinger": "dps",
+    # Visions of Eternity specs
+    "Luminary": "heal",      # Guardian - Radiant Forge support
+    "Paragon": "stab",       # Warrior - Chants/Commands support
+    "Amalgam": "dps",        # Engineer - Morphs DPS
+    "Galeshot": "dps",       # Ranger - Cyclone Bow DPS
+    "Antiquary": "dps",      # Thief - Skritt Swipe DPS
+    "Evoker": "dps",         # Elementalist - Familiars DPS
+    "Troubadour": "boon",    # Mesmer - Instruments support
+    "Ritualist": "strip",    # Necromancer - Spirits corrupt
+    "Conduit": "boon"        # Revenant - Legendary Entity support
 }
 
 # Counter recommendations based on meta knowledge
 COUNTER_MATRIX = {
+    # Core specs
     "Firebrand": ["Spellbreaker", "Scourge"],  # Strip aegis/stab
     "Scrapper": ["Reaper", "Harbinger"],        # Power burst through barrier
     "Scourge": ["Spellbreaker", "Willbender"],  # Fast push, don't let shades stack
@@ -94,6 +115,16 @@ COUNTER_MATRIX = {
     "Reaper": ["Scrapper", "Firebrand"],        # Sustain through shroud
     "Soulbeast": ["Scrapper", "Firebrand"],     # Sustain
     "Weaver": ["Spellbreaker", "Deadeye"],      # Interrupt/burst
+    # Visions of Eternity counters
+    "Luminary": ["Spellbreaker", "Ritualist"],  # Strip radiant boons
+    "Paragon": ["Scourge", "Ritualist"],        # Corrupt stability/echoes
+    "Amalgam": ["Spellbreaker", "Antiquary"],   # Interrupt morphs
+    "Galeshot": ["Deadeye", "Antiquary"],       # Burst before squalls
+    "Antiquary": ["Scrapper", "Paragon"],       # Sustain through backfire
+    "Evoker": ["Spellbreaker", "Antiquary"],    # Interrupt familiars
+    "Troubadour": ["Spellbreaker", "Ritualist"], # Strip performance boons
+    "Ritualist": ["Willbender", "Antiquary"],   # Burst spirits down
+    "Conduit": ["Scrapper", "Paragon"]          # Sustain through resonance
 }
 
 # Tactical advice per context
