@@ -202,16 +202,35 @@
             </div>
             
             <button type="submit" 
-                    :disabled="selectedFiles.length === 0"
-                    :class="selectedFiles.length > 0 ? 'bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple hover:scale-[1.02]' : 'bg-gray-700 cursor-not-allowed'"
-                    class="w-full mt-6 py-4 rounded-xl font-display font-bold text-lg transition-all flex items-center justify-center gap-3">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                </svg>
-                <span x-show="selectedFiles.length === 1">{% if lang == 'en' %}Analyze file{% else %}Analyser le fichier{% endif %}</span>
-                <span x-show="selectedFiles.length > 1">{% if lang == 'en' %}Analyze{% else %}Analyser{% endif %} <span x-text="selectedFiles.length"></span> {% if lang == 'en' %}files{% else %}fichiers{% endif %}</span>
+                    :disabled="selectedFiles.length === 0 || isAnalyzing"
+                    :class="selectedFiles.length > 0 && !isAnalyzing ? 'bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple hover:scale-[1.02]' : 'bg-gray-700 cursor-not-allowed'"
+                    class="w-full mt-6 py-4 rounded-xl font-display font-bold text-lg transition-all flex items-center justify-center gap-3 relative overflow-hidden">
                 
-                <span id="loading-file" class="htmx-indicator">
+                <!-- Progress bar overlay -->
+                <div x-show="isAnalyzing" 
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+                    <div class="w-full h-2 bg-gray-700 rounded-full overflow-hidden mb-2">
+                        <div class="h-full bg-gradient-to-r from-gw2-purple to-cyber-pink transition-all duration-500 ease-out"
+                             :style="`width: ${analysisProgress}%`"></div>
+                    </div>
+                    <span class="text-white text-sm font-medium">
+                        <span x-text="analysisProgress"></span>% - {% if lang == 'en' %}Analyzing{% else %}Analyse en cours{% endif %}...
+                    </span>
+                </div>
+                
+                <!-- Normal button content -->
+                <div x-show="!isAnalyzing" class="flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <span x-show="selectedFiles.length === 1">{% if lang == 'en' %}Analyze file{% else %}Analyser le fichier{% endif %}</span>
+                    <span x-show="selectedFiles.length > 1">{% if lang == 'en' %}Analyze{% else %}Analyser{% endif %} <span x-text="selectedFiles.length"></span> {% if lang == 'en' %}files{% else %}fichiers{% endif %}</span>
+                </div>
+                
+                <span id="loading-file" class="htmx-indicator" x-show="false">
                     <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -331,4 +350,123 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('analyzeApp', () => ({
+        selectedFiles: [],
+        isDragging: false,
+        mode: 'files',
+        fightContext: 'auto',
+        isAnalyzing: false,
+        analysisProgress: 0,
+        eventSource: null,
+        
+        contextDescriptions: {
+            'auto': "{{ 'Auto-detect based on squad size' if lang == 'en' else 'Détection automatique basée sur la taille du squad' }}",
+            'zerg': "{{ 'Large scale WvW (25+ players)' if lang == 'en' else 'WvW grande échelle (25+ joueurs)' }}",
+            'guild_raid': "{{ 'Organized guild group (15-25 players)' if lang == 'en' else 'Groupe organisé (15-25 joueurs)' }}",
+            'roam': "{{ 'Small group or solo (5-15 players)' if lang == 'en' else 'Petit groupe ou solo (5-15 joueurs)' }}"
+        },
+        
+        init() {
+            // Override form submission to handle progress
+            const form = document.querySelector('form[action="/api/analyze/evtc"]');
+            if (form) {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.startAnalysis();
+                });
+            }
+        },
+        
+        handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            this.selectedFiles = files;
+        },
+        
+        handleDrop(event) {
+            event.preventDefault();
+            this.isDragging = false;
+            const files = Array.from(event.dataTransfer.files);
+            this.selectedFiles = files;
+        },
+        
+        clearFiles() {
+            this.selectedFiles = [];
+            const fileInput = document.querySelector('#evtc-file');
+            if (fileInput) fileInput.value = '';
+        },
+        
+        removeFile(index) {
+            this.selectedFiles.splice(index, 1);
+        },
+        
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+        
+        async startAnalysis() {
+            if (this.selectedFiles.length === 0 || this.isAnalyzing) return;
+            
+            this.isAnalyzing = true;
+            this.analysisProgress = 0;
+            
+            // Start SSE connection for progress updates
+            this.eventSource = new EventSource('/api/analyze/progress');
+            
+            this.eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                this.analysisProgress = data.progress;
+                
+                if (data.progress >= 100) {
+                    this.eventSource.close();
+                    this.isAnalyzing = false;
+                    this.analysisProgress = 0;
+                }
+            };
+            
+            this.eventSource.onerror = () => {
+                this.eventSource.close();
+                this.isAnalyzing = false;
+                this.analysisProgress = 0;
+            };
+            
+            // Submit the form with files
+            const formData = new FormData();
+            this.selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+            formData.append('context', this.fightContext);
+            
+            try {
+                const response = await fetch('/api/analyze/evtc', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    document.getElementById('result-container').innerHTML = html;
+                } else {
+                    console.error('Analysis failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            } finally {
+                // Ensure cleanup
+                if (this.eventSource) {
+                    this.eventSource.close();
+                }
+                this.isAnalyzing = false;
+                this.analysisProgress = 0;
+            }
+        }
+    }));
+});
+</script>
 {% endblock %}

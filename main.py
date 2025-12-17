@@ -12,13 +12,14 @@ import os
 import re
 import uuid
 import json
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 from pathlib import Path
 from dataclasses import asdict
 
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import httpx
@@ -489,6 +490,31 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
         logger.error(f"dps.report API failed: {e}")
     
     raise HTTPException(status_code=500, detail="Failed to fetch dps.report data")
+
+
+@app.get("/api/analyze/progress")
+async def analyze_progress(request: Request):
+    """
+    Server-Sent Events endpoint for real-time progress updates
+    """
+    async def event_generator():
+        # Simulate progress for now - in real implementation, 
+        # this would be connected to actual parsing progress
+        progress = 0
+        while progress <= 100:
+            yield f"data: {json.dumps({'progress': progress, 'status': 'Analyzing...' if progress < 100 else 'Complete'})}\n\n"
+            progress += 10
+            await asyncio.sleep(0.5)  # Simulate work
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        }
+    )
 
 
 @app.post("/api/analyze/evtc")
