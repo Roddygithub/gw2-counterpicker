@@ -96,7 +96,7 @@ def guess_fight_context(
 
 # === CONFIGURATION ===
 OLLAMA_URL = "http://localhost:11434"
-MODEL_NAME = "llama3.2"  # Use 3B model - requires decent hardware (8GB+ RAM)
+MODEL_NAME = "mistral:7b"  # Mistral 7B - no content filter, better GW2 understanding. Requires 8GB+ RAM
 FIGHTS_DB_PATH = Path("data/fights.db")
 
 # Ensure data directory exists
@@ -751,64 +751,55 @@ class CounterAI:
         fights_summary = self._format_fights_summary(similar_fights)
         enemy_str = self._format_enemy_comp(enemy_comp)
         
-        # Llama 3.2 has content filter issues with GW2 combat prompts
-        # Use smart_rules fallback which uses historical data effectively
-        # TODO: Consider using Groq API or fine-tuned model in the future
-        return self._fallback_counter(enemy_comp, stats, context)
+        # Check Ollama availability
+        if not self.ollama_available:
+            self._check_ollama()
         
-        # List of valid GW2 elite specs for the prompt
-        valid_specs = """SPECS VALIDES (utilise UNIQUEMENT ces noms):
-- Guardian: Firebrand, Willbender, Dragonhunter
-- Warrior: Spellbreaker, Berserker, Bladesworn
-- Revenant: Herald, Vindicator, Renegade
-- Engineer: Scrapper, Holosmith, Mechanist
-- Ranger: Druid, Soulbeast, Untamed
-- Thief: Daredevil, Deadeye, Specter
-- Elementalist: Tempest, Weaver, Catalyst
-- Mesmer: Chronomancer, Mirage, Virtuoso
-- Necromancer: Reaper, Scourge, Harbinger"""
+        if not self.ollama_available:
+            return self._fallback_counter(enemy_comp, stats, context)
+        
+        # Mistral 7B optimized prompts - concise format for faster inference
+        # Uses [INST] format that Mistral understands best
+        valid_specs = "Firebrand,Willbender,Dragonhunter,Spellbreaker,Berserker,Bladesworn,Herald,Vindicator,Renegade,Scrapper,Holosmith,Mechanist,Druid,Soulbeast,Untamed,Daredevil,Deadeye,Specter,Tempest,Weaver,Catalyst,Chronomancer,Mirage,Virtuoso,Reaper,Scourge,Harbinger"
 
-        # Context-specific prompts with valid specs list
+        # Context-specific prompts optimized for Mistral 7B
         context_prompts = {
-            'zerg': f"""Guild Wars 2 WvW expert. ZERG mode (25+ players).
+            'zerg': f"""[INST] You are a Guild Wars 2 WvW expert. Mode: ZERG (25+ players).
+Valid specs: {valid_specs}
+Enemy composition: {enemy_str}
+Historical data: {fights_summary}
 
-{valid_specs}
+Respond in this EXACT format only:
+CONTER: Nx Spec, Nx Spec, Nx Spec
+FOCUS: Target1 > Target2 > Target3
+TACTIQUE: One tactical advice [/INST]""",
 
-ENEMY: {enemy_str}
+            'guild_raid': f"""[INST] You are a Guild Wars 2 WvW expert. Mode: GUILD RAID (10-25 players).
+Valid specs: {valid_specs}
+Enemy composition: {enemy_str}
+Historical data: {fights_summary}
 
-Answer in EXACTLY this format, nothing else:
-CONTER: 2x Spellbreaker, 2x Scourge, 1x Scrapper
-FOCUS: Firebrand > Scrapper > Scourge  
-TACTIQUE: Strip aegis then coordinated burst""",
+Respond in this EXACT format only:
+CONTER: Nx Spec, Nx Spec, Nx Spec
+FOCUS: Target1 > Target2 > Target3
+TACTIQUE: One tactical advice [/INST]""",
 
-            'guild_raid': f"""Guild Wars 2 WvW expert. GUILD mode (10-25 players).
+            'roam': f"""[INST] You are a Guild Wars 2 WvW expert. Mode: ROAMING (1-10 players).
+Valid specs: {valid_specs}
+Enemy composition: {enemy_str}
+Historical data: {fights_summary}
 
-{valid_specs}
-
-ENEMY: {enemy_str}
-
-Answer in EXACTLY this format, nothing else:
-CONTER: 2x Spellbreaker, 2x Scourge, 1x Scrapper
-FOCUS: Firebrand > Scrapper > Scourge
-TACTIQUE: Strip aegis then coordinated burst""",
-
-            'roam': f"""Guild Wars 2 WvW expert. ROAMING mode (1-10 players).
-
-{valid_specs}
-
-ENEMY: {enemy_str}
-
-Answer in EXACTLY this format, nothing else:
-CONTER: 1x Willbender, 1x Deadeye
-FOCUS: Druid > Virtuoso
-TACTIQUE: Burst healer first, kite if needed"""
+Respond in this EXACT format only:
+CONTER: Nx Spec, Nx Spec
+FOCUS: Target1 > Target2
+TACTIQUE: One tactical advice [/INST]"""
         }
         
         prompt = context_prompts.get(context, context_prompts['zerg'])
 
         try:
-            # Use longer timeout for first request (model loading) and retry
-            timeout = httpx.Timeout(60.0, connect=10.0)  # 60s read, 10s connect
+            # Mistral 7B needs longer timeout (40-60s on CPU)
+            timeout = httpx.Timeout(90.0, connect=15.0)  # 90s read, 15s connect
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
                     f"{OLLAMA_URL}/api/generate",
@@ -816,12 +807,14 @@ TACTIQUE: Burst healer first, kite if needed"""
                         "model": MODEL_NAME,
                         "prompt": prompt,
                         "stream": False,
-                        "keep_alive": "30m",  # Keep model in memory for 30 minutes
+                        "keep_alive": "60m",  # Keep model in memory for 60 minutes
                         "options": {
-                            "temperature": 0.3,  # Lower temperature for more focused responses
+                            "temperature": 0.1,  # Very low for consistent format
                             "top_p": 0.9,
-                            "num_predict": 200,  # Enough for 3 lines
-                            "num_ctx": 2048  # Enough context for prompt + specs list
+                            "num_predict": 60,  # Very short response (3 lines max)
+                            "num_ctx": 512,  # Minimal context for speed
+                            "repeat_penalty": 1.2,  # Avoid repetition
+                            "stop": ["\n\n", "Note:", "Explanation:"]  # Stop tokens
                         }
                     }
                 )
@@ -998,23 +991,24 @@ counter_ai = CounterAI()
 
 async def warmup_ollama():
     """
-    Preload the Ollama model into memory at startup.
+    Preload the Mistral 7B model into memory at startup.
     This prevents timeout on the first user request.
+    Mistral 7B takes ~20s to load on CPU.
     """
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            logger.info("Warming up Ollama model...")
+        async with httpx.AsyncClient(timeout=180.0) as client:  # 3 min timeout for model loading
+            logger.info(f"Warming up {MODEL_NAME} model (this may take 20-30s)...")
             response = await client.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={
                     "model": MODEL_NAME,
                     "prompt": "Hello",
                     "stream": False,
-                    "keep_alive": "30m"
+                    "keep_alive": "60m"  # Keep in memory for 60 minutes
                 }
             )
             if response.status_code == 200:
-                logger.info("✓ Ollama model warmed up and ready")
+                logger.info(f"✓ {MODEL_NAME} warmed up and ready")
             else:
                 logger.warning(f"Ollama warmup returned {response.status_code}")
     except Exception as e:
