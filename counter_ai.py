@@ -97,6 +97,14 @@ def guess_fight_context(
 # === CONFIGURATION ===
 OLLAMA_URL = "http://localhost:11434"
 FIGHTS_DB_PATH = Path("data/fights.db")
+WVW_SPECS_PATH = Path("data/gw2_wvw_specs.json")
+
+# Load WvW spec data from API (cached locally)
+WVW_SPEC_DATA = {}
+if WVW_SPECS_PATH.exists():
+    import json as _json
+    with open(WVW_SPECS_PATH, 'r', encoding='utf-8') as _f:
+        WVW_SPEC_DATA = _json.load(_f)
 
 # Model configuration - auto-detect based on available RAM
 # Qwen2.5:3b for servers with limited RAM (< 6GB), Mistral 7B for local with more RAM
@@ -104,11 +112,11 @@ MODEL_CONFIGS = {
     "qwen2.5:3b": {
         "name": "qwen2.5:3b",
         "ram_required": 3,  # GB
-        "timeout": 30,
-        "num_predict": 60,
-        "num_ctx": 512,
+        "timeout": 45,
+        "num_predict": 80,
+        "num_ctx": 1024,  # Increased for enriched prompts
         "temperature": 0.1,
-        "prompt_format": "qwen"  # Uses <|im_start|> format
+        "prompt_format": "qwen"
     },
     "mistral:7b": {
         "name": "mistral:7b",
@@ -761,8 +769,27 @@ class CounterAI:
         
         return best_by_role
     
-    def _build_prompt(self, enemy_str: str, fights_summary: str, context: str) -> str:
-        """Build prompt based on current model's format"""
+    def _build_enemy_analysis(self, enemy_comp: Dict[str, int]) -> str:
+        """Build enriched enemy analysis from API data"""
+        if not WVW_SPEC_DATA:
+            return ""
+        
+        lines = []
+        for spec in enemy_comp.keys():
+            if spec in WVW_SPEC_DATA:
+                data = WVW_SPEC_DATA[spec]
+                roles = ", ".join(data.get("role_tags", [])[:3])
+                weak_to = data.get("counters", {}).get("weak_to", [])[:2]
+                
+                line = f"- {spec}: {roles}"
+                if weak_to:
+                    line += f" (weak to: {', '.join(weak_to)})"
+                lines.append(line)
+        
+        return "\n".join(lines) if lines else ""
+    
+    def _build_prompt(self, enemy_str: str, fights_summary: str, context: str, enemy_comp: Dict[str, int] = None) -> str:
+        """Build prompt based on current model's format with API-enriched context"""
         valid_specs = "Firebrand, Willbender, Dragonhunter, Spellbreaker, Berserker, Bladesworn, Herald, Vindicator, Renegade, Scrapper, Holosmith, Mechanist, Druid, Soulbeast, Untamed, Daredevil, Deadeye, Specter, Tempest, Weaver, Catalyst, Chronomancer, Mirage, Virtuoso, Reaper, Scourge, Harbinger"
         
         model_config = MODEL_CONFIGS.get(MODEL_NAME, MODEL_CONFIGS["qwen2.5:3b"])
@@ -775,24 +802,36 @@ class CounterAI:
         }
         mode = context_names.get(context, context_names['zerg'])
         
-        # Base content (same for all formats)
+        # Build enriched enemy analysis from API data
+        enemy_analysis = ""
+        if enemy_comp and WVW_SPEC_DATA:
+            enemy_analysis = self._build_enemy_analysis(enemy_comp)
+        
+        # Base content with optional enrichment
         base_content = f"""Guild Wars 2 WvW counter-picker.
 
-VALID SPECS ONLY: {valid_specs}
+VALID SPECS: {valid_specs}
 
 Mode: {mode}
-Enemy: {enemy_str}
+Enemy: {enemy_str}"""
 
-Respond EXACTLY like this (use only specs from the list above):
-CONTER: 2x Spellbreaker, 2x Scourge
-FOCUS: Firebrand > Scrapper
-TACTIQUE: Strip aegis then burst"""
+        # Add enriched context if available
+        if enemy_analysis:
+            base_content += f"""
+
+[ENEMY ANALYSIS]
+{enemy_analysis}"""
+
+        base_content += """
+
+Respond EXACTLY in this format:
+CONTER: Nx Spec, Nx Spec
+FOCUS: Target1 > Target2
+TACTIQUE: One tactical advice"""
 
         if prompt_format == "qwen":
-            # Qwen uses <|im_start|> format but works well with simple prompts
             return base_content
         else:
-            # Mistral uses [INST] format
             return f"[INST] {base_content} [/INST]"
     
     async def generate_counter(self, enemy_comp: Dict[str, int], context: str = "zerg") -> dict:
@@ -817,8 +856,8 @@ TACTIQUE: Strip aegis then burst"""
         if not self.ollama_available:
             return self._fallback_counter(enemy_comp, stats, context)
         
-        # Build prompt based on model format
-        prompt = self._build_prompt(enemy_str, fights_summary, context)
+        # Build prompt based on model format with API-enriched context
+        prompt = self._build_prompt(enemy_str, fights_summary, context, enemy_comp)
         
         # Get model-specific configuration
         model_config = MODEL_CONFIGS.get(MODEL_NAME, MODEL_CONFIGS["qwen2.5:3b"])

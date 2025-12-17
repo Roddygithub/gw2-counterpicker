@@ -36,9 +36,16 @@ from tinydb import TinyDB
 
 # Configuration
 FIGHTS_DB_PATH = Path("data/fights.db")
+WVW_SPECS_PATH = Path("data/gw2_wvw_specs.json")
 OUTPUT_PATH_QWEN = Path("data/finetune_dataset_qwen.jsonl")
 OUTPUT_PATH_MISTRAL = Path("data/finetune_dataset_mistral.jsonl")
 MIN_EXAMPLES_PER_CONTEXT = 50  # Minimum examples per context type
+
+# Load WvW spec data from API (if available)
+WVW_SPEC_DATA = {}
+if WVW_SPECS_PATH.exists():
+    with open(WVW_SPECS_PATH, 'r', encoding='utf-8') as f:
+        WVW_SPEC_DATA = json.load(f)
 
 # Valid GW2 elite specs
 VALID_SPECS = {
@@ -184,6 +191,52 @@ def get_focus_targets(enemy_comp: dict) -> list:
     return [t[0] for t in sorted_targets[:3]]
 
 
+def get_spec_context(spec_name: str) -> str:
+    """Get WvW context for a spec from API data"""
+    if spec_name not in WVW_SPEC_DATA:
+        return ""
+    
+    data = WVW_SPEC_DATA[spec_name]
+    roles = ", ".join(data.get("role_tags", []))
+    desc = data.get("wvw_description", "")
+    countered_by = data.get("counters", {}).get("countered_by", [])
+    weak_to = data.get("counters", {}).get("weak_to", [])
+    
+    context_parts = [f"{spec_name} ({data.get('profession', '')})"]
+    if roles:
+        context_parts.append(f"Role: {roles}")
+    if desc:
+        context_parts.append(desc)
+    if countered_by:
+        context_parts.append(f"Countered by: {', '.join(countered_by)}")
+    if weak_to:
+        context_parts.append(f"Weak to: {', '.join(weak_to)}")
+    
+    return " | ".join(context_parts)
+
+
+def build_enemy_context(enemy_comp: dict) -> str:
+    """Build enriched context block for enemy composition"""
+    if not WVW_SPEC_DATA:
+        return ""
+    
+    context_lines = []
+    for spec in enemy_comp.keys():
+        if spec in WVW_SPEC_DATA:
+            data = WVW_SPEC_DATA[spec]
+            roles = ", ".join(data.get("role_tags", [])[:3])  # Top 3 roles
+            weak_to = data.get("counters", {}).get("weak_to", [])[:2]  # Top 2 weaknesses
+            
+            line = f"- {spec}: {roles}"
+            if weak_to:
+                line += f" (weak to: {', '.join(weak_to)})"
+            context_lines.append(line)
+    
+    if context_lines:
+        return "\n".join(context_lines)
+    return ""
+
+
 def generate_example(enemy_comp: dict, context: str, outcome: str = None, model_format: str = "qwen") -> dict:
     """Generate a single training example for fine-tuning
     
@@ -197,6 +250,7 @@ def generate_example(enemy_comp: dict, context: str, outcome: str = None, model_
     
     valid_specs_str = ", ".join(sorted(VALID_SPECS))
     enemy_str = format_enemy_comp(enemy_comp)
+    enemy_context = build_enemy_context(enemy_comp)
     
     context_names = {
         "zerg": "ZERG (25+ players)",
@@ -205,30 +259,38 @@ def generate_example(enemy_comp: dict, context: str, outcome: str = None, model_
     }
     mode = context_names.get(context, context_names['zerg'])
     
-    # Base content (same for both formats)
+    # Build enriched prompt with API data
     base_content = f"""Guild Wars 2 WvW counter-picker.
 
-VALID SPECS ONLY: {valid_specs_str}
+VALID SPECS: {valid_specs_str}
 
 Mode: {mode}
-Enemy: {enemy_str}
+Enemy composition: {enemy_str}"""
 
-Respond EXACTLY like this (use only specs from the list above):
-CONTER: 2x Spellbreaker, 2x Scourge
-FOCUS: Firebrand > Scrapper
-TACTIQUE: Strip aegis then burst"""
+    # Add enriched context if available
+    if enemy_context:
+        base_content += f"""
+
+[ENEMY ANALYSIS]
+{enemy_context}"""
+
+    base_content += """
+
+Respond EXACTLY in this format:
+CONTER: Nx Spec, Nx Spec
+FOCUS: Target1 > Target2
+TACTIQUE: One tactical advice"""
 
     # Format prompt based on model
     if model_format == "mistral":
         prompt = f"[INST] {base_content} [/INST]"
     else:
-        # Qwen works well with simple prompts
         prompt = base_content
 
-    # Output response
+    # Output response - use counter data from API if available
     counter_specs = get_counter_specs(enemy_comp, context)
     focus_targets = get_focus_targets(enemy_comp)
-    tactic = random.choice(TACTICS.get(context, TACTICS["zerg"]))
+    tactic = get_smart_tactic(enemy_comp, context)
     
     response = f"""CONTER: {", ".join(counter_specs)}
 FOCUS: {" > ".join(focus_targets)}
@@ -241,6 +303,55 @@ TACTIQUE: {tactic}"""
         "enemy_comp": enemy_comp,
         "outcome": outcome
     }
+
+
+def get_smart_tactic(enemy_comp: dict, context: str) -> str:
+    """Generate a smart tactic based on enemy composition and API data"""
+    import random
+    
+    # Analyze enemy composition for specific tactics
+    has_stability = any(spec in enemy_comp for spec in ["Firebrand", "Herald"])
+    has_boons = any(spec in enemy_comp for spec in ["Firebrand", "Scrapper", "Chronomancer", "Tempest"])
+    has_condi = any(spec in enemy_comp for spec in ["Scourge", "Mirage", "Harbinger", "Weaver"])
+    has_burst = any(spec in enemy_comp for spec in ["Soulbeast", "Deadeye", "Virtuoso", "Bladesworn"])
+    has_support = any(spec in enemy_comp for spec in ["Firebrand", "Scrapper", "Druid", "Tempest", "Mechanist"])
+    
+    # Context-specific smart tactics
+    smart_tactics = []
+    
+    if has_stability and has_boons:
+        smart_tactics.extend([
+            "Strip stability with Spellbreaker bubble before CC push",
+            "Wait for Tome of Courage cooldown then engage",
+            "Focus boon strip on Firebrands first"
+        ])
+    
+    if has_condi:
+        smart_tactics.extend([
+            "Stack cleanses and resistance before engaging",
+            "Burst down Scourges before they stack conditions",
+            "Avoid clumping to reduce shade pressure"
+        ])
+    
+    if has_burst:
+        smart_tactics.extend([
+            "Spread to avoid cleave damage",
+            "Save defensive cooldowns for burst windows",
+            "Focus burst specs before they can reset"
+        ])
+    
+    if has_support:
+        smart_tactics.extend([
+            "Focus healers first to reduce sustain",
+            "Split supports from DPS with positioning",
+            "Interrupt key heal skills"
+        ])
+    
+    # Fallback to generic tactics
+    if not smart_tactics:
+        smart_tactics = TACTICS.get(context, TACTICS["zerg"])
+    
+    return random.choice(smart_tactics)
 
 
 def load_fights() -> list:
