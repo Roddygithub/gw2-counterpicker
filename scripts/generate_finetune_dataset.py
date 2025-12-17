@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate a fine-tuning dataset for Mistral 7B from historical fight data.
+Generate fine-tuning datasets for Qwen2.5:3b and Mistral 7B from historical fight data.
 
 This script creates training examples in the format:
 - Input: Enemy composition + context
@@ -16,10 +16,11 @@ Requirements:
 - tinydb
 
 Usage:
-    python scripts/generate_finetune_dataset.py
+    python scripts/generate_finetune_dataset.py [--model qwen|mistral|both]
 
 Output:
-    data/finetune_dataset.jsonl
+    data/finetune_dataset_qwen.jsonl   (for Qwen2.5:3b)
+    data/finetune_dataset_mistral.jsonl (for Mistral 7B)
 """
 
 import json
@@ -35,7 +36,8 @@ from tinydb import TinyDB
 
 # Configuration
 FIGHTS_DB_PATH = Path("data/fights.db")
-OUTPUT_PATH = Path("data/finetune_dataset.jsonl")
+OUTPUT_PATH_QWEN = Path("data/finetune_dataset_qwen.jsonl")
+OUTPUT_PATH_MISTRAL = Path("data/finetune_dataset_mistral.jsonl")
 MIN_EXAMPLES_PER_CONTEXT = 50  # Minimum examples per context type
 
 # Valid GW2 elite specs
@@ -182,12 +184,18 @@ def get_focus_targets(enemy_comp: dict) -> list:
     return [t[0] for t in sorted_targets[:3]]
 
 
-def generate_example(enemy_comp: dict, context: str, outcome: str = None) -> dict:
-    """Generate a single training example"""
+def generate_example(enemy_comp: dict, context: str, outcome: str = None, model_format: str = "qwen") -> dict:
+    """Generate a single training example for fine-tuning
+    
+    Args:
+        enemy_comp: Enemy composition dict
+        context: Fight context (zerg, guild_raid, roam)
+        outcome: Fight outcome (victory, defeat)
+        model_format: "qwen" for Qwen2.5:3b or "mistral" for Mistral 7B
+    """
     import random
     
-    # Input prompt (Mistral [INST] format)
-    valid_specs_str = ",".join(sorted(VALID_SPECS))
+    valid_specs_str = ", ".join(sorted(VALID_SPECS))
     enemy_str = format_enemy_comp(enemy_comp)
     
     context_names = {
@@ -195,15 +203,27 @@ def generate_example(enemy_comp: dict, context: str, outcome: str = None) -> dic
         "guild_raid": "GUILD RAID (10-25 players)",
         "roam": "ROAMING (1-10 players)"
     }
+    mode = context_names.get(context, context_names['zerg'])
     
-    prompt = f"""[INST] You are a Guild Wars 2 WvW expert. Mode: {context_names.get(context, context)}.
-Valid specs: {valid_specs_str}
-Enemy composition: {enemy_str}
+    # Base content (same for both formats)
+    base_content = f"""Guild Wars 2 WvW counter-picker.
 
-Respond in this EXACT format only:
-CONTER: Nx Spec, Nx Spec, Nx Spec
-FOCUS: Target1 > Target2 > Target3
-TACTIQUE: One tactical advice [/INST]"""
+VALID SPECS ONLY: {valid_specs_str}
+
+Mode: {mode}
+Enemy: {enemy_str}
+
+Respond EXACTLY like this (use only specs from the list above):
+CONTER: 2x Spellbreaker, 2x Scourge
+FOCUS: Firebrand > Scrapper
+TACTIQUE: Strip aegis then burst"""
+
+    # Format prompt based on model
+    if model_format == "mistral":
+        prompt = f"[INST] {base_content} [/INST]"
+    else:
+        # Qwen works well with simple prompts
+        prompt = base_content
 
     # Output response
     counter_specs = get_counter_specs(enemy_comp, context)
@@ -259,72 +279,71 @@ def main():
     for ctx, ctx_fights in fights_by_context.items():
         print(f"  - {ctx}: {len(ctx_fights)}")
     
-    # Generate examples
-    examples = []
-    
-    # From real fights
-    for fight in fights:
-        enemy_comp = fight.get('enemy_composition', {})
-        if not enemy_comp:
-            continue
-        
-        # Filter to valid specs only
-        enemy_comp = {k: v for k, v in enemy_comp.items() if k in VALID_SPECS}
-        if not enemy_comp:
-            continue
-        
-        context = fight.get('context', 'zerg')
-        if context not in ['zerg', 'guild_raid', 'roam']:
-            context = 'zerg'
-        
-        outcome = fight.get('outcome', 'unknown')
-        
-        example = generate_example(enemy_comp, context, outcome)
-        examples.append(example)
-    
-    print(f"\nGenerated {len(examples)} examples from real fights")
-    
-    # Add synthetic examples to balance contexts
+    # Generate datasets for both models
     import random
-    for context in ['zerg', 'guild_raid', 'roam']:
-        current_count = len([e for e in examples if e['context'] == context])
-        needed = max(0, MIN_EXAMPLES_PER_CONTEXT - current_count)
+    
+    for model_format in ["qwen", "mistral"]:
+        print(f"\n--- Generating dataset for {model_format.upper()} ---")
+        examples = []
         
-        if needed > 0:
-            print(f"Adding {needed} synthetic examples for {context}")
+        # From real fights
+        for fight in fights:
+            enemy_comp = fight.get('enemy_composition', {})
+            if not enemy_comp:
+                continue
             
-            for _ in range(needed):
-                # Generate random enemy comp
-                num_specs = random.randint(3, 8) if context != 'roam' else random.randint(2, 5)
-                specs = random.sample(list(VALID_SPECS), min(num_specs, len(VALID_SPECS)))
-                enemy_comp = {}
-                for spec in specs:
-                    enemy_comp[spec] = random.randint(1, 3) if context != 'roam' else 1
+            # Filter to valid specs only
+            enemy_comp = {k: v for k, v in enemy_comp.items() if k in VALID_SPECS}
+            if not enemy_comp:
+                continue
+            
+            context = fight.get('context', 'zerg')
+            if context not in ['zerg', 'guild_raid', 'roam']:
+                context = 'zerg'
+            
+            outcome = fight.get('outcome', 'unknown')
+            
+            example = generate_example(enemy_comp, context, outcome, model_format)
+            examples.append(example)
+        
+        print(f"Generated {len(examples)} examples from real fights")
+        
+        # Add synthetic examples to balance contexts
+        for context in ['zerg', 'guild_raid', 'roam']:
+            current_count = len([e for e in examples if e['context'] == context])
+            needed = max(0, MIN_EXAMPLES_PER_CONTEXT - current_count)
+            
+            if needed > 0:
+                print(f"Adding {needed} synthetic examples for {context}")
                 
-                example = generate_example(enemy_comp, context)
-                examples.append(example)
-    
-    print(f"\nTotal examples: {len(examples)}")
-    
-    # Shuffle examples
-    import random
-    random.shuffle(examples)
-    
-    # Save to JSONL format (standard for fine-tuning)
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-        for example in examples:
-            # Simplified format for fine-tuning
-            record = {
-                "instruction": example["instruction"],
-                "output": example["output"]
-            }
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
-    
-    print(f"\n✓ Dataset saved to {OUTPUT_PATH}")
-    print(f"  Format: JSONL (instruction/output pairs)")
-    print(f"  Ready for fine-tuning with Unsloth or Axolotl")
+                for _ in range(needed):
+                    num_specs = random.randint(3, 8) if context != 'roam' else random.randint(2, 5)
+                    specs = random.sample(list(VALID_SPECS), min(num_specs, len(VALID_SPECS)))
+                    enemy_comp = {}
+                    for spec in specs:
+                        enemy_comp[spec] = random.randint(1, 3) if context != 'roam' else 1
+                    
+                    example = generate_example(enemy_comp, context, model_format=model_format)
+                    examples.append(example)
+        
+        print(f"Total examples: {len(examples)}")
+        
+        # Shuffle examples
+        random.shuffle(examples)
+        
+        # Save to JSONL format
+        output_path = OUTPUT_PATH_QWEN if model_format == "qwen" else OUTPUT_PATH_MISTRAL
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(output_path, 'w', encoding='utf-8') as f:
+            for example in examples:
+                record = {
+                    "instruction": example["instruction"],
+                    "output": example["output"]
+                }
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        
+        print(f"✓ Dataset saved to {output_path}")
     
     # Show sample
     print("\n" + "=" * 60)

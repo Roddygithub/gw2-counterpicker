@@ -96,8 +96,33 @@ def guess_fight_context(
 
 # === CONFIGURATION ===
 OLLAMA_URL = "http://localhost:11434"
-MODEL_NAME = "mistral:7b"  # Mistral 7B - no content filter, better GW2 understanding. Requires 8GB+ RAM
 FIGHTS_DB_PATH = Path("data/fights.db")
+
+# Model configuration - auto-detect based on available RAM
+# Qwen2.5:3b for servers with limited RAM (< 6GB), Mistral 7B for local with more RAM
+MODEL_CONFIGS = {
+    "qwen2.5:3b": {
+        "name": "qwen2.5:3b",
+        "ram_required": 3,  # GB
+        "timeout": 30,
+        "num_predict": 60,
+        "num_ctx": 512,
+        "temperature": 0.1,
+        "prompt_format": "qwen"  # Uses <|im_start|> format
+    },
+    "mistral:7b": {
+        "name": "mistral:7b",
+        "ram_required": 6,  # GB
+        "timeout": 90,
+        "num_predict": 80,
+        "num_ctx": 1024,
+        "temperature": 0.2,
+        "prompt_format": "mistral"  # Uses [INST] format
+    }
+}
+
+# Default model - will be auto-detected on startup
+MODEL_NAME = "qwen2.5:3b"  # Default to lighter model, changed if more RAM available
 
 # Ensure data directory exists
 FIGHTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -736,9 +761,43 @@ class CounterAI:
         
         return best_by_role
     
+    def _build_prompt(self, enemy_str: str, fights_summary: str, context: str) -> str:
+        """Build prompt based on current model's format"""
+        valid_specs = "Firebrand, Willbender, Dragonhunter, Spellbreaker, Berserker, Bladesworn, Herald, Vindicator, Renegade, Scrapper, Holosmith, Mechanist, Druid, Soulbeast, Untamed, Daredevil, Deadeye, Specter, Tempest, Weaver, Catalyst, Chronomancer, Mirage, Virtuoso, Reaper, Scourge, Harbinger"
+        
+        model_config = MODEL_CONFIGS.get(MODEL_NAME, MODEL_CONFIGS["qwen2.5:3b"])
+        prompt_format = model_config.get("prompt_format", "qwen")
+        
+        context_names = {
+            'zerg': 'ZERG (25+ players)',
+            'guild_raid': 'GUILD RAID (10-25 players)',
+            'roam': 'ROAMING (1-10 players)'
+        }
+        mode = context_names.get(context, context_names['zerg'])
+        
+        # Base content (same for all formats)
+        base_content = f"""Guild Wars 2 WvW counter-picker.
+
+VALID SPECS ONLY: {valid_specs}
+
+Mode: {mode}
+Enemy: {enemy_str}
+
+Respond EXACTLY like this (use only specs from the list above):
+CONTER: 2x Spellbreaker, 2x Scourge
+FOCUS: Firebrand > Scrapper
+TACTIQUE: Strip aegis then burst"""
+
+        if prompt_format == "qwen":
+            # Qwen uses <|im_start|> format but works well with simple prompts
+            return base_content
+        else:
+            # Mistral uses [INST] format
+            return f"[INST] {base_content} [/INST]"
+    
     async def generate_counter(self, enemy_comp: Dict[str, int], context: str = "zerg") -> dict:
         """
-        Generate counter recommendation using Llama 3.2 8B
+        Generate counter recommendation using AI (Qwen2.5:3b or Mistral 7B)
         
         Args:
             enemy_comp: Enemy composition {spec: count}
@@ -758,48 +817,14 @@ class CounterAI:
         if not self.ollama_available:
             return self._fallback_counter(enemy_comp, stats, context)
         
-        # Mistral 7B optimized prompts - concise format for faster inference
-        # Uses [INST] format that Mistral understands best
-        valid_specs = "Firebrand,Willbender,Dragonhunter,Spellbreaker,Berserker,Bladesworn,Herald,Vindicator,Renegade,Scrapper,Holosmith,Mechanist,Druid,Soulbeast,Untamed,Daredevil,Deadeye,Specter,Tempest,Weaver,Catalyst,Chronomancer,Mirage,Virtuoso,Reaper,Scourge,Harbinger"
-
-        # Context-specific prompts optimized for Mistral 7B
-        context_prompts = {
-            'zerg': f"""[INST] You are a Guild Wars 2 WvW expert. Mode: ZERG (25+ players).
-Valid specs: {valid_specs}
-Enemy composition: {enemy_str}
-Historical data: {fights_summary}
-
-Respond in this EXACT format only:
-CONTER: Nx Spec, Nx Spec, Nx Spec
-FOCUS: Target1 > Target2 > Target3
-TACTIQUE: One tactical advice [/INST]""",
-
-            'guild_raid': f"""[INST] You are a Guild Wars 2 WvW expert. Mode: GUILD RAID (10-25 players).
-Valid specs: {valid_specs}
-Enemy composition: {enemy_str}
-Historical data: {fights_summary}
-
-Respond in this EXACT format only:
-CONTER: Nx Spec, Nx Spec, Nx Spec
-FOCUS: Target1 > Target2 > Target3
-TACTIQUE: One tactical advice [/INST]""",
-
-            'roam': f"""[INST] You are a Guild Wars 2 WvW expert. Mode: ROAMING (1-10 players).
-Valid specs: {valid_specs}
-Enemy composition: {enemy_str}
-Historical data: {fights_summary}
-
-Respond in this EXACT format only:
-CONTER: Nx Spec, Nx Spec
-FOCUS: Target1 > Target2
-TACTIQUE: One tactical advice [/INST]"""
-        }
+        # Build prompt based on model format
+        prompt = self._build_prompt(enemy_str, fights_summary, context)
         
-        prompt = context_prompts.get(context, context_prompts['zerg'])
+        # Get model-specific configuration
+        model_config = MODEL_CONFIGS.get(MODEL_NAME, MODEL_CONFIGS["qwen2.5:3b"])
 
         try:
-            # Mistral 7B needs longer timeout (40-60s on CPU)
-            timeout = httpx.Timeout(90.0, connect=15.0)  # 90s read, 15s connect
+            timeout = httpx.Timeout(float(model_config["timeout"]), connect=15.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
                     f"{OLLAMA_URL}/api/generate",
@@ -807,14 +832,14 @@ TACTIQUE: One tactical advice [/INST]"""
                         "model": MODEL_NAME,
                         "prompt": prompt,
                         "stream": False,
-                        "keep_alive": "60m",  # Keep model in memory for 60 minutes
+                        "keep_alive": "60m",
                         "options": {
-                            "temperature": 0.1,  # Very low for consistent format
+                            "temperature": model_config["temperature"],
                             "top_p": 0.9,
-                            "num_predict": 60,  # Very short response (3 lines max)
-                            "num_ctx": 512,  # Minimal context for speed
-                            "repeat_penalty": 1.2,  # Avoid repetition
-                            "stop": ["\n\n", "Note:", "Explanation:"]  # Stop tokens
+                            "num_predict": model_config["num_predict"],
+                            "num_ctx": model_config["num_ctx"],
+                            "repeat_penalty": 1.2,
+                            "stop": ["\n\n", "Note:", "Explanation:"]
                         }
                     }
                 )
@@ -989,22 +1014,70 @@ TACTIQUE: One tactical advice [/INST]"""
 counter_ai = CounterAI()
 
 
+async def detect_best_model() -> str:
+    """
+    Detect the best available model based on what's installed in Ollama.
+    Priority: qwen2.5:3b (fast, light) > mistral:7b (better quality)
+    """
+    global MODEL_NAME
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{OLLAMA_URL}/api/tags")
+            if response.status_code == 200:
+                models = response.json().get('models', [])
+                model_names = [m.get('name', '') for m in models]
+                
+                # Check for preferred models in order
+                if any('qwen2.5:3b' in m for m in model_names):
+                    MODEL_NAME = "qwen2.5:3b"
+                    logger.info(f"✓ Selected {MODEL_NAME} (fast, 3GB RAM)")
+                elif any('mistral:7b' in m or 'mistral:latest' in m for m in model_names):
+                    MODEL_NAME = "mistral:7b"
+                    logger.info(f"✓ Selected {MODEL_NAME} (quality, 6GB RAM)")
+                elif any('llama3.2' in m for m in model_names):
+                    # Fallback to llama but warn about content filter
+                    MODEL_NAME = "llama3.2"
+                    logger.warning(f"⚠ Using {MODEL_NAME} - may have content filter issues")
+                else:
+                    logger.warning(f"No supported model found. Available: {model_names}")
+                    return None
+                
+                return MODEL_NAME
+    except Exception as e:
+        logger.warning(f"Could not detect models: {e}")
+    
+    return MODEL_NAME
+
+
 async def warmup_ollama():
     """
-    Preload the Mistral 7B model into memory at startup.
-    This prevents timeout on the first user request.
-    Mistral 7B takes ~20s to load on CPU.
+    Detect best model and preload it into memory at startup.
+    Qwen2.5:3b takes ~5s, Mistral 7B takes ~20s to load on CPU.
     """
+    global MODEL_NAME
+    
+    # First detect the best available model
+    detected = await detect_best_model()
+    if not detected:
+        logger.warning("No Ollama model available - using fallback")
+        return
+    
+    model_config = MODEL_CONFIGS.get(MODEL_NAME, MODEL_CONFIGS["qwen2.5:3b"])
+    
     try:
-        async with httpx.AsyncClient(timeout=180.0) as client:  # 3 min timeout for model loading
-            logger.info(f"Warming up {MODEL_NAME} model (this may take 20-30s)...")
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            logger.info(f"Warming up {MODEL_NAME} model...")
             response = await client.post(
                 f"{OLLAMA_URL}/api/generate",
                 json={
                     "model": MODEL_NAME,
                     "prompt": "Hello",
                     "stream": False,
-                    "keep_alive": "60m"  # Keep in memory for 60 minutes
+                    "keep_alive": "60m",
+                    "options": {
+                        "num_ctx": model_config["num_ctx"]
+                    }
                 }
             )
             if response.status_code == 200:
