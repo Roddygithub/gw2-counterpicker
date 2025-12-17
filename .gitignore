@@ -46,6 +46,12 @@ Thumbs.db
 *.log
 logs/
 
+# LoRA and model files (too large for GitHub)
+data/qwen25-3b-gw2-lora/
+data/qwen25-3b-merged/
+data/*.zip
+*.safetensors
+
 # Data files (keep structure, ignore content)
 *.db
 *.json

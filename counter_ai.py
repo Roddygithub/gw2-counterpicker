@@ -109,6 +109,15 @@ if WVW_SPECS_PATH.exists():
 # Model configuration - auto-detect based on available RAM
 # Qwen2.5:3b for servers with limited RAM (< 6GB), Mistral 7B for local with more RAM
 MODEL_CONFIGS = {
+    "qwen25-gw2": {
+        "name": "qwen25-gw2",
+        "ram_required": 3,  # GB
+        "timeout": 60,
+        "num_predict": 150,
+        "num_ctx": 2048,
+        "temperature": 0.1,
+        "prompt_format": "qwen"  # Custom GW2 prompt built into model
+    },
     "qwen2.5:3b": {
         "name": "qwen2.5:3b",
         "ram_required": 3,  # GB
@@ -130,7 +139,7 @@ MODEL_CONFIGS = {
 }
 
 # Default model - will be auto-detected on startup
-MODEL_NAME = "qwen2.5:3b"  # Default to lighter model, changed if more RAM available
+MODEL_NAME = "qwen25-gw2"  # Custom model with GW2 prompt, fallback to qwen2.5:3b
 
 # Ensure data directory exists
 FIGHTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -1068,7 +1077,10 @@ async def detect_best_model() -> str:
                 model_names = [m.get('name', '') for m in models]
                 
                 # Check for preferred models in order
-                if any('qwen2.5:3b' in m for m in model_names):
+                if any('qwen25-gw2' in m for m in model_names):
+                    MODEL_NAME = "qwen25-gw2"
+                    logger.info(f"✓ Selected {MODEL_NAME} (GW2 optimized)")
+                elif any('qwen2.5:3b' in m for m in model_names):
                     MODEL_NAME = "qwen2.5:3b"
                     logger.info(f"✓ Selected {MODEL_NAME} (fast, 3GB RAM)")
                 elif any('mistral:7b' in m or 'mistral:latest' in m for m in model_names):
