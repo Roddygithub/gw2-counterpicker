@@ -9,7 +9,7 @@ import httpx
 import uuid
 
 from parser import RealEVTCParser
-from counter_ai import record_fight_for_learning, get_ai_counter
+from services.counter_service import get_counter_service
 from role_detector import estimate_role_from_profession
 from translations import get_all_translations
 from logger import get_logger
@@ -164,10 +164,10 @@ async def analyze_dps_report_url(url: str, lang: str) -> dict:
             
             players_data['source'] = 'dps_report'
             players_data['source_name'] = url
-            record_fight_for_learning(players_data)
+            get_counter_service().record_fight(players_data)
             
             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-            ai_counter = await get_ai_counter(enemy_spec_counts)
+            ai_counter = await get_counter_service().generate_counter(enemy_spec_counts)
             
             return {
                 "request": None,
@@ -214,10 +214,10 @@ async def analyze_single_file(filename: str, data: bytes, filesize: int, lang: s
                         
                         players_data['source'] = 'dps_report'
                         players_data['source_name'] = permalink
-                        record_fight_for_learning(players_data)
+                        get_counter_service().record_fight(players_data)
                         
                         enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-                        ai_counter = await get_ai_counter(enemy_spec_counts)
+                        ai_counter = await get_counter_service().generate_counter(enemy_spec_counts)
                         
                         logger.info(f"dps.report success: {len(players_data['enemies'])} enemies")
                         
@@ -244,10 +244,10 @@ async def analyze_single_file(filename: str, data: bytes, filesize: int, lang: s
     
     players_data['source'] = 'evtc'
     players_data['source_name'] = filename
-    record_fight_for_learning(players_data, filename=filename, filesize=filesize)
+    get_counter_service().record_fight(players_data, filename=filename, filesize=filesize)
     
     enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-    ai_counter = await get_ai_counter(enemy_spec_counts)
+    ai_counter = await get_counter_service().generate_counter(enemy_spec_counts)
     
     logger.info(f"Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
     
@@ -344,9 +344,9 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
                 continue
             
             try:
-                record_fight_for_learning(players_data, filename=filename, filesize=len(file_data))
+                get_counter_service().record_fight(players_data, filename=filename, filesize=len(file_data))
             except Exception as e:
-                logger.warning(f"record_fight_for_learning failed for {filename}: {e}")
+                logger.warning(f"record_fight failed for {filename}: {e}")
             
             outcome = players_data.get('fight_outcome', 'unknown')
             if outcome == 'victory':
