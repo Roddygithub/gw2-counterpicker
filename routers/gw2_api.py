@@ -630,7 +630,8 @@ async def import_guild_fights(request: Request, guild_id: str):
         try:
             members_data = await gw2_api.get_guild_members(guild_id, api_key)
             if members_data:
-                guild_members = [m.get('name', '') for m in members_data if m.get('name')]
+                # get_guild_members returns a list of account name strings
+                guild_members = [m for m in members_data if m]
         except Exception as member_error:
             logger.warning(f"Could not get guild members (requires permissions): {member_error}")
         
@@ -714,10 +715,9 @@ async def guild_analytics_page(request: Request, guild_id: str):
             if guild_fights and len(guild_fights) > 100:
                 guild_fights = sorted(guild_fights, key=lambda x: x.get('fight_date', ''), reverse=True)[:100]
             if guild_fights:
-                # Extract member account names for filtering
                 member_accounts = None
                 if guild_members:
-                    member_accounts = [m.get('name', '') for m in guild_members if m.get('name')]
+                    member_accounts = guild_members
                 group_comparison = get_guild_group_comparison(guild_fights, guild_members=member_accounts)
         
         return templates.TemplateResponse(

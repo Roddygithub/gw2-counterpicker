@@ -3,52 +3,7 @@
 {% block title %}Analyse - GW2 CounterPicker{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="{
-    mode: 'file',
-    selectedFiles: [],
-    isDragging: false,
-    fightContext: 'auto',
-    contextDescriptions: {
-        'auto': '{% if lang == "en" %}Automatic detection based on squad size{% else %}Détection automatique basée sur la taille du squad{% endif %}',
-        'zerg': '{% if lang == "en" %}25+ players, blob vs blob fights{% else %}25+ joueurs, combats blob vs blob{% endif %}',
-        'guild_raid': '{% if lang == "en" %}10-25 players, structured guild fights{% else %}10-25 joueurs, combats de guilde structurés{% endif %}',
-        'roam': '{% if lang == "en" %}1-10 players, small scale / roaming{% else %}1-10 joueurs, petit comité / roaming{% endif %}'
-    },
-    
-    handleFileSelect(event) {
-        this.selectedFiles = Array.from(event.target.files);
-    },
-    
-    handleDrop(event) {
-        this.isDragging = false;
-        this.selectedFiles = Array.from(event.dataTransfer.files);
-        const input = document.getElementById('evtc-file');
-        const dataTransfer = new DataTransfer();
-        this.selectedFiles.forEach(file => dataTransfer.items.add(file));
-        input.files = dataTransfer.files;
-    },
-    
-    clearFiles() {
-        this.selectedFiles = [];
-        const input = document.getElementById('evtc-file');
-        if (input) input.value = '';
-    },
-    
-    removeFile(index) {
-        this.selectedFiles.splice(index, 1);
-        const input = document.getElementById('evtc-file');
-        const dataTransfer = new DataTransfer();
-        this.selectedFiles.forEach(file => dataTransfer.items.add(file));
-        input.files = dataTransfer.files;
-    },
-    
-    formatFileSize(bytes) {
-        if (!bytes) return '';
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-}">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="analyzeApp">
     <!-- Header -->
     <div class="text-center mb-12">
         <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
@@ -64,8 +19,8 @@
     <!-- Tab Selector -->
     <div class="flex justify-center mb-8">
         <div class="inline-flex rounded-xl bg-gw2-darker p-1 border border-gw2-purple/30">
-            <button @click="mode = 'file'" 
-                    :class="mode === 'file' ? 'bg-gw2-purple text-white' : 'text-gray-400 hover:text-white'"
+            <button @click="mode = 'files'" 
+                    :class="mode === 'files' ? 'bg-gw2-purple text-white' : 'text-gray-400 hover:text-white'"
                     class="px-6 py-3 rounded-lg font-display font-bold transition-all flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -84,12 +39,8 @@
     </div>
     
     <!-- File Upload Mode -->
-    <div x-show="mode === 'file'" x-transition class="glow-card rounded-2xl p-6 md:p-8 mb-8">
-        <form id="file-form" hx-post="/api/analyze/evtc" 
-              hx-target="#result-container" 
-              hx-swap="innerHTML"
-              hx-encoding="multipart/form-data"
-              hx-indicator="#loading-file">
+    <div x-show="mode === 'files'" x-transition class="glow-card rounded-2xl p-6 md:p-8 mb-8">
+        <form id="file-form" action="/api/analyze/evtc" method="POST" enctype="multipart/form-data">
             
             <!-- Fight Context Selector -->
             <div class="mb-6">
@@ -370,13 +321,22 @@ document.addEventListener('alpine:init', () => {
         },
         
         init() {
+            // Debug: write to console
+            console.log('Alpine.js initialized');
+            console.log('Looking for form with action="/api/analyze/evtc"');
+            
             // Override form submission to handle progress
             const form = document.querySelector('form[action="/api/analyze/evtc"]');
+            console.log('Form found:', form);
+            
             if (form) {
                 form.addEventListener('submit', (e) => {
+                    console.log('Form submitted, calling startAnalysis()');
                     e.preventDefault();
                     this.startAnalysis();
                 });
+            } else {
+                console.error('Form with action="/api/analyze/evtc" not found!');
             }
         },
         
@@ -411,7 +371,10 @@ document.addEventListener('alpine:init', () => {
         },
         
         async startAnalysis() {
-            if (this.selectedFiles.length === 0 || this.isAnalyzing) return;
+            console.log('startAnalysis called!');
+            console.log('selectedFiles:', this.selectedFiles);
+            
+            if (this.selectedFiles.length === 0) return;
             
             this.isAnalyzing = true;
             this.analysisProgress = 0;

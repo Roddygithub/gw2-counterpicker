@@ -345,7 +345,11 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
             if not players_data:
                 continue
             
-            # Aggregate data (simplified version - full logic in main.py)
+            try:
+                record_fight_for_learning(players_data, filename=filename, filesize=len(file_data))
+            except Exception as e:
+                logger.warning(f"record_fight_for_learning failed for {filename}: {e}")
+            
             outcome = players_data.get('fight_outcome', 'unknown')
             if outcome == 'victory':
                 victories += 1
@@ -367,8 +371,73 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
             })
             
             logger.info(f"Processed {filename}: {players_data.get('fight_name')} ({parse_mode})")
+            
+            total_duration += players_data.get('duration_sec', 0)
+            
+            comp = players_data.get('composition', {})
+            if comp:
+                for spec, count in comp.get('spec_counts', {}).items():
+                    aggregated_composition['spec_counts'][spec] = aggregated_composition['spec_counts'].get(spec, 0) + count
+                for role, count in comp.get('role_counts', {}).items():
+                    aggregated_composition['role_counts'][role] = aggregated_composition['role_counts'].get(role, 0) + count
+                aggregated_composition['total_players'] += comp.get('total_players', comp.get('total', 0) or 0)
+            
+            for ally in players_data.get('allies', []):
+                role = ally.get('role', 'dps')
+                spec = ally.get('elite_spec', ally.get('profession', 'Unknown'))
+                if role not in aggregated_composition['specs_by_role']:
+                    aggregated_composition['specs_by_role'][role] = {}
+                aggregated_composition['specs_by_role'][role][spec] = aggregated_composition['specs_by_role'][role].get(spec, 0) + 1
+            
+            enemy_comp = players_data.get('enemy_composition', {})
+            if enemy_comp:
+                for spec, count in enemy_comp.get('spec_counts', {}).items():
+                    enemy_composition['spec_counts'][spec] = enemy_composition['spec_counts'].get(spec, 0) + count
+                for role, count in enemy_comp.get('role_counts', {}).items():
+                    enemy_composition['role_counts'][role] = enemy_composition['role_counts'].get(role, 0) + count
+                enemy_composition['total'] += enemy_comp.get('total', 0)
+            
+            # Build player aggregate for Top 10 (dedupe by account)
+            seen_accounts = set()
+            for ally in players_data.get('allies', []):
+                account = ally.get('account', ally.get('name', 'Unknown'))
+                if account in seen_accounts:
+                    continue
+                seen_accounts.add(account)
+                if account not in player_stats:
+                    player_stats[account] = {
+                        'account': account,
+                        'name': ally.get('name', account),
+                        'spec': ally.get('elite_spec', ally.get('profession', 'Unknown')),
+                        'damage': 0,
+                        'kills': 0,
+                        'deaths': 0,
+                        'appearances': 0,
+                    }
+                player_stats[account]['damage'] += ally.get('damage_out', ally.get('damage', ally.get('dps', 0)))
+                player_stats[account]['kills'] += ally.get('kills', 0)
+                player_stats[account]['deaths'] += ally.get('deaths', 0)
+                player_stats[account]['appearances'] += 1
     
-    # Return simplified result (full aggregation logic would go here)
+    num_fights = len(fight_results)
+    avg_players = (aggregated_composition['total_players'] // num_fights) if num_fights > 0 else 0
+    unique_players = len(player_stats)
+    top_players = sorted(
+        [
+            {
+                'name': v.get('name', k),
+                'spec': v.get('spec', 'Unknown'),
+                'damage': v.get('damage', 0),
+                'kills': v.get('kills', 0),
+                'deaths': v.get('deaths', 0),
+                'appearances': v.get('appearances', 0)
+            }
+            for k, v in player_stats.items()
+        ],
+        key=lambda x: x['damage'],
+        reverse=True
+    )[:10]
+    
     return {
         "request": None,
         "session_id": session_id,
@@ -379,13 +448,14 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
             'victories': victories,
             'defeats': defeats,
             'draws': draws,
-            'total_duration_min': total_duration // 60,
-            'avg_players': 0
+            'total_duration_min': round(total_duration / 60, 1),
+            'avg_players': avg_players,
+            'unique_players': unique_players,
         },
         "composition": aggregated_composition,
         "enemy_composition": enemy_composition,
         "map_counts": [],
-        "top_players": [],
+        "top_players": top_players,
         "builds_by_class": {},
         "counter_recommendation": None,
         "parse_mode": parse_mode,

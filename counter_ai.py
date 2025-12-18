@@ -109,15 +109,6 @@ if WVW_SPECS_PATH.exists():
 # Model configuration - auto-detect based on available RAM
 # Qwen2.5:3b for servers with limited RAM (< 6GB), Mistral 7B for local with more RAM
 MODEL_CONFIGS = {
-    "qwen25-gw2": {
-        "name": "qwen25-gw2",
-        "ram_required": 3,  # GB
-        "timeout": 60,
-        "num_predict": 150,
-        "num_ctx": 2048,
-        "temperature": 0.1,
-        "prompt_format": "qwen"  # Custom GW2 prompt built into model
-    },
     "qwen2.5:3b": {
         "name": "qwen2.5:3b",
         "ram_required": 3,  # GB
@@ -139,7 +130,7 @@ MODEL_CONFIGS = {
 }
 
 # Default model - will be auto-detected on startup
-MODEL_NAME = "qwen25-gw2"  # Custom model with GW2 prompt, fallback to qwen2.5:3b
+MODEL_NAME = "qwen2.5:3b"
 
 # Ensure data directory exists
 FIGHTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -149,6 +140,7 @@ fights_db = TinyDB(str(FIGHTS_DB_PATH))
 fights_table = fights_db.table('fights')
 stats_table = fights_db.table('stats')
 analyzed_files_table = fights_db.table('analyzed_files')  # Track analyzed files to avoid duplicates
+settings_table = fights_db.table('settings')
 
 
 @dataclass
@@ -679,6 +671,15 @@ class CounterAI:
         
         # Find builds from winning fights against similar compositions
         enemy_specs = set(enemy_comp.keys())
+        feedback_tbl = fights_db.table('feedback')
+        enemy_hash = self._hash_composition(enemy_comp)
+        Fq = Query()
+        fb_rows = feedback_tbl.search(Fq.enemy_comp_hash == enemy_hash)
+        fb_total = len(fb_rows)
+        fb_success = sum(1 for r in fb_rows if r.get('worked'))
+        fb_rate = (fb_success / fb_total) if fb_total > 0 else None
+        cfg = settings_table.all()
+        feedback_weight = (cfg[0].get('feedback_weight', 0.0) if cfg else 0.0) or 0.0
         
         # Group builds by spec and role, track win rates
         build_stats = {}  # {(spec, role): {'wins': 0, 'total': 0, 'avg_score': 0, 'scores': []}}
@@ -749,6 +750,9 @@ class CounterAI:
             
             win_rate = round((stats['wins'] / total) * 100, 1)
             avg_score = sum(stats['scores']) / len(stats['scores']) if stats['scores'] else 0
+            if fb_rate is not None and feedback_weight > 0:
+                factor = 1 + feedback_weight * (fb_rate - 0.5)
+                win_rate = round(max(0, min(100, win_rate * factor)), 1)
             
             # Calculate recommended count (average in winning fights, rounded up)
             counts = stats.get('counts_in_wins', [])
@@ -860,13 +864,18 @@ TACTIQUE: One tactical advice"""
         
         # ALWAYS check Ollama availability before each call
         self._check_ollama()
-        logger.info(f"Ollama check: available={self.ollama_available}, model={MODEL_NAME}")
+        
+        # Write debug to file
+        with open("/tmp/counter_ai_debug.log", "a") as f:
+            f.write(f"[{datetime.now()}] Ollama check: available={self.ollama_available}, model={MODEL_NAME}\n")
         
         if not self.ollama_available:
-            logger.warning(f"Ollama not available, using fallback")
+            with open("/tmp/counter_ai_debug.log", "a") as f:
+                f.write(f"[{datetime.now()}] Ollama NOT available, using fallback\n")
             return self._fallback_counter(enemy_comp, stats, context)
         
-        logger.info(f"Calling Ollama with model {MODEL_NAME} for {enemy_str}")
+        with open("/tmp/counter_ai_debug.log", "a") as f:
+            f.write(f"[{datetime.now()}] Calling Ollama with model {MODEL_NAME} for {enemy_str}\n")
         
         # Build prompt based on model format with API-enriched context
         prompt = self._build_prompt(enemy_str, fights_summary, context, enemy_comp)
@@ -917,6 +926,7 @@ TACTIQUE: One tactical advice"""
                         'similar_fights': len(similar_fights),
                         'model': MODEL_NAME,
                         'enemy_composition': enemy_str,
+                        'enemy_comp_dict': enemy_comp,
                         'best_builds': best_builds,
                         'generated_at': datetime.now().isoformat()
                     }
@@ -1027,6 +1037,7 @@ TACTIQUE: One tactical advice"""
             'similar_fights': len(best_builds),
             'model': 'smart_rules',
             'enemy_composition': enemy_str,
+            'enemy_comp_dict': enemy_comp,
             'best_builds': best_builds,
             'generated_at': datetime.now().isoformat(),
             'fallback': True
@@ -1068,7 +1079,7 @@ counter_ai = CounterAI()
 async def detect_best_model() -> str:
     """
     Detect the best available model based on what's installed in Ollama.
-    Priority: qwen2.5:3b (fast, light) > mistral:7b (better quality)
+    Priority: qwen2.5:3b (fast, light) > mistral:7b (better quality) > llama3.2
     """
     global MODEL_NAME
     
@@ -1080,10 +1091,7 @@ async def detect_best_model() -> str:
                 model_names = [m.get('name', '') for m in models]
                 
                 # Check for preferred models in order
-                if any('qwen25-gw2' in m for m in model_names):
-                    MODEL_NAME = "qwen25-gw2"
-                    logger.info(f"✓ Selected {MODEL_NAME} (GW2 optimized)")
-                elif any('qwen2.5:3b' in m for m in model_names):
+                if any('qwen2.5:3b' in m for m in model_names):
                     MODEL_NAME = "qwen2.5:3b"
                     logger.info(f"✓ Selected {MODEL_NAME} (fast, 3GB RAM)")
                 elif any('mistral:7b' in m or 'mistral:latest' in m for m in model_names):
@@ -1172,9 +1180,65 @@ async def get_ai_counter(enemy_composition: Dict[str, int], context: str = "zerg
         enemy_composition: Enemy composition {spec: count}
         context: Fight context - "zerg", "guild_raid", "roam"
     """
-    return await counter_ai.generate_counter(enemy_composition, context=context)
+    # Write debug immediately to file
+    with open("/tmp/get_ai_counter_debug.log", "a") as f:
+        f.write(f"[{datetime.now()}] get_ai_counter called with {len(enemy_composition)} specs, context={context}\n")
+    
+    logger.info(f"get_ai_counter called with {len(enemy_composition)} specs, context={context}")
+    result = await counter_ai.generate_counter(enemy_composition, context=context)
+    logger.info(f"get_ai_counter result: model={result.get('model')}, fallback={result.get('fallback', False)}")
+    
+    # Write result to debug file
+    with open("/tmp/get_ai_counter_debug.log", "a") as f:
+        f.write(f"[{datetime.now()}] Result: model={result.get('model')}, fallback={result.get('fallback', False)}\n")
+    
+    return result
 
 
 def get_ai_status() -> dict:
     """Get AI learning status"""
     return counter_ai.get_learning_status()
+
+
+def record_feedback(enemy_comp: Dict[str, int], worked: bool, context: str = "zerg") -> None:
+    tbl = fights_db.table('feedback')
+    tbl.insert({
+        'timestamp': datetime.now().isoformat(),
+        'enemy_comp': enemy_comp or {},
+        'enemy_comp_hash': counter_ai._hash_composition(enemy_comp or {}),
+        'worked': bool(worked),
+        'context': context
+    })
+
+def get_feedback_summary() -> dict:
+    tbl = fights_db.table('feedback')
+    rows = tbl.all()
+    agg = {}
+    for r in rows:
+        h = r.get('enemy_comp_hash') or 'unknown'
+        if h not in agg:
+            agg[h] = {'hash': h, 'total': 0, 'worked': 0, 'contexts': {}}
+        agg[h]['total'] += 1
+        if r.get('worked'):
+            agg[h]['worked'] += 1
+        ctx = r.get('context', 'zerg')
+        agg[h]['contexts'][ctx] = agg[h]['contexts'].get(ctx, 0) + 1
+    result = []
+    for h, v in agg.items():
+        rate = (v['worked'] / v['total']) if v['total'] > 0 else 0.0
+        result.append({'enemy_comp_hash': h, 'total': v['total'], 'worked': v['worked'], 'success_rate': round(rate, 3), 'contexts': v['contexts']})
+    return {'count': len(rows), 'by_comp': result}
+
+def get_settings() -> dict:
+    rows = settings_table.all()
+    if rows:
+        return rows[0]
+    settings_table.insert({'feedback_weight': 0.0})
+    return {'feedback_weight': 0.0}
+
+def update_settings(values: dict) -> dict:
+    cur = get_settings()
+    cur.update(values or {})
+    settings_table.truncate()
+    settings_table.insert(cur)
+    return cur

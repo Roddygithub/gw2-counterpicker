@@ -7,7 +7,7 @@
         <span class="text-xs text-gray-500">Basée sur {{ ai_counter.fights_analyzed }} fights réels</span>
     </div>
     
-    {% if ai_counter.model == 'fallback_rules' %}
+    {% if ai_counter.fallback %}
     <div class="text-xs text-yellow-500 mb-2">🔄 Règles Fallback</div>
     {% endif %}
     

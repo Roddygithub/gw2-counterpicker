@@ -16,6 +16,7 @@ from services.analysis_service import (
     analyze_multiple_files,
     analyze_dps_report_url
 )
+from counter_ai import record_feedback
 from logger import get_logger
 
 router = APIRouter(prefix="/api/analyze")
@@ -117,3 +118,17 @@ async def analyze_files(
     result["request"] = request
     
     return templates.TemplateResponse("partials/evening_result_v2.html", result)
+
+
+@router.post("/confirm-result")
+async def confirm_result(request: Request):
+    body = await request.json()
+    worked = bool(body.get("worked"))
+    enemy_comp = body.get("enemy_comp", {})
+    context = body.get("context", "zerg")
+    try:
+        record_feedback(enemy_comp, worked, context)
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"confirm_result failed: {e}")
+        return {"status": "error"}

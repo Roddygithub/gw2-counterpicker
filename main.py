@@ -53,8 +53,10 @@ from scheduler import setup_scheduled_tasks
 from rate_limiter import check_upload_rate_limit
 from logger import get_logger
 from routers.gw2_api import router as gw2_api_router
+from routers.admin import router as admin_router
 from services.gw2_api_service import get_api_key_by_session, get_account_by_session, gw2_api
 from services.player_stats_service import record_player_fight
+from services.analysis_service import analyze_multiple_files
 import zipfile
 import io
 
@@ -90,6 +92,16 @@ templates.env.globals["app_version"] = app.version
 templates.env.globals["offline_mode"] = True
 templates.env.globals["ai_mode"] = True  # v3.0 IA VIVANTE
 
+
+@app.get("/health")
+async def health():
+    return JSONResponse({"status": "ok"})
+
+
+@app.get("/api/ai/status")
+async def api_ai_status():
+    return JSONResponse(get_ai_status())
+
 # Initialize engines
 real_parser = RealEVTCParser()
 
@@ -98,6 +110,7 @@ setup_scheduled_tasks()
 
 # Include GW2 API router
 app.include_router(gw2_api_router)
+app.include_router(admin_router)
 
 # Auto-deployment system active - Changes sync to GitHub and server automatically
 
@@ -377,6 +390,51 @@ async def meta_page(request: Request, context: str = None):
     })
 
 
+def get_meta_from_database(context: str = None) -> dict:
+    try:
+        from counter_ai import fights_table
+        fights = fights_table.all()
+        if not fights:
+            return {}
+        return {}
+    except Exception:
+        return {}
+
+
+def get_default_meta_data() -> dict:
+    now = datetime.now().strftime("%Y-%m-%d")
+    return {
+        "last_updated": now,
+        "fights_count": 0,
+        "tier_s": [
+            {"spec": "Firebrand", "role": "support/stab", "usage": 95},
+            {"spec": "Scrapper", "role": "support/boon", "usage": 90},
+            {"spec": "Spellbreaker", "role": "strip/frontline", "usage": 88}
+        ],
+        "tier_a": [
+            {"spec": "Harbinger", "role": "dps/condi", "usage": 72},
+            {"spec": "Virtuoso", "role": "dps/backline", "usage": 68},
+            {"spec": "Willbender", "role": "roamer/dps", "usage": 64}
+        ],
+        "tier_b": [
+            {"spec": "Vindicator", "role": "boon/support", "usage": 48},
+            {"spec": "Bladesworn", "role": "dps/frontline", "usage": 42},
+            {"spec": "Catalyst", "role": "boon/backline", "usage": 38}
+        ],
+        "tier_c": [
+            {"spec": "Druid", "role": "heal", "usage": 22},
+            {"spec": "Deadeye", "role": "roamer", "usage": 18}
+        ],
+        "rising": [
+            {"spec": "Harbinger", "reason": "Strong teamfight presence", "change": "+5%"},
+            {"spec": "Virtuoso", "reason": "Reliable ranged pressure", "change": "+3%"}
+        ],
+        "falling": [
+            {"spec": "Catalyst", "reason": "Stability meta shift", "change": "-2%"}
+        ]
+    }
+
+
 async def record_user_fight_stats(request: Request, players_data: Dict, log_data: Dict = None):
     """Record fight stats for connected user if they appear in the log"""
     try:
@@ -494,18 +552,12 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
 
 @app.get("/api/analyze/progress")
 async def analyze_progress(request: Request):
-    """
-    Server-Sent Events endpoint for real-time progress updates
-    """
     async def event_generator():
-        # Simulate progress for now - in real implementation, 
-        # this would be connected to actual parsing progress
         progress = 0
         while progress <= 100:
             yield f"data: {json.dumps({'progress': progress, 'status': 'Analyzing...' if progress < 100 else 'Complete'})}\n\n"
-            progress += 10
-            await asyncio.sleep(0.5)  # Simulate work
-    
+            progress += 1
+            await asyncio.sleep(0.12)
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
@@ -533,6 +585,12 @@ async def analyze_evtc_files(
     
     Security: Rate limited to 10 uploads/min, max 50MB per file, ZIP validation
     """
+    # Debug - write to file immediately
+    from datetime import datetime
+    with open("/tmp/analyze_endpoint_debug.log", "a") as f:
+        f.write(f"[{datetime.now()}] analyze_evtc_files called with {len(files)} files, context={context}\n")
+        f.write(f"Request headers: {dict(request.headers)}\n")
+    
     logger.info(f"analyze_evtc_files called with {len(files)} files")
     for i, file in enumerate(files):
         logger.info(f"  File {i+1}: {file.filename} ({file.content_type})")
@@ -668,6 +726,29 @@ async def analyze_evtc_files(
     # Multiple files mode - redirect to evening analysis
     else:
         return await analyze_evening_files(request, files)
+
+
+async def analyze_evening_files(
+    request: Request,
+    files: List[UploadFile]
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+    if len(files) > 100:
+        raise HTTPException(status_code=400, detail="Maximum 100 files allowed")
+
+    validated_files = []
+    for file in files:
+        try:
+            content = await validate_upload_file(file)
+            validated_files.append((file.filename, content))
+        except HTTPException as e:
+            raise HTTPException(status_code=e.status_code, detail=f"File '{file.filename}': {e.detail}")
+
+    lang = get_lang(request)
+    result = await analyze_multiple_files(validated_files, lang)
+    result["request"] = request
+    return templates.TemplateResponse("partials/evening_result_v2.html", result)
 
 
 def is_wvw_log(data: dict) -> bool:
@@ -1074,10 +1155,6 @@ def extract_players_from_ei_json(data: dict) -> dict:
             if dps_entries:
                 logger.info(f"DEBUG EI JSON - dpsAll[0] = {dps_entries[0] if isinstance(dps_entries, list) else dps_entries}")
         
-        # Skip players who didn't participate (less than 1k damage)
-        if damage_out < 1000:
-            continue
-        
         # === DAMAGE IN ===
         damage_in = 0
         defenses = player.get('defenses', [{}])
@@ -1198,6 +1275,10 @@ def extract_players_from_ei_json(data: dict) -> dict:
         else:
             dps = cleanses_per_sec = down_contrib_per_sec = cc_per_sec = 0
             healing_per_sec = strips_per_sec = strip_in_per_sec = 0
+        
+        # Final participation filter: allow supports with low damage
+        if damage_out < 200 and healing_total <= 0 and down_contrib <= 0 and boon_strips <= 0 and condi_cleanse <= 0 and kills <= 0:
+            continue
         
         profession = player.get('profession', 'Unknown')
         group = player.get('group', 0)
@@ -1355,6 +1436,10 @@ def extract_players_from_ei_json(data: dict) -> dict:
         else:
             enemy_role_counts['dps'] += 1
             enemy_specs_by_role['dps'][spec] = enemy_specs_by_role['dps'].get(spec, 0) + 1
+    
+    # Debug: write spec_counts to file
+    with open("/tmp/spec_counts_debug.log", "a") as f:
+        f.write(f"[{datetime.now()}] enemy_spec_counts: {enemy_spec_counts}\n")
     
     # Sort enemy specs by count
     enemy_spec_counts_sorted = dict(sorted(enemy_spec_counts.items(), key=lambda x: x[1], reverse=True))
@@ -1895,18 +1980,14 @@ def get_meta_from_database(context: str = None) -> dict:
 
 if __name__ == "__main__":
     import uvicorn
-    import multiprocessing
     
-    # Use multiple workers for better concurrency (2 workers for small server)
-    # Each worker can handle multiple async requests
-    workers = min(2, multiprocessing.cpu_count())
-    
+    # Single worker mode for development
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=8001,
-        workers=workers,
-        limit_concurrency=100,  # Max concurrent connections
-        timeout_keep_alive=30,  # Keep-alive timeout
-        access_log=False,  # Disable access log for performance
+        reload=True,  # Activer le rechargement automatique
+        limit_concurrency=100,
+        timeout_keep_alive=30,
+        access_log=False,
     )
