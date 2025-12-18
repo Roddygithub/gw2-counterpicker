@@ -702,9 +702,23 @@ async def analyze_evtc_files(
             logger.error(f"Local parser failed: {parse_error}\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(parse_error)}")
     
-    # Multiple files mode - feature removed
+    # Multiple files mode
     else:
-        raise HTTPException(status_code=400, detail="Batch evening analysis has been removed")
+        # Validate all files before processing
+        validated_files = []
+        for file in files:
+            try:
+                content = await validate_upload_file(file)
+                validated_files.append((file.filename, content))
+            except HTTPException as e:
+                raise HTTPException(
+                    status_code=e.status_code,
+                    detail=f"File '{file.filename}': {e.detail}"
+                )
+        
+        result = await analyze_multiple_files(validated_files, lang)
+        result["request"] = request
+        return templates.TemplateResponse("partials/multi_result.html", result)
 
 
 async def analyze_evening_files(
