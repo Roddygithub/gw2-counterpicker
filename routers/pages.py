@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from counter_ai import get_ai_status
+from services.counter_service import get_counter_service
 from translations import get_all_translations
 
 router = APIRouter()
@@ -22,13 +22,13 @@ def get_lang(request: Request) -> str:
 async def home(request: Request):
     """Main landing page - The gateway to victory"""
     lang = get_lang(request)
-    ai_status = get_ai_status()
+    stats_status = get_counter_service().get_status()
     return templates.TemplateResponse("index.html", {
         "request": request,
         "title": "GW2 CounterPicker",
         "lang": lang,
         "t": get_all_translations(lang),
-        "ai_status": ai_status
+        "ai_status": stats_status
     })
 
 

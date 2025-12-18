@@ -97,11 +97,11 @@ scheduler = WeeklyScheduler()
 
 def setup_scheduled_tasks():
     """Setup all scheduled tasks"""
-    from counter_ai import counter_ai
+    from services.counter_service import get_counter_service
     
     # Cleanup fingerprints every Friday at 18h55
     scheduler.add_task(
-        func=lambda: counter_ai.cleanup_old_fingerprints(days_old=7),
+        func=lambda: get_counter_service().cleanup_old_fingerprints(days_old=7),
         day_of_week=4,  # Friday
         hour=18,
         minute=55,

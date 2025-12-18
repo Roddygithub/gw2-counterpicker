@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from counter_ai import get_feedback_summary, get_settings, update_settings
+from services.counter_service import get_counter_service
 from translations import get_all_translations
 
 router = APIRouter(prefix="/admin")
@@ -16,8 +16,8 @@ def get_lang(request: Request) -> str:
 @router.get("/feedback", response_class=HTMLResponse)
 async def feedback_page(request: Request):
     lang = get_lang(request)
-    summary = get_feedback_summary()
-    settings = get_settings()
+    summary = get_counter_service().get_feedback_summary()
+    settings = get_counter_service().get_settings()
     return templates.TemplateResponse("admin/feedback.html", {
         "request": request,
         "title": "Admin Feedback",
@@ -30,7 +30,7 @@ async def feedback_page(request: Request):
 
 @router.post("/feedback/settings")
 async def feedback_settings(request: Request, feedback_weight: float = Form(...)):
-    update_settings({"feedback_weight": float(feedback_weight)})
+    get_counter_service().update_settings({"feedback_weight": float(feedback_weight)})
     return await feedback_page(request)
 
 
@@ -38,7 +38,7 @@ async def feedback_settings(request: Request, feedback_weight: float = Form(...)
 async def feedback_export_csv(request: Request):
     import csv
     import io
-    summary = get_feedback_summary()
+    summary = get_counter_service().get_feedback_summary()
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["enemy_comp_hash", "total", "worked", "success_rate", "contexts_json"])
