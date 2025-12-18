@@ -884,59 +884,61 @@ TACTIQUE: One tactical advice"""
         model_config = MODEL_CONFIGS.get(MODEL_NAME, MODEL_CONFIGS["qwen2.5:3b"])
 
         try:
-            timeout = httpx.Timeout(float(model_config["timeout"]), connect=15.0)
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                with open("/tmp/counter_ai_debug.log", "a") as f:
-                    f.write(f"[{datetime.now()}] Sending HTTP request to {OLLAMA_URL}/api/generate\n")
-                response = await client.post(
-                    f"{OLLAMA_URL}/api/generate",
-                    json={
-                        "model": MODEL_NAME,
-                        "prompt": prompt,
-                        "stream": False,
-                        "keep_alive": "60m",
-                        "options": {
-                            "temperature": model_config["temperature"],
-                            "top_p": 0.9,
-                            "num_predict": model_config["num_predict"],
-                            "num_ctx": model_config["num_ctx"],
-                            "repeat_penalty": 1.2,
-                            "stop": ["\n\n", "Note:", "Explanation:"]
-                        }
+            import time
+            start = time.time()
+            with open("/tmp/counter_ai_debug.log", "a") as f:
+                f.write(f"[{datetime.now()}] Using sync httpx client\n")
+            client = httpx.Client(timeout=30.0)
+            response = client.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={
+                    "model": MODEL_NAME,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": model_config["temperature"],
+                        "top_p": 0.9,
+                        "num_predict": model_config["num_predict"],
+                        "num_ctx": model_config["num_ctx"],
+                        "repeat_penalty": 1.2,
+                        "stop": ["\n\n", "Note:", "Explanation:"]
                     }
-                )
-                with open("/tmp/counter_ai_debug.log", "a") as f:
-                    f.write(f"[{datetime.now()}] Got response status: {response.status_code}\n")
+                }
+            )
+            elapsed = time.time() - start
+            with open("/tmp/counter_ai_debug.log", "a") as f:
+                f.write(f"[{datetime.now()}] Got response in {elapsed:.1f}s, status: {response.status_code}\n")
+            client.close()
+            
+            if response.status_code == 200:
+                result = response.json()
+                counter_text = result.get('response', '').strip()
                 
-                if response.status_code == 200:
-                    result = response.json()
-                    counter_text = result.get('response', '').strip()
-                    
-                    # Calculate precision based on similar fights win rate
-                    if similar_fights:
-                        wins = sum(1 for f in similar_fights if f.get('outcome') == 'victory')
-                        precision = round((wins / len(similar_fights)) * 100, 1)
-                    else:
-                        precision = 85.0  # Default for new compositions
-                    
-                    # Get best builds that won against this comp
-                    best_builds = self.get_best_builds_against(enemy_comp)
-                    
-                    return {
-                        'success': True,
-                        'counter': counter_text,
-                        'precision': precision,
-                        'fights_analyzed': stats['total_fights'],
-                        'similar_fights': len(similar_fights),
-                        'model': MODEL_NAME,
-                        'enemy_composition': enemy_str,
-                        'enemy_comp_dict': enemy_comp,
-                        'best_builds': best_builds,
-                        'generated_at': datetime.now().isoformat()
-                    }
+                # Calculate precision based on similar fights win rate
+                if similar_fights:
+                    wins = sum(1 for f in similar_fights if f.get('outcome') == 'victory')
+                    precision = round((wins / len(similar_fights)) * 100, 1)
                 else:
-                    logger.error(f"Ollama error: {response.status_code}")
-                    return self._fallback_counter(enemy_comp, stats, context)
+                    precision = 85.0  # Default for new compositions
+                
+                # Get best builds that won against this comp
+                best_builds = self.get_best_builds_against(enemy_comp)
+                
+                return {
+                    'success': True,
+                    'counter': counter_text,
+                    'precision': precision,
+                    'fights_analyzed': stats['total_fights'],
+                    'similar_fights': len(similar_fights),
+                    'model': MODEL_NAME,
+                    'enemy_composition': enemy_str,
+                    'enemy_comp_dict': enemy_comp,
+                    'best_builds': best_builds,
+                    'generated_at': datetime.now().isoformat()
+                }
+            else:
+                logger.error(f"Ollama error: {response.status_code}")
+                return self._fallback_counter(enemy_comp, stats, context)
                     
         except httpx.TimeoutException as e:
             logger.error(f"Ollama timeout after 60s: {type(e).__name__}")
