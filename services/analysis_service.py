@@ -21,15 +21,13 @@ real_parser = RealEVTCParser()
 
 
 def is_player_afk(player) -> bool:
-    """
-    Determine if a player was AFK/inactive during the fight.
-    AFK criteria: no damage dealt, no healing, no damage taken, no kills
-    """
     damage = getattr(player, 'damage_dealt', 0) or 0
     healing = getattr(player, 'healing', 0) or 0
     damage_taken = getattr(player, 'damage_taken', 0) or 0
     kills = getattr(player, 'kills', 0) or 0
-    
+    subgroup = getattr(player, 'subgroup', 0) or 0
+    if subgroup > 0:
+        return False
     return damage == 0 and healing == 0 and damage_taken == 0 and kills == 0
 
 
@@ -400,7 +398,7 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
             # Build player aggregate for Top 10 (dedupe by account)
             seen_accounts = set()
             for ally in players_data.get('allies', []):
-                account = ally.get('account', ally.get('name', 'Unknown'))
+                account = ally.get('account') or ally.get('name', 'Unknown')
                 if account in seen_accounts:
                     continue
                 seen_accounts.add(account)
