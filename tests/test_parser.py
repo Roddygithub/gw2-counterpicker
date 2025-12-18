@@ -82,7 +82,7 @@ class TestContextDetection:
     
     def test_zerg_context(self):
         """Test zerg context detection (25+ players)"""
-        from counter_ai import guess_fight_context, FightContext
+        from services.counter_service import guess_fight_context, FightContext
         
         context = guess_fight_context(
             ally_count=30,
@@ -94,7 +94,7 @@ class TestContextDetection:
     
     def test_guild_raid_context(self):
         """Test guild raid context detection (10-25 players)"""
-        from counter_ai import guess_fight_context, FightContext
+        from services.counter_service import guess_fight_context, FightContext
         
         context = guess_fight_context(
             ally_count=15,
@@ -106,7 +106,7 @@ class TestContextDetection:
     
     def test_roam_context(self):
         """Test roam context detection (<10 players)"""
-        from counter_ai import guess_fight_context, FightContext
+        from services.counter_service import guess_fight_context, FightContext
         
         context = guess_fight_context(
             ally_count=5,
