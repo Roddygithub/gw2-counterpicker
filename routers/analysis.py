@@ -13,6 +13,7 @@ from rate_limiter import check_upload_rate_limit
 from services.file_validator import validate_upload_file
 from services.analysis_service import (
     analyze_single_file,
+    analyze_multiple_files,
     analyze_dps_report_url
 )
 from services.counter_service import get_counter_service
@@ -77,7 +78,21 @@ async def analyze_evtc(
     
     # Multiple files mode
     else:
-        raise HTTPException(status_code=410, detail="Batch evening analysis has been removed")
+        # Validate all files
+        validated_files = []
+        for file in files:
+            try:
+                content = await validate_upload_file(file)
+                validated_files.append((file.filename, content))
+            except HTTPException as e:
+                raise HTTPException(
+                    status_code=e.status_code,
+                    detail=f"File '{file.filename}': {e.detail}"
+                )
+        
+        result = await analyze_multiple_files(validated_files, lang)
+        result["request"] = request
+        return templates.TemplateResponse("partials/multi_result.html", result)
 
 
 

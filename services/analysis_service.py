@@ -266,5 +266,30 @@ async def analyze_single_file(filename: str, data: bytes, filesize: int, lang: s
 
 
 async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang: str) -> dict:
-    """Batch evening analysis removed."""
-    raise HTTPException(status_code=410, detail="Batch evening analysis has been removed")
+    """
+    Analyze multiple EVTC/ZEVTC files sequentially (no PDF/heatmap).
+    
+    Returns a summary with per-file results and errors (if any).
+    """
+    results = []
+    errors = []
+    
+    for filename, data in validated_files:
+        try:
+            # Use the single-file path to keep consistent parsing and recording
+            single_result = await analyze_single_file(filename, data, len(data), lang)
+            results.append({
+                "filename": filename,
+                "data": single_result
+            })
+        except HTTPException as e:
+            errors.append({"filename": filename, "detail": e.detail})
+        except Exception as e:
+            errors.append({"filename": filename, "detail": str(e)})
+    
+    return {
+        "results": results,
+        "errors": errors,
+        "lang": lang,
+        "t": get_all_translations(lang)
+    }
