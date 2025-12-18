@@ -801,51 +801,21 @@ class CounterAI:
         
         return "\n".join(lines) if lines else ""
     
-    def _build_prompt(self, enemy_str: str, fights_summary: str, context: str, enemy_comp: Dict[str, int] = None) -> str:
-        """Build prompt based on current model's format with API-enriched context"""
-        valid_specs = "Dragonhunter, Firebrand, Willbender, Luminary, Berserker, Spellbreaker, Bladesworn, Paragon, Scrapper, Holosmith, Mechanist, Amalgam, Druid, Soulbeast, Untamed, Galeshot, Daredevil, Deadeye, Specter, Antiquary, Tempest, Weaver, Catalyst, Evoker, Chronomancer, Mirage, Virtuoso, Troubadour, Reaper, Scourge, Harbinger, Ritualist, Herald, Renegade, Vindicator, Conduit"
+    def _build_prompt(self, enemy_str: str, fights_summary: str, context: str, enemy_comp: Dict[str, int]) -> str:
+        """Build simplified AI prompt to avoid timeouts"""
+        mode = context.replace("_raid", "").title()
         
-        model_config = MODEL_CONFIGS.get(MODEL_NAME, MODEL_CONFIGS["qwen2.5:3b"])
-        prompt_format = model_config.get("prompt_format", "qwen")
-        
-        context_names = {
-            'zerg': 'ZERG (25+ players)',
-            'guild_raid': 'GUILD RAID (10-25 players)',
-            'roam': 'ROAMING (1-10 players)'
-        }
-        mode = context_names.get(context, context_names['zerg'])
-        
-        # Build enriched enemy analysis from API data
-        enemy_analysis = ""
-        if enemy_comp and WVW_SPEC_DATA:
-            enemy_analysis = self._build_enemy_analysis(enemy_comp)
-        
-        # Base content with optional enrichment
+        # Simplified prompt to avoid timeouts
         base_content = f"""Guild Wars 2 WvW counter-picker.
-
-VALID SPECS: {valid_specs}
-
 Mode: {mode}
-Enemy: {enemy_str}"""
-
-        # Add enriched context if available
-        if enemy_analysis:
-            base_content += f"""
-
-[ENEMY ANALYSIS]
-{enemy_analysis}"""
-
-        base_content += """
+Enemy: {enemy_str}
 
 Respond EXACTLY in this format:
 CONTER: Nx Spec, Nx Spec
 FOCUS: Target1 > Target2
 TACTIQUE: One tactical advice"""
 
-        if prompt_format == "qwen":
-            return base_content
-        else:
-            return f"[INST] {base_content} [/INST]"
+        return base_content
     
     async def generate_counter(self, enemy_comp: Dict[str, int], context: str = "zerg") -> dict:
         """
