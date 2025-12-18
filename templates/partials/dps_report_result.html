@@ -897,7 +897,57 @@
         </div>
         {% endif %}
         
-        <p class="text-xs text-gray-500 italic">⚠️ Rôles estimés basés sur la spécialisation (pas de stats disponibles pour les ennemis)</p>
+        <!-- Show detail button for multi-file analysis -->
+        {% if players.enemy_composition.per_fight_breakdown %}
+        <div x-data="{ showDetail: false }" class="mt-4">
+            <button @click="showDetail = !showDetail" 
+                    class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all text-sm font-medium">
+                <span x-show="!showDetail">📊 {% if lang == 'en' %}Show Detail{% else %}Montrer le détail{% endif %}</span>
+                <span x-show="showDetail">🔼 {% if lang == 'en' %}Hide Detail{% else %}Masquer le détail{% endif %}</span>
+            </button>
+            
+            <div x-show="showDetail" x-transition class="mt-4 space-y-3">
+                <h4 class="font-display text-lg font-bold text-red-300">{% if lang == 'en' %}Per-Fight Enemy Composition Breakdown{% else %}Détail par Combat - Composition Ennemie{% endif %}</h4>
+                <div class="grid gap-3">
+                    {% for fight in players.enemy_composition.per_fight_breakdown %}
+                    <div class="bg-gw2-darker rounded-xl p-4 border border-red-500/20">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <span class="font-bold text-white">{% if lang == 'en' %}Fight{% else %}Combat{% endif %} #{{ fight.fight_number }}</span>
+                                <span class="text-xs text-gray-400 ml-2">{{ fight.filename }}</span>
+                            </div>
+                            <span class="text-sm text-red-400">{{ fight.total_enemies }} {% if lang == 'en' %}enemies{% else %}ennemis{% endif %}</span>
+                        </div>
+                        <div class="grid grid-cols-5 gap-2 text-center text-xs">
+                            <div>
+                                <div class="text-orange-400 font-bold">{{ fight.role_counts.dps|default(0) }}</div>
+                                <div class="text-gray-500">DPS</div>
+                            </div>
+                            <div>
+                                <div class="text-purple-400 font-bold">{{ fight.role_counts.dps_strip|default(0) }}</div>
+                                <div class="text-gray-500">Strip</div>
+                            </div>
+                            <div>
+                                <div class="text-yellow-400 font-bold">{{ fight.role_counts.stab|default(0) }}</div>
+                                <div class="text-gray-500">Stab</div>
+                            </div>
+                            <div>
+                                <div class="text-green-400 font-bold">{{ fight.role_counts.healer|default(0) }}</div>
+                                <div class="text-gray-500">Healers</div>
+                            </div>
+                            <div>
+                                <div class="text-cyan-400 font-bold">{{ fight.role_counts.boon|default(0) }}</div>
+                                <div class="text-gray-500">Boons</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <p class="text-xs text-gray-500 italic mt-4">⚠️ Rôles estimés basés sur la spécialisation (pas de stats disponibles pour les ennemis)</p>
     </div>
     {% endif %}
     
