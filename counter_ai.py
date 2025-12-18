@@ -112,8 +112,8 @@ MODEL_CONFIGS = {
     "qwen2.5:3b": {
         "name": "qwen2.5:3b",
         "ram_required": 3,  # GB
-        "timeout": 45,
-        "num_predict": 80,
+        "timeout": 90,
+        "num_predict": 64,
         "num_ctx": 1024,  # Increased for enriched prompts
         "temperature": 0.1,
         "prompt_format": "qwen"
@@ -886,6 +886,8 @@ TACTIQUE: One tactical advice"""
         try:
             timeout = httpx.Timeout(float(model_config["timeout"]), connect=15.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
+                with open("/tmp/counter_ai_debug.log", "a") as f:
+                    f.write(f"[{datetime.now()}] Sending HTTP request to {OLLAMA_URL}/api/generate\n")
                 response = await client.post(
                     f"{OLLAMA_URL}/api/generate",
                     json={
@@ -903,6 +905,8 @@ TACTIQUE: One tactical advice"""
                         }
                     }
                 )
+                with open("/tmp/counter_ai_debug.log", "a") as f:
+                    f.write(f"[{datetime.now()}] Got response status: {response.status_code}\n")
                 
                 if response.status_code == 200:
                     result = response.json()
