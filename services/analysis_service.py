@@ -267,16 +267,15 @@ async def analyze_single_file(filename: str, data: bytes, filesize: int, lang: s
 
 async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang: str) -> dict:
     """
-    Analyze multiple EVTC/ZEVTC files sequentially (no PDF/heatmap).
+    Analyze multiple EVTC/ZEVTC files and return aggregated statistics.
     
-    Returns a summary with per-file results and errors (if any).
+    Returns a single aggregated analysis with averaged metrics across all fights.
     """
     results = []
     errors = []
     
     for filename, data in validated_files:
         try:
-            # Use the single-file path to keep consistent parsing and recording
             single_result = await analyze_single_file(filename, data, len(data), lang)
             results.append({
                 "filename": filename,
@@ -287,13 +286,39 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
         except Exception as e:
             errors.append({"filename": filename, "detail": str(e)})
     
-    # Compute aggregate statistics
+    if not results:
+        return {
+            "errors": errors,
+            "summary": {},
+            "aggregated_players": None,
+            "lang": lang,
+            "t": get_all_translations(lang)
+        }
+    
+    # Aggregate statistics across all fights
     total_fights = len(results)
     victories = 0
     defeats = 0
     draws = 0
     total_duration_sec = 0
     unique_players = set()
+    
+    # Aggregated player data
+    all_allies = {}  # account -> player data with aggregated stats
+    all_enemies = {}  # name -> enemy data with aggregated stats
+    all_allies_afk = {}
+    
+    # Composition aggregation
+    ally_spec_counts = {}
+    ally_role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    enemy_spec_counts = {}
+    enemy_role_counts = {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0}
+    
+    # Fight stats aggregation
+    total_ally_deaths = 0
+    total_ally_kills = 0
+    total_ally_damage = 0
+    total_ally_downs = 0
     
     for item in results:
         players_data = item["data"]["players"]
@@ -308,11 +333,134 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
         
         total_duration_sec += players_data.get("duration_sec", 0)
         
-        # Collect unique player accounts
+        # Aggregate allies
         for ally in players_data.get("allies", []):
             account = ally.get("account", "")
             if account:
                 unique_players.add(account)
+                if account not in all_allies:
+                    all_allies[account] = {
+                        'name': ally.get('name'),
+                        'account': account,
+                        'profession': ally.get('profession'),
+                        'role': ally.get('role'),
+                        'group': ally.get('group'),
+                        'damage': 0,
+                        'kills': 0,
+                        'deaths': 0,
+                        'downs': 0,
+                        'is_commander': ally.get('is_commander', False),
+                        'in_squad': ally.get('in_squad', True),
+                        'fight_count': 0
+                    }
+                all_allies[account]['damage'] += ally.get('damage', 0)
+                all_allies[account]['kills'] += ally.get('kills', 0)
+                all_allies[account]['deaths'] += ally.get('deaths', 0)
+                all_allies[account]['downs'] += ally.get('downs', 0)
+                all_allies[account]['fight_count'] += 1
+        
+        # Aggregate AFK allies
+        for ally_afk in players_data.get("allies_afk", []):
+            account = ally_afk.get("account", ally_afk.get("name"))
+            if account not in all_allies_afk:
+                all_allies_afk[account] = ally_afk
+        
+        # Aggregate enemies
+        for enemy in players_data.get("enemies", []):
+            name = enemy.get('name')
+            if name not in all_enemies:
+                all_enemies[name] = {
+                    'name': name,
+                    'profession': enemy.get('profession'),
+                    'role': enemy.get('role'),
+                    'damage_taken': 0,
+                    'fight_count': 0
+                }
+            all_enemies[name]['damage_taken'] += enemy.get('damage_taken', 0)
+            all_enemies[name]['fight_count'] += 1
+        
+        # Aggregate compositions
+        comp = players_data.get('composition', {})
+        for spec, count in comp.get('spec_counts', {}).items():
+            ally_spec_counts[spec] = ally_spec_counts.get(spec, 0) + count
+        for role, count in comp.get('role_counts', {}).items():
+            if role in ally_role_counts:
+                ally_role_counts[role] += count
+        
+        enemy_comp = players_data.get('enemy_composition', {})
+        for spec, count in enemy_comp.get('spec_counts', {}).items():
+            enemy_spec_counts[spec] = enemy_spec_counts.get(spec, 0) + count
+        for role, count in enemy_comp.get('role_counts', {}).items():
+            if role in enemy_role_counts:
+                enemy_role_counts[role] += count
+        
+        # Aggregate fight stats
+        fight_stats = players_data.get('fight_stats', {})
+        total_ally_deaths += fight_stats.get('ally_deaths', 0)
+        total_ally_kills += fight_stats.get('ally_kills', 0)
+        total_ally_damage += fight_stats.get('ally_damage', 0)
+        total_ally_downs += fight_stats.get('ally_downs', 0)
+    
+    # Calculate averages for compositions (divide by number of fights)
+    avg_ally_spec_counts = {spec: count / total_fights for spec, count in ally_spec_counts.items()}
+    avg_ally_role_counts = {role: count / total_fights for role, count in ally_role_counts.items()}
+    avg_enemy_spec_counts = {spec: count / total_fights for spec, count in enemy_spec_counts.items()}
+    avg_enemy_role_counts = {role: count / total_fights for role, count in enemy_role_counts.items()}
+    
+    # Build specs_by_role for allies
+    ally_specs_by_role = {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}}
+    for account, ally_data in all_allies.items():
+        role = ally_data.get('role', 'dps')
+        spec = ally_data.get('profession')
+        if role in ally_specs_by_role and spec:
+            ally_specs_by_role[role][spec] = ally_specs_by_role[role].get(spec, 0) + 1
+    
+    # Build specs_by_role for enemies
+    enemy_specs_by_role = {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}}
+    for name, enemy_data in all_enemies.items():
+        role = enemy_data.get('role', 'dps')
+        spec = enemy_data.get('profession')
+        if role in enemy_specs_by_role and spec:
+            enemy_specs_by_role[role][spec] = enemy_specs_by_role[role].get(spec, 0) + 1
+    
+    # Determine overall fight outcome
+    if victories > defeats:
+        overall_outcome = "victory"
+    elif defeats > victories:
+        overall_outcome = "defeat"
+    else:
+        overall_outcome = "draw"
+    
+    # Build aggregated players_data structure
+    aggregated_players = {
+        'allies': list(all_allies.values()),
+        'allies_afk': list(all_allies_afk.values()),
+        'enemies': list(all_enemies.values()),
+        'fight_name': f"Aggregated Analysis ({total_fights} fights)",
+        'duration_sec': total_duration_sec,
+        'fight_outcome': overall_outcome,
+        'fight_stats': {
+            'ally_deaths': total_ally_deaths,
+            'ally_kills': total_ally_kills,
+            'ally_damage': total_ally_damage,
+            'ally_downs': total_ally_downs,
+        },
+        'composition': {
+            'spec_counts': avg_ally_spec_counts,
+            'role_counts': avg_ally_role_counts,
+            'specs_by_role': ally_specs_by_role,
+            'total_players': len(all_allies)
+        },
+        'enemy_composition': {
+            'spec_counts': avg_enemy_spec_counts,
+            'role_counts': avg_enemy_role_counts,
+            'specs_by_role': enemy_specs_by_role,
+            'total': len(all_enemies)
+        }
+    }
+    
+    # Generate counter recommendation based on aggregated enemy composition
+    ai_counter = await get_counter_service().generate_counter(avg_enemy_spec_counts)
     
     summary = {
         "total_fights": total_fights,
@@ -324,9 +472,10 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
     }
     
     return {
-        "results": results,
         "errors": errors,
         "summary": summary,
+        "aggregated_players": aggregated_players,
+        "ai_counter": ai_counter,
         "lang": lang,
         "t": get_all_translations(lang)
     }

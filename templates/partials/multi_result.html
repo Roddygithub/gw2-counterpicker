@@ -51,17 +51,6 @@
                 <div class="text-xs text-gray-400">{% if lang == 'en' %}Unique Players{% else %}Joueurs Uniques{% endif %}</div>
             </div>
         </div>
-        
-        <!-- Files Status -->
-        <p class="text-gray-400 text-sm">
-            {% set success_count = results|length %}
-            {% set error_count = errors|length %}
-            {% if lang == 'en' %}
-                {{ success_count }} file(s) analyzed successfully{% if error_count > 0 %}, {{ error_count }} error(s){% endif %}.
-            {% else %}
-                {{ success_count }} fichier(s) analysé(s) avec succès{% if error_count > 0 %}, {{ error_count }} erreur(s){% endif %}.
-            {% endif %}
-        </p>
     </div>
     
     {% if errors %}
@@ -77,23 +66,14 @@
     </div>
     {% endif %}
     
-    {% for item in results %}
-        {% set data = item.data.data %}
-        {% set players = item.data.players %}
-        {% set ai_counter = item.data.ai_counter %}
-        {% set permalink = item.data.permalink %}
-        {% set filename = item.data.filename %}
-        {% set timestamp = item.data.timestamp %}
-        {% set parse_mode = item.data.parse_mode %}
-        <div class="glow-card rounded-2xl p-4 border border-gw2-purple/30">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <p class="text-sm text-gray-400">{{ filename }}</p>
-                    <p class="text-xs text-gray-500">{% if lang == 'en' %}Analyzed{% else %}Analysé{% endif %} {{ timestamp }}</p>
-                </div>
-                <span class="text-xs px-3 py-1 rounded-full bg-gw2-purple/20 text-gw2-purple">{{ parse_mode|capitalize }}</span>
-            </div>
-            {% include "partials/dps_report_result.html" %}
-        </div>
-    {% endfor %}
+    {% if aggregated_players %}
+        <!-- Aggregated Analysis - Single unified view -->
+        {% set players = aggregated_players %}
+        {% set data = {"fightName": players.fight_name, "duration": players.duration_sec} %}
+        {% set permalink = "" %}
+        {% set filename = "Multi-file Analysis" %}
+        {% set timestamp = "" %}
+        {% set parse_mode = "aggregated" %}
+        {% include "partials/dps_report_result.html" %}
+    {% endif %}
 </div>
