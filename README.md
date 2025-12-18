@@ -1,65 +1,74 @@
-# 🔮 GW2 CounterPicker
+# 🔮 GW2 CounterPicker v4.0
 
 <div align="center">
 
-![GW2 CounterPicker Banner](https://via.placeholder.com/1200x400/0F0A1F/8B5CF6?text=GW2+CounterPicker)
+![GW2 CounterPicker Banner](https://via.placeholder.com/1200x400/0F0A1F/8B5CF6?text=GW2+CounterPicker+v4.0)
 
-### **Le seul outil capable de lire dans l'âme de ton adversaire.**
-### **Et dans celle de tout son serveur.**
+### **Stats-Based WvW Intelligence Engine**
+### **Analyse. Apprends. Domine.**
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Render-8B5CF6?style=for-the-badge)](https://gw2-counterpicker.onrender.com)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Tests](https://img.shields.io/badge/Tests-Passing-success?style=for-the-badge)](https://github.com/Roddygithub/gw2-counterpicker/actions)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 ---
 
-**L'outil d'intelligence WvW le plus puissant jamais créé pour Guild Wars 2.**
+**L'outil d'intelligence WvW basé sur les données réelles de combat.**
 
-*Made with rage, love and 15 years of WvW pain.* 💜
+*Propulsé par l'analyse statistique de milliers de fights WvW.* 💜
 
-[🚀 Demo Live](#demo) • [⚡ Quick Start](#quick-start) • [📖 Documentation](#features) • [🤝 Contribuer](#contributing)
+[⚡ Quick Start](#quick-start) • [📖 Features](#features) • [🚀 Déploiement](#déploiement) • [🤝 Contribuer](#contributing)
 
 </div>
 
 ---
 
-## 🎬 Demo
+## 🎯 Version 4.0 - Core Engine
 
-![Demo GIF](https://via.placeholder.com/800x450/0F0A1F/EC4899?text=Demo+Video+Coming+Soon)
-
-> *Capture d'écran de l'interface en action - Coming soon*
+**Changements majeurs :**
+- ✅ **Moteur stats-based** : Recommandations basées sur l'historique réel de combats
+- ✅ **Zero dépendances LLM** : Plus rapide, plus léger, plus fiable
+- ✅ **Tests automatisés** : 20+ tests avec CI/CD
+- ✅ **Déploiement automatique** : GitHub Actions → Production
+- ✅ **Architecture propre** : Services séparés, code maintenable
 
 ---
 
 ## ⚡ Features
 
-### 🎯 Mode 1: Quick Analysis
-- **Colle un lien dps.report** → Analyse complète en **3 secondes**
-- Détection automatique de la composition ennemie
-- Counter parfait recommandé avec stratégie détaillée
-- Identification des specs dominantes et du type de squad
+### 🎯 Analyse de Combats
+- **Upload dps.report ou fichiers .evtc/.zevtc**
+- Détection automatique du contexte (Zerg/Guild Raid/Roam)
+- Analyse détaillée de la composition ennemie
+- Statistiques par joueur et par squad
+- Déduplication intelligente des combats
 
-### 📊 Mode 2: Soirée Complète
-- **Drag & drop jusqu'à 100 fichiers .evtc/.zip**
-- Analyse exhaustive de 4+ heures de WvW
-- **Composition moyenne** du serveur adverse
-- **Évolution horaire** des builds (ex: "À 21h30 → 8 FB, à 23h15 → 14 FB")
-- **Heatmap** des zones les plus contestées
-- **Top 10** joueurs les plus vus + leurs builds exacts
-- Build le plus joué par classe
-- **Counter parfait** pour le prochain soir
-- 📄 **Export PDF** "Night Intelligence Report"
+### 🧠 Recommandations Stats-Based
+- **Counters basés sur l'historique réel** de tes combats
+- Analyse des builds qui ont gagné contre des compos similaires
+- Taux de victoire par build et par contexte
+- Stratégies adaptées au type de combat
+- Système de feedback pour améliorer les recommandations
 
-### 📈 Meta 2025
-- Tier list actualisée des builds WvW EU
-- Specs en hausse et en baisse
-- Analyse des tendances meta
+### 📊 Analyse Multi-Fichiers
+- **Upload jusqu'à 100 fichiers** en une fois
+- Analyse agrégée d'une soirée complète
+- **Top 10 joueurs** les plus rencontrés
+- Composition moyenne de l'adversaire
+- Statistiques de victoires/défaites
+- Export PDF des résultats
 
-### 🎨 Design Cyberpunk
-- UI moderne avec thème nebula violet-bleu
-- Animations fluides HTMX + Alpine.js
-- 100% responsive (mobile, tablette, desktop)
+### 📈 Meta WvW
+- Pages meta par contexte (Zerg/Guild Raid/Roam/Unknown)
+- Builds les plus joués basés sur les données réelles
+- Tier list actualisée automatiquement
+- Tendances et évolution du meta
+
+### 🎨 Interface Moderne
+- UI cyberpunk avec thème violet-bleu
+- Animations fluides (HTMX + Alpine.js)
+- 100% responsive
 - Mode sombre élégant
 
 ---
@@ -121,11 +130,14 @@ railway init
 railway up
 ```
 
-### Fly.io
+### Production (SSH + systemd)
+
+Voir [DEPLOYMENT.md](DEPLOYMENT.md) pour le guide complet.
 
 ```bash
-fly launch
-fly deploy
+# Sur le serveur
+sudo systemctl start gw2-counterpicker
+sudo systemctl enable gw2-counterpicker
 ```
 
 ---
@@ -135,11 +147,15 @@ fly deploy
 | Composant | Technologie |
 |-----------|-------------|
 | Backend | **FastAPI** 0.109 |
+| Database | **TinyDB** (JSON) |
+| Parser | **python-evtc** (EVTC parsing) |
 | Frontend | **HTMX** + **Alpine.js** |
 | Styling | **Tailwind CSS** (CDN) |
 | Templating | **Jinja2** |
 | PDF Generation | **ReportLab** |
-| Fonts | **Orbitron** + **Inter** |
+| Testing | **pytest** + **pytest-asyncio** |
+| CI/CD | **GitHub Actions** |
+| Deployment | **SSH** (systemd + nginx) |
 
 ---
 
@@ -147,44 +163,65 @@ fly deploy
 
 ```
 gw2-counterpicker/
-├── main.py              # FastAPI application
-├── models.py            # Pydantic data models
-├── mock_parser.py       # EVTC parser (mock for now)
-├── counter_engine.py    # Counter-pick intelligence
-├── pdf_generator.py     # PDF report generation
-├── requirements.txt     # Python dependencies
-├── Dockerfile           # Docker configuration
-├── render.yaml          # Render deployment config
-├── templates/           # Jinja2 templates
-│   ├── base.html
-│   ├── index.html
-│   ├── analyze.html
-│   ├── evening.html
-│   ├── meta.html
-│   └── partials/
-│       ├── analysis_result.html
-│       └── evening_result.html
-└── static/
-    ├── css/
-    └── js/
+├── main.py                      # FastAPI application
+├── models.py                    # Pydantic models
+├── parser.py                    # EVTC parser
+├── counter_engine.py            # Rules-based counter logic
+├── role_detector.py             # Role detection
+├── pdf_generator.py             # PDF generation
+├── services/
+│   ├── counter_service.py       # Stats-based counter engine
+│   ├── analysis_service.py      # Fight analysis
+│   ├── player_stats_service.py  # Player statistics
+│   ├── performance_stats_service.py
+│   ├── gw2_api_service.py       # GW2 API integration
+│   └── file_validator.py        # Security validation
+├── routers/
+│   ├── analysis.py              # Analysis endpoints
+│   ├── pages.py                 # Web pages
+│   ├── admin.py                 # Admin endpoints
+│   └── gw2_api.py               # GW2 API endpoints
+├── tests/
+│   ├── test_counter_service.py  # Counter service tests
+│   ├── test_analysis_service.py
+│   └── test_role_detector.py
+├── templates/                   # Jinja2 templates
+├── static/                      # CSS, JS, images
+├── data/                        # TinyDB databases
+└── .github/workflows/           # CI/CD
+    └── test-and-deploy.yml
 ```
 
 ---
 
 ## 🔮 Roadmap
 
-- [x] Mode Quick Analysis (dps.report)
-- [x] Mode Soirée Complète (multi-fichiers)
-- [x] Counter-pick engine intelligent
-- [x] Export PDF Night Intelligence Report
-- [x] Meta 2025 tier list
-- [ ] **Vrai parsing .evtc** avec python-evtc
+### v4.0 - Core Engine ✅
+- [x] Moteur stats-based sans LLM
+- [x] Tests automatisés (pytest)
+- [x] CI/CD avec GitHub Actions
+- [x] Déploiement automatique
+- [x] Architecture propre (services/routers)
+- [x] Parsing EVTC complet
+- [x] Analyse multi-fichiers
+- [x] Export PDF
+- [x] Meta pages par contexte
+- [x] GW2 API integration
+
+### v4.1 - Améliorations (À venir)
+- [ ] Dashboard utilisateur amélioré
+- [ ] Graphiques de progression
+- [ ] Comparaison de builds
+- [ ] Analyse de guilde avancée
+- [ ] Export CSV/JSON
+
+### v5.0 - Social (Futur)
 - [ ] Login GitHub OAuth
-- [ ] Sauvegarde des analyses
 - [ ] Partage public de rapports
+- [ ] Classements communautaires
 - [ ] API publique
-- [ ] Intégration Discord bot
-- [ ] Historique des matchups
+- [ ] Bot Discord
+- [ ] Historique des matchups serveur
 
 ---
 
