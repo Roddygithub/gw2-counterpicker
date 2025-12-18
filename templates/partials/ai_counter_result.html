@@ -1,10 +1,10 @@
-<!-- AI Counter Result Partial - Updated when user changes context -->
+<!-- Stats Engine Counter Result Partial - Updated when user changes context -->
 <div class="ai-counter-result" id="ai-counter-container">
     {% if ai_counter and ai_counter.success %}
     <div class="flex items-center gap-2 mb-3">
-        <span class="text-lg">🧠</span>
-        <span class="font-display font-bold text-gw2-purple">IA VIVANTE</span>
-        <span class="text-xs text-gray-500">Basée sur {{ ai_counter.fights_analyzed }} fights réels</span>
+        <span class="text-lg">📊</span>
+        <span class="font-display font-bold text-gw2-purple">{% if lang == 'en' %}Stats Engine{% else %}Moteur Stats{% endif %}</span>
+        <span class="text-xs text-gray-500">{% if lang == 'en' %}Based on {{ ai_counter.fights_analyzed }} real fights{% else %}Basé sur {{ ai_counter.fights_analyzed }} fights réels{% endif %}</span>
     </div>
     
     {% if ai_counter.fallback %}
@@ -73,15 +73,11 @@
     </div>
     {% endif %}
     
-    <div class="text-xs text-gray-600 mt-3">
-        Powered by {{ ai_counter.model }}
-    </div>
-    
     {% else %}
-    <!-- Fallback when AI is not available -->
+    <!-- Fallback when stats engine is not available -->
     <div class="text-center py-4">
-        <span class="text-2xl">🤖</span>
-        <p class="text-gray-400 mt-2">{% if lang == 'en' %}AI analysis unavailable{% else %}Analyse IA indisponible{% endif %}</p>
+        <span class="text-2xl">📊</span>
+        <p class="text-gray-400 mt-2">{% if lang == 'en' %}Stats engine unavailable{% else %}Moteur stats indisponible{% endif %}</p>
     </div>
     {% endif %}
 </div>

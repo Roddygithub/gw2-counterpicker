@@ -461,32 +461,20 @@
         </div>
     </nav>
     
-    <!-- v3.0 IA VIVANTE Banner -->
-    {% if ai_mode %}
-    <div class="bg-gradient-to-r from-red-900/30 via-orange-900/20 to-red-900/30 border-b border-red-500/30">
-        <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-3 text-sm">
-            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold">
-                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+    <!-- v4.0 Core Engine Banner -->
+    <div class="bg-gradient-to-r from-emerald-900/20 via-cyan-900/10 to-emerald-900/20 border-b border-emerald-500/30">
+        <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-3 text-sm text-emerald-200">
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 v{{ app_version }}
             </span>
-            <span class="text-red-400 font-bold">⚡ IA VIVANTE</span>
+            <span class="font-bold text-emerald-300">⚡ Moteur Stats Temps Réel</span>
             <span class="text-gray-500">•</span>
-            <span class="text-gray-300">Entraînée sur <span class="text-white font-medium" id="fights-count">X</span> fights réels</span>
+            <span class="text-gray-200">Recommandations basées sur vos combats analysés</span>
             <span class="text-gray-500">•</span>
-            <span class="text-orange-400 font-medium">Évolue à chaque upload</span>
+            <span class="text-cyan-300 font-medium">100% sans IA / offline</span>
         </div>
     </div>
-    <script>
-    // Fetch AI status to update fights count
-    fetch('/api/ai/status')
-        .then(r => r.json())
-        .then(data => {
-            const el = document.getElementById('fights-count');
-            if (el) el.textContent = data.total_fights || 0;
-        })
-        .catch(() => {});
-    </script>
-    {% endif %}
     
     <!-- Main Content -->
     <main class="pt-20 pb-12 min-h-screen">

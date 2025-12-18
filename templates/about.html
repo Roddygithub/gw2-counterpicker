@@ -13,7 +13,7 @@
             </span>
         </h1>
         <p class="text-xl text-gray-400">
-            {% if lang == 'en' %}Transparency about what the AI can and cannot do{% else %}Transparence sur ce que l'IA peut et ne peut pas faire{% endif %}
+            {% if lang == 'en' %}Transparency about what the stats engine can and cannot do{% else %}Transparence sur ce que le moteur statistique peut et ne peut pas faire{% endif %}
         </p>
     </div>
 
@@ -82,38 +82,38 @@
         <!-- Step 2 -->
         <div>
             <h3 class="font-display text-lg font-bold text-emerald-400 mb-2">
-                2. {% if lang == 'en' %}AI Analysis (Local){% else %}Analyse IA (locale){% endif %}
+                2. {% if lang == 'en' %}Stats Engine (Local){% else %}Moteur statistique (local){% endif %}
             </h3>
             <div class="text-gray-300 text-sm space-y-2">
                 {% if lang == 'en' %}
-                <p>If an Ollama model (e.g. <code class="text-cyan-400">llama3.2</code>) is available, the AI:</p>
+                <p>The stats engine:</p>
                 <ul class="list-disc list-inside ml-4 text-gray-400">
                     <li>Searches history for <strong class="text-white">most similar fights</strong> (close enemy composition)</li>
                     <li>Observes which <strong class="text-white">allied specs/roles</strong> had the best <strong class="text-white">win rate</strong></li>
                     <li>Generates a <strong class="text-white">counter-composition recommendation</strong></li>
                 </ul>
-                <p class="text-gray-400">When AI is unavailable, a static rules system serves as <strong class="text-yellow-400">fallback</strong>.</p>
+                <p class="text-gray-400">When not enough data is available, a static rules system serves as <strong class="text-yellow-400">fallback</strong>.</p>
                 {% else %}
-                <p>Si un modèle Ollama (ex: <code class="text-cyan-400">llama3.2</code>) est disponible, l'IA :</p>
+                <p>Le moteur statistique :</p>
                 <ul class="list-disc list-inside ml-4 text-gray-400">
                     <li>Cherche dans l'historique les <strong class="text-white">combats les plus similaires</strong></li>
                     <li>Observe quelles <strong class="text-white">spés/rôles alliés</strong> ont eu le meilleur <strong class="text-white">taux de victoire</strong></li>
                     <li>Génère une <strong class="text-white">recommandation de contre-composition</strong></li>
                 </ul>
-                <p class="text-gray-400">Quand l'IA n'est pas disponible, un système de règles statiques sert de <strong class="text-yellow-400">fallback</strong>.</p>
+                <p class="text-gray-400">Quand il n'y a pas assez de données, un système de règles statiques sert de <strong class="text-yellow-400">fallback</strong>.</p>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- What the AI CAN do -->
+    <!-- What the stats engine CAN do -->
     <div class="glow-card rounded-2xl p-6 mb-8 border border-emerald-500/30">
         <h2 class="font-display text-2xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
-            ✅ {% if lang == 'en' %}What the AI CAN Do (Realistically){% else %}Ce que l'IA PEUT faire (réellement){% endif %}
+            ✅ {% if lang == 'en' %}What the stats engine CAN do (realistically){% else %}Ce que le moteur stats PEUT faire (réellement){% endif %}
         </h2>
         <div class="text-gray-300 space-y-3">
             {% if lang == 'en' %}
-            <p>Based on log data, GW2 CounterPicker can:</p>
+            <p>Based on observed fight data, GW2 CounterPicker can:</p>
             <ul class="space-y-2">
                 <li class="flex items-start gap-2">
                     <span class="text-emerald-400 mt-1">✓</span>
@@ -134,7 +134,7 @@
             </ul>
             <p class="text-gray-400 italic mt-4">In summary: the tool helps answer <strong class="text-white">"With what type of comp do we most often win against THIS type of enemy?"</strong></p>
             {% else %}
-            <p>Basé sur les données des logs, GW2 CounterPicker peut :</p>
+            <p>Basé sur les données observées des combats, GW2 CounterPicker peut :</p>
             <ul class="space-y-2">
                 <li class="flex items-start gap-2">
                     <span class="text-emerald-400 mt-1">✓</span>
@@ -158,10 +158,10 @@
         </div>
     </div>
 
-    <!-- What the AI CANNOT do -->
+    <!-- What the stats engine CANNOT do -->
     <div class="glow-card rounded-2xl p-6 mb-8 border border-red-500/30">
         <h2 class="font-display text-2xl font-bold text-red-400 mb-4 flex items-center gap-2">
-            ❌ {% if lang == 'en' %}What the AI CANNOT Do (Important Limitations){% else %}Ce que l'IA NE PEUT PAS faire (limites importantes){% endif %}
+            ❌ {% if lang == 'en' %}What the stats engine CANNOT do (important limitations){% else %}Ce que le moteur stats NE PEUT PAS faire (limites importantes){% endif %}
         </h2>
         <div class="text-gray-300 space-y-3">
             {% if lang == 'en' %}
@@ -243,13 +243,13 @@
     <!-- How to read recommendations -->
     <div class="glow-card rounded-2xl p-6 mb-8">
         <h2 class="font-display text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            📖 {% if lang == 'en' %}How to Read AI Recommendations{% else %}Comment lire les recommandations IA{% endif %}
+            📖 {% if lang == 'en' %}How to read stats-based recommendations{% else %}Comment lire les recommandations statistiques{% endif %}
         </h2>
         <div class="text-gray-300 space-y-4">
             {% if lang == 'en' %}
             <p>When you see something like:</p>
             <div class="bg-gw2-darker rounded-xl p-4 border border-emerald-500/30 my-4">
-                <p class="text-emerald-400 text-sm mb-2">🧠 LIVE AI - Based on 94 real fights</p>
+                <p class="text-emerald-400 text-sm mb-2">📊 Stats engine - Based on 94 real fights</p>
                 <p class="text-white">→ 2-3 Spellbreaker strip<br>→ 2 healers (Scrapper/Tempest)<br>→ 1 Chronomancer pull<br>Priority: Druid > Firebrand > Reaper</p>
             </div>
             <p>This <strong class="text-white">concretely means</strong>:</p>
@@ -262,7 +262,7 @@
             {% else %}
             <p>Quand tu vois quelque chose comme :</p>
             <div class="bg-gw2-darker rounded-xl p-4 border border-emerald-500/30 my-4">
-                <p class="text-emerald-400 text-sm mb-2">🧠 IA VIVANTE - Basée sur 94 fights réels</p>
+                <p class="text-emerald-400 text-sm mb-2">📊 Moteur stats - Basé sur 94 fights réels</p>
                 <p class="text-white">→ 2-3 Spellbreaker strip<br>→ 2 healers (Scrapper/Tempest)<br>→ 1 Chronomancer pull<br>Priorité : Druid > Firebrand > Reaper</p>
             </div>
             <p>Cela signifie <strong class="text-white">concrètement</strong> :</p>

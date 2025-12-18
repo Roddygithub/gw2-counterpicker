@@ -65,14 +65,14 @@ TRANSLATIONS = {
         # Sorting
         'sort_by': 'Trier:',
         
-        # AI section
-        'ai_counter': 'IA VIVANTE - Recommandation Counter',
-        'ai_recommendation': 'Recommandation IA',
+        # Engine section
+        'ai_counter': 'RECOMMANDATION STATISTIQUE',
+        'ai_recommendation': 'Recommandation moteur stats',
         'best_builds': 'MEILLEURS BUILDS RÉELS CONTRE CETTE COMP',
-        'based_on_fights': 'Basé sur {count} fights similaires dans notre base',
-        'fights_played': 'Sur {count} fights réels',
-        'win_rate': 'Win Rate',
-        'powered_by': 'Powered by',
+        'based_on_fights': 'Basé sur {count} combats similaires analysés',
+        'fights_played': 'Sur {count} combats réels',
+        'win_rate': 'Taux de victoire',
+        'powered_by': 'Propulsé par',
         'builds_won': 'Ces builds ont historiquement gagné contre des compositions similaires',
         
         # Full report
@@ -99,7 +99,7 @@ TRANSLATIONS = {
         
         # Main page
         'title': 'GW2 Counter Picker',
-        'subtitle': 'Analyze your WvW fights and get AI recommendations',
+        'subtitle': 'Analyze your WvW fights and get stats-based recommendations',
         'upload_title': 'Analyze an EVTC file',
         'upload_desc': 'Drag and drop or click to select',
         'url_title': 'Or paste a dps.report link',
