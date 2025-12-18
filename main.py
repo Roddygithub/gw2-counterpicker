@@ -2,8 +2,8 @@
 GW2 CounterPicker - The Ultimate WvW Intelligence Tool
 "Le seul outil capable de lire dans l'âme de ton adversaire. Et dans celle de tout son serveur."
 
-v3.0 - IA VIVANTE - Apprend de chaque fight uploadé
-Powered by Llama 3.2 8B via Ollama
+v4.0 - Core Engine - Stats-based counter recommendations
+Powered by real fight data and advanced analytics
 
 Made with rage, love and 15 years of WvW pain.
 """
@@ -40,13 +40,7 @@ from role_detector import (
     get_base_class,
     SPEC_TO_CLASS
 )
-from counter_ai import (
-    record_fight_for_learning,
-    get_ai_counter,
-    get_ai_status,
-    counter_ai,
-    warmup_ollama
-)
+from services.counter_service import get_counter_service
 from services.performance_stats_service import record_player_performance
 from translations import get_all_translations
 from scheduler import setup_scheduled_tasks
@@ -69,17 +63,15 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan - warmup Ollama at startup"""
-    # Startup: Warmup Ollama model
-    import asyncio
-    asyncio.create_task(warmup_ollama())
+    """Application lifespan"""
+    # Startup: Initialize services
     yield
     # Shutdown: nothing to do
 
 app = FastAPI(
     title="GW2 CounterPicker",
-    description="The most powerful WvW intelligence tool ever created - IA VIVANTE powered by Llama 3.2",
-    version="3.0.0",
+    description="The most powerful WvW intelligence tool ever created - Stats-based analytics",
+    version="4.0.0",
     lifespan=lifespan
 )
 
@@ -90,7 +82,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["app_version"] = app.version
 templates.env.globals["offline_mode"] = True
-templates.env.globals["ai_mode"] = True  # v3.0 IA VIVANTE
+templates.env.globals["ai_mode"] = False  # v4.0 Stats-based
 
 
 @app.get("/health")
@@ -98,9 +90,9 @@ async def health():
     return JSONResponse({"status": "ok"})
 
 
-@app.get("/api/ai/status")
-async def api_ai_status():
-    return JSONResponse(get_ai_status())
+@app.get("/api/stats/status")
+async def api_stats_status():
+    return JSONResponse(get_counter_service().get_status())
 
 # Initialize engines
 real_parser = RealEVTCParser()
@@ -119,17 +111,16 @@ def import_deployed_data():
     """Import fight data from export file if database is empty"""
     from pathlib import Path
     import json
-    from counter_ai import fights_table  # Import manquant
     
-    # Check if we need to import data
-    fights = fights_table.all()
+    counter_service = get_counter_service()
+    fights = counter_service.fights_table.all()
     if not fights:
         export_file = Path("data/export/fights_export.json")
         if export_file.exists():
             logger.info(f"Importing {export_file.stat().st_size} bytes of fight data...")
             with open(export_file) as f:
                 fights_data = json.load(f)
-            fights_table.insert_multiple(fights_data)
+            counter_service.fights_table.insert_multiple(fights_data)
             logger.info(f"Imported {len(fights_data)} fights to database")
 
 # Import data on startup
@@ -244,13 +235,13 @@ async def validate_upload_file(file: UploadFile) -> bytes:
 async def home(request: Request):
     """Main landing page - The gateway to victory"""
     lang = get_lang(request)
-    ai_status = get_ai_status()
+    stats_status = get_counter_service().get_status()
     return templates.TemplateResponse("index.html", {
         "request": request,
         "title": "GW2 CounterPicker",
         "lang": lang,
         "t": get_all_translations(lang),
-        "ai_status": ai_status
+        "ai_status": stats_status
     })
 
 @app.get("/set-lang/{lang}")
@@ -323,13 +314,13 @@ async def recalculate_counter(
     
     # Update fight record with confirmed context if fight_id provided
     if fight_id:
-        from counter_ai import fights_table
+        counter_service = get_counter_service()
         Fight = Query()
-        fights_table.update({'context_confirmed': new_context}, Fight.fight_id == fight_id)
+        counter_service.fights_table.update({'context_confirmed': new_context}, Fight.fight_id == fight_id)
         logger.info(f"Updated fight {fight_id} with confirmed context: {new_context}")
     
-    # Recalculate AI counter with new context
-    ai_counter = await get_ai_counter(enemy_comp, context=new_context)
+    # Recalculate counter with new context
+    ai_counter = await get_counter_service().generate_counter(enemy_comp, context=new_context)
     
     lang = get_lang(request)
     return templates.TemplateResponse("partials/ai_counter_result.html", {
@@ -367,8 +358,8 @@ async def meta_page(request: Request, context: str = None):
         else:
             meta_data = get_default_meta_data()
     
-    # Add AI learning status
-    ai_status = get_ai_status()
+    # Add stats status
+    ai_status = get_counter_service().get_status()
     
     # Title based on context
     context_titles = {
@@ -525,11 +516,11 @@ async def analyze_dps_report(request: Request, url: str = Form(...)):
                 players_data['source'] = 'dps_report'
                 players_data['source_name'] = url
                 context = players_data.get('context_detected', 'zerg')
-                record_fight_for_learning(players_data, context=context)
+                get_counter_service().record_fight(players_data, context=context)
                 
-                # Generate AI counter with context
+                # Generate counter with context
                 enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-                ai_counter = await get_ai_counter(enemy_spec_counts, context=context)
+                ai_counter = await get_counter_service().generate_counter(enemy_spec_counts, context=context)
                 
                 lang = get_lang(request)
                 return templates.TemplateResponse("partials/dps_report_result.html", {
@@ -643,10 +634,10 @@ async def analyze_evtc_files(
                             
                             players_data = extract_players_from_ei_json(log_data)
                             
-                            # Record fight for AI learning with context
+                            # Record fight with context
                             players_data['source'] = 'dps_report'
                             players_data['source_name'] = permalink
-                            record_fight_for_learning(players_data, context=context)
+                            get_counter_service().record_fight(players_data, context=context)
                             
                             # Record performance stats for global comparison
                             duration_sec = players_data.get('duration_sec', 0)
@@ -656,9 +647,9 @@ async def analyze_evtc_files(
                             # Record stats for connected user
                             await record_user_fight_stats(request, players_data, log_data)
                             
-                            # Generate AI counter with context
+                            # Generate counter with context
                             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-                            ai_counter = await get_ai_counter(enemy_spec_counts, context=context)
+                            ai_counter = await get_counter_service().generate_counter(enemy_spec_counts, context=context)
                             
                             logger.info(f"dps.report success: {len(players_data['enemies'])} enemies")
                             
@@ -686,10 +677,10 @@ async def analyze_evtc_files(
             # Convert parsed log to players_data format
             players_data = convert_parsed_log_to_players_data(parsed_log)
             
-            # Record fight for AI learning with context (with deduplication)
+            # Record fight with context (with deduplication)
             players_data['source'] = 'evtc'
             players_data['source_name'] = file.filename
-            record_fight_for_learning(players_data, filename=file.filename, filesize=file.size, context=context)
+            get_counter_service().record_fight(players_data, filename=file.filename, filesize=file.size, context=context)
             
             # Record performance stats for global comparison
             duration_sec = players_data.get('duration_sec', 0)
@@ -699,9 +690,9 @@ async def analyze_evtc_files(
             # Record stats for connected user
             await record_user_fight_stats(request, players_data)
             
-            # Generate AI counter with context
+            # Generate counter with context
             enemy_spec_counts = players_data.get('enemy_composition', {}).get('spec_counts', {})
-            ai_counter = await get_ai_counter(enemy_spec_counts, context=context)
+            ai_counter = await get_counter_service().generate_counter(enemy_spec_counts, context=context)
             
             logger.info(f"Offline parse success: {len(parsed_log.players)} allies, {len(parsed_log.enemies)} enemies")
             
@@ -1843,18 +1834,18 @@ async def get_shared_report(request: Request, session_id: str):
 @app.get("/health")
 async def health_check():
     """Health check endpoint for deployment"""
-    ai_status = get_ai_status()
+    stats_status = get_counter_service().get_status()
     return {
         "status": "operational", 
-        "message": "GW2 CounterPicker v3.0 - IA VIVANTE",
-        "ai_status": ai_status
+        "message": "GW2 CounterPicker v4.0 - Stats Engine",
+        "stats_status": stats_status
     }
 
 
 @app.get("/api/ai/status")
 async def ai_status_endpoint():
-    """Get AI learning status"""
-    return get_ai_status()
+    """Get stats status (legacy endpoint for compatibility)"""
+    return get_counter_service().get_status()
 
 
 @app.get("/favicon.ico")
@@ -1897,7 +1888,8 @@ def get_meta_from_database(context: str = None) -> dict:
     Args:
         context: Filter by fight context - "zerg", "guild_raid", "roam", or None for all
     """
-    from counter_ai import fights_table
+    counter_service = get_counter_service()
+    fights_table = counter_service.fights_table
     
     # Count spec usage across fights (optionally filtered by context)
     spec_counts = {}
