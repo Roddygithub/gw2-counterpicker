@@ -45,6 +45,7 @@
                 <span class="text-xs px-3 py-1 rounded-full bg-gw2-purple/20 text-gw2-purple">{{ parse_mode|capitalize }}</span>
             </div>
             {% include "partials/dps_report_result.html" with
+                request=request,
                 data=data,
                 players=players,
                 ai_counter=ai_counter,
