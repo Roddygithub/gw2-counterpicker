@@ -827,6 +827,10 @@ TACTIQUE: One tactical advice"""
         
         Returns dict with recommendation and metadata
         """
+        # Write immediate debug to confirm new code execution
+        with open("/tmp/counter_ai_debug.log", "a") as f:
+            f.write(f"[{datetime.now()}] NEW CODE: generate_counter called with {len(enemy_comp)} specs\n")
+        
         stats = self.get_stats()
         similar_fights = self._find_similar_fights(enemy_comp, context=context)
         fights_summary = self._format_fights_summary(similar_fights)
