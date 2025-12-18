@@ -16,7 +16,7 @@ from services.analysis_service import (
     analyze_multiple_files,
     analyze_dps_report_url
 )
-from counter_ai import record_feedback
+from services.counter_service import get_counter_service
 from logger import get_logger
 
 router = APIRouter(prefix="/api/analyze")
@@ -127,7 +127,7 @@ async def confirm_result(request: Request):
     enemy_comp = body.get("enemy_comp", {})
     context = body.get("context", "zerg")
     try:
-        record_feedback(enemy_comp, worked, context)
+        get_counter_service().record_feedback(enemy_comp, worked, context)
         return {"status": "ok"}
     except Exception as e:
         logger.error(f"confirm_result failed: {e}")
