@@ -75,10 +75,4 @@ async def evening_page_redirect(request: Request):
 @router.get("/meta", response_class=HTMLResponse)
 async def meta_page(request: Request):
     """Meta analysis page - Current WvW meta trends"""
-    lang = get_lang(request)
-    return templates.TemplateResponse("meta.html", {
-        "request": request,
-        "title": "Meta Analysis" if lang == 'en' else "Analyse Méta",
-        "lang": lang,
-        "t": get_all_translations(lang)
-    })
+    return RedirectResponse(url="/meta/zerg", status_code=302)

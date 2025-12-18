@@ -322,17 +322,17 @@ async def recalculate_counter(
 
 @app.get("/meta", response_class=HTMLResponse)
 @app.get("/meta/{context}", response_class=HTMLResponse)
-async def meta_page(request: Request, context: str = None):
+async def meta_page(request: Request, context: str = 'zerg'):
     """
     Meta 2025 page - Current trending builds with AI status
     
     Args:
-        context: Optional filter - "zerg", "guild_raid", "roam", or None for all
+        context: Optional filter - "zerg", "guild_raid", "roam"
     """
     # Validate context parameter
-    valid_contexts = ['zerg', 'guild_raid', 'roam', None]
-    if context and context not in valid_contexts:
-        context = None
+    valid_contexts = ['zerg', 'guild_raid', 'roam']
+    if context not in valid_contexts:
+        context = 'zerg'
     
     # Try to get meta from database first (real data), fallback to static/default
     meta_data = get_meta_from_database(context=context)
@@ -353,14 +353,13 @@ async def meta_page(request: Request, context: str = None):
     context_titles = {
         'zerg': 'Meta Zerg 2025',
         'guild_raid': 'Meta Raid Guilde 2025',
-        'roam': 'Meta Roaming 2025',
-        None: 'Meta WvW 2025'
+        'roam': 'Meta Roaming 2025'
     }
     
     lang = get_lang(request)
     return templates.TemplateResponse("meta.html", {
         "request": request,
-        "title": context_titles.get(context, "Meta 2025"),
+        "title": context_titles.get(context, "Meta Zerg 2025"),
         "meta_data": meta_data,
         "ai_status": ai_status,
         "current_context": context,
@@ -1547,12 +1546,12 @@ def get_default_meta_data() -> dict:
     }
 
 
-def get_meta_from_database(context: str = None) -> dict:
+def get_meta_from_database(context: str = 'zerg') -> dict:
     """
     Generate meta data from actual fight database
     
     Args:
-        context: Filter by fight context - "zerg", "guild_raid", "roam", or None for all
+        context: Filter by fight context - "zerg", "guild_raid", "roam"
     """
     counter_service = get_counter_service()
     fights_table = counter_service.fights_table
@@ -1564,10 +1563,9 @@ def get_meta_from_database(context: str = None) -> dict:
     
     for fight in fights_table.all():
         # Filter by context if specified
-        if context:
-            fight_context = fight.get('context_confirmed') or fight.get('context_detected') or fight.get('context', 'unknown')
-            if fight_context != context:
-                continue
+        fight_context = fight.get('context_confirmed') or fight.get('context_detected') or fight.get('context', 'unknown')
+        if fight_context != context:
+            continue
         
         fights_count += 1
         for build in fight.get('ally_builds', []):
@@ -1620,14 +1618,13 @@ def get_meta_from_database(context: str = None) -> dict:
     context_labels = {
         'zerg': 'Zerg (25+ joueurs)',
         'guild_raid': 'Raid Guilde (10-25 joueurs)',
-        'roam': 'Roaming (1-10 joueurs)',
-        None: 'Tous les contextes'
+        'roam': 'Roaming (1-10 joueurs)'
     }
     
     return {
         "last_updated": "Décembre 2025 (Live Data)",
         "context": context,
-        "context_label": context_labels.get(context, 'Tous les contextes'),
+        "context_label": context_labels.get(context, context_labels['zerg']),
         "fights_count": fights_count,
         "tier_s": tier_s,
         "tier_a": tier_a,

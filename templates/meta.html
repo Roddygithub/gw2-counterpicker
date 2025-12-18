@@ -15,6 +15,7 @@
 .role-boon { color: #8b5cf6; background-color: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3); }
 .role-roamer { color: #ec4899; background-color: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3); }
 .role-condi { color: #84cc16; background-color: rgba(132, 204, 22, 0.15); border-color: rgba(132, 204, 22, 0.3); }
+.usage-bar { width: var(--usage); }
 </style>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
@@ -42,12 +43,6 @@
     <!-- Context Selector -->
     <div class="flex justify-center mb-8">
         <div class="inline-flex flex-wrap justify-center gap-2 p-2 rounded-xl bg-gw2-darker border border-gw2-purple/30">
-            <!-- All -->
-            <a href="/meta" 
-               class="px-4 py-2 rounded-lg font-display font-bold transition-all flex items-center gap-2 {% if not current_context %}bg-gw2-purple text-white{% else %}text-gray-400 hover:text-white hover:bg-gw2-purple/20{% endif %}">
-                <span>🌐</span>
-                <span>{% if lang == 'en' %}All{% else %}Tous{% endif %}</span>
-            </a>
             <!-- Zerg -->
             <a href="/meta/zerg" 
                class="px-4 py-2 rounded-lg font-display font-bold transition-all flex items-center gap-2 {% if current_context == 'zerg' %}bg-red-500 text-white{% else %}text-gray-400 hover:text-white hover:bg-red-500/20{% endif %}">
@@ -114,7 +109,7 @@
                         <span class="text-sm text-gray-400">Usage:</span>
                         <div class="flex items-center gap-2">
                             <div class="w-24 h-2 rounded-full bg-gw2-darker overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-yellow-400 to-orange-500" style="width: {{ build.usage }}%;"></div>
+                                <div class="h-full bg-gradient-to-r from-yellow-400 to-orange-500 usage-bar" style="--usage: {{ build.usage }}%;"></div>
                             </div>
                             <span class="text-sm font-bold text-yellow-400">{{ build.usage }}%</span>
                         </div>
@@ -153,7 +148,7 @@
                         <span class="text-sm text-gray-400">Usage:</span>
                         <div class="flex items-center gap-2">
                             <div class="w-24 h-2 rounded-full bg-gw2-darker overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-gw2-purple to-cyber-pink" style="width: {{ build.usage }}%;"></div>
+                                <div class="h-full bg-gradient-to-r from-gw2-purple to-cyber-pink usage-bar" style="--usage: {{ build.usage }}%;"></div>
                             </div>
                             <span class="text-sm font-bold text-gw2-purple">{{ build.usage }}%</span>
                         </div>
@@ -191,7 +186,7 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <div class="w-16 h-2 rounded-full bg-gw2-darker overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-cyan-400 to-blue-500" style="width: {{ build.usage }}%;"></div>
+                                <div class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 usage-bar" style="--usage: {{ build.usage }}%;"></div>
                             </div>
                             <span class="text-xs font-bold text-cyan-400">{{ build.usage }}%</span>
                         </div>
@@ -230,7 +225,7 @@
                         <span class="text-sm text-gray-400">Usage:</span>
                         <div class="flex items-center gap-2">
                             <div class="w-24 h-2 rounded-full bg-gw2-darker overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-gray-500 to-gray-600" style="width: {{ build.usage }}%;"></div>
+                                <div class="h-full bg-gradient-to-r from-gray-500 to-gray-600 usage-bar" style="--usage: {{ build.usage }}%;"></div>
                             </div>
                             <span class="text-sm font-bold text-gray-400">{{ build.usage }}%</span>
                         </div>
