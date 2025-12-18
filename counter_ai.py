@@ -855,30 +855,36 @@ TACTIQUE: One tactical advice"""
 
         try:
             import time
+            import asyncio
             start = time.time()
             with open("/tmp/counter_ai_debug.log", "a") as f:
-                f.write(f"[{datetime.now()}] Using sync httpx client\n")
-            client = httpx.Client(timeout=30.0)
-            response = client.post(
-                f"{OLLAMA_URL}/api/generate",
-                json={
-                    "model": MODEL_NAME,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": model_config["temperature"],
-                        "top_p": 0.9,
-                        "num_predict": model_config["num_predict"],
-                        "num_ctx": model_config["num_ctx"],
-                        "repeat_penalty": 1.2,
-                        "stop": ["\n\n", "Note:", "Explanation:"]
+                f.write(f"[{datetime.now()}] Using sync httpx client in thread\n")
+            
+            def _call_ollama_sync():
+                client = httpx.Client(timeout=30.0)
+                response = client.post(
+                    f"{OLLAMA_URL}/api/generate",
+                    json={
+                        "model": MODEL_NAME,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": model_config["temperature"],
+                            "top_p": 0.9,
+                            "num_predict": model_config["num_predict"],
+                            "num_ctx": model_config["num_ctx"],
+                            "repeat_penalty": 1.2,
+                            "stop": ["\n\n", "Note:", "Explanation:"]
+                        }
                     }
-                }
-            )
+                )
+                client.close()
+                return response
+            
+            response = await asyncio.to_thread(_call_ollama_sync)
             elapsed = time.time() - start
             with open("/tmp/counter_ai_debug.log", "a") as f:
                 f.write(f"[{datetime.now()}] Got response in {elapsed:.1f}s, status: {response.status_code}\n")
-            client.close()
             
             if response.status_code == 200:
                 result = response.json()
