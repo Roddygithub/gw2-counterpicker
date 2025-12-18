@@ -38,6 +38,7 @@ from role_detector import (
 )
 from services.counter_service import get_counter_service
 from services.performance_stats_service import record_player_performance
+from services.analysis_service import analyze_multiple_files, convert_parsed_log_to_players_data
 from translations import get_all_translations
 from scheduler import setup_scheduled_tasks
 from rate_limiter import check_upload_rate_limit
