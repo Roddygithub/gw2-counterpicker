@@ -66,10 +66,10 @@ if ! pgrep -x "ollama" > /dev/null; then
     sleep 3
 fi
 
-# Vérifier que le modèle llama3.2 est disponible
-if ! ollama list | grep -q "llama3.2"; then
-    echo "Téléchargement du modèle llama3.2..."
-    ollama pull llama3.2
+# Vérifier que le modèle qwen2.5:3b est disponible
+if ! ollama list | grep -q "qwen2.5:3b"; then
+    echo "Téléchargement du modèle qwen2.5:3b..."
+    ollama pull qwen2.5:3b
 fi
 
 echo "✅ Ollama prêt"
