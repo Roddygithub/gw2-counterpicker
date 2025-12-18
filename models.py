@@ -141,71 +141,7 @@ class CounterRecommendation(BaseModel):
     
     @property
     def top_priority_builds(self) -> List[CounterBuild]:
-        return [b for b in self.recommended_builds if b.priority >= 4]
-
-
-class HourlyEvolution(BaseModel):
-    """Build evolution per hour"""
-    hour: str
-    spec_counts: Dict[str, int]
-    notable_changes: List[str]
-
-
-class TopPlayer(BaseModel):
-    """Top player statistics"""
-    rank: int
-    player_name: str
-    account_name: Optional[str] = None
-    elite_spec: str
-    times_seen: int
-    avg_damage: int
-    avg_kills: float
-    threat_level: str  # "Low", "Medium", "High", "Extreme"
-    
-    @property
-    def icon_name(self) -> str:
-        return self.elite_spec.lower().replace(" ", "_")
-
-
-class HeatmapData(BaseModel):
-    """Heatmap zone data"""
-    zone_name: str
-    fight_count: int
-    total_kills: int
-    intensity: float  # 0-1 for color intensity
-
-
-class EveningReport(BaseModel):
-    """Complete evening analysis report"""
-    session_id: str
-    created_at: datetime
-    
-    # Basic stats
-    total_files_analyzed: int
-    total_fights: int
-    total_duration_minutes: int
-    
-    # Enemy server info
-    enemy_server: str
-    enemy_alliance: Optional[str] = None
-    
-    # Composition analysis
-    average_composition: CompositionAnalysis
-    
-    # Hourly evolution
-    hourly_evolution: List[HourlyEvolution]
-    
-    # Top players
-    top_players: List[TopPlayer]
-    
-    # Build statistics
-    most_played_per_class: Dict[str, str]  # profession -> elite_spec
-    
-    # Heatmap data
-    heatmap_zones: List[HeatmapData]
-    
-    # Summary
-    key_insights: List[str]
+        return [b for b in self.recommended_builds if b.priority >= 3]
 
 
 class AnalysisResult(BaseModel):
@@ -224,4 +160,4 @@ class AnalysisResult(BaseModel):
     # Fight outcome
     our_kills: int
     our_deaths: int
-    outcome: str  # "Victory", "Defeat", "Draw"
+    outcome: str  # "Victory", "Defeat", "Draw", "Stalemate"

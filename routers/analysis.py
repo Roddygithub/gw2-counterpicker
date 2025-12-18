@@ -13,7 +13,6 @@ from rate_limiter import check_upload_rate_limit
 from services.file_validator import validate_upload_file
 from services.analysis_service import (
     analyze_single_file,
-    analyze_multiple_files,
     analyze_dps_report_url
 )
 from services.counter_service import get_counter_service
@@ -78,46 +77,9 @@ async def analyze_evtc(
     
     # Multiple files mode
     else:
-        return await analyze_files(request, files)
+        raise HTTPException(status_code=410, detail="Batch evening analysis has been removed")
 
 
-@router.post("/files")
-async def analyze_files(
-    request: Request,
-    files: List[UploadFile] = File(...)
-):
-    """
-    Analyze multiple .evtc/.zip files for full evening analysis
-    Strategy: Try dps.report first, fallback to local parser if unavailable
-    
-    Security: Rate limited to 10 uploads/min, max 50MB per file, ZIP validation
-    """
-    # Rate limiting check
-    await check_upload_rate_limit(request)
-    
-    if not files:
-        raise HTTPException(status_code=400, detail="No files uploaded")
-    
-    if len(files) > 100:
-        raise HTTPException(status_code=400, detail="Maximum 100 files allowed")
-    
-    # Validate all files before processing
-    validated_files = []
-    for file in files:
-        try:
-            content = await validate_upload_file(file)
-            validated_files.append((file.filename, content))
-        except HTTPException as e:
-            raise HTTPException(
-                status_code=e.status_code,
-                detail=f"File '{file.filename}': {e.detail}"
-            )
-    
-    lang = get_lang(request)
-    result = await analyze_multiple_files(validated_files, lang)
-    result["request"] = request
-    
-    return templates.TemplateResponse("partials/evening_result_v2.html", result)
 
 
 @router.post("/confirm-result")

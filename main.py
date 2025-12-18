@@ -24,13 +24,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import httpx
 
-# TinyDB for persistent sessions
-from tinydb import TinyDB, Query
-
 from models import (
     AnalysisResult, PlayerBuild, CompositionAnalysis, 
-    CounterRecommendation, EveningReport, HourlyEvolution,
-    HeatmapData, TopPlayer
+    CounterRecommendation
 )
 from parser import RealEVTCParser
 from role_detector import (
@@ -50,7 +46,6 @@ from routers.gw2_api import router as gw2_api_router
 from routers.admin import router as admin_router
 from services.gw2_api_service import get_api_key_by_session, get_account_by_session, gw2_api
 from services.player_stats_service import record_player_fight
-from services.analysis_service import analyze_multiple_files
 import zipfile
 import io
 
@@ -86,7 +81,7 @@ templates.env.globals["ai_mode"] = False  # v4.0 Stats-based
 
 
 @app.get("/health")
-async def health():
+async def health_check():
     return JSONResponse({"status": "ok"})
 
 
@@ -125,13 +120,6 @@ def import_deployed_data():
 
 # Import data on startup
 import_deployed_data()
-
-# Persistent session storage with TinyDB
-DB_PATH = Path("data")
-DB_PATH.mkdir(exist_ok=True)
-db = TinyDB(DB_PATH / "sessions.json")
-sessions_table = db.table("sessions")
-
 
 def get_lang(request: Request) -> str:
     """Get language from cookie or default to French"""
@@ -714,9 +702,9 @@ async def analyze_evtc_files(
             logger.error(f"Local parser failed: {parse_error}\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"Failed to parse file: {str(parse_error)}")
     
-    # Multiple files mode - redirect to evening analysis
+    # Multiple files mode - feature removed
     else:
-        return await analyze_evening_files(request, files)
+        raise HTTPException(status_code=400, detail="Batch evening analysis has been removed")
 
 
 async def analyze_evening_files(
@@ -1491,344 +1479,8 @@ async def analyze_evening_files(
     request: Request,
     files: List[UploadFile] = File(...)
 ):
-    """
-    Analyze multiple .evtc/.zip files for full evening analysis
-    Strategy: Try dps.report first, fallback to local parser if unavailable
-    
-    Security: Rate limited to 10 uploads/min, max 50MB per file, ZIP validation
-    """
-    # Rate limiting check
-    await check_upload_rate_limit(request)
-    
-    if not files:
-        raise HTTPException(status_code=400, detail="No files uploaded")
-    
-    if len(files) > 100:
-        raise HTTPException(status_code=400, detail="Maximum 100 files allowed")
-    
-    # Validate all files before processing
-    validated_files = []
-    for file in files:
-        try:
-            content = await validate_upload_file(file)
-            validated_files.append((file.filename, content))
-        except HTTPException as e:
-            raise HTTPException(
-                status_code=e.status_code,
-                detail=f"File '{file.filename}': {e.detail}"
-            )
-    
-    session_id = str(uuid.uuid4())
-    
-    fight_results = []
-    aggregated_composition = {
-        'spec_counts': {},
-        'role_counts': {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0},
-        'specs_by_role': {'dps': {}, 'dps_strip': {}, 'healer': {}, 'stab': {}, 'boon': {}},
-        'total_players': 0
-    }
-    enemy_composition = {
-        'spec_counts': {},
-        'role_counts': {'dps': 0, 'dps_strip': 0, 'healer': 0, 'stab': 0, 'boon': 0},
-        'total': 0
-    }
-    player_stats = {}
-    map_counts = {}
-    total_duration = 0
-    victories = 0
-    defeats = 0
-    draws = 0
-    skipped_non_wvw = 0  # Count of non-WvW logs skipped
-    parse_mode = "offline"  # Track which mode was used
-    
-    # Use local parser for evening analysis (faster and more reliable for batch processing)
-    dps_report_available = False
-    logger.info("Using OFFLINE mode for batch analysis (faster)")
-    
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        # Skip dps.report check - use local parser directly for batch processing
-        pass
-        
-        logger.info(f"Processing {len(validated_files)} files...")
-        
-        for filename, file_data in validated_files:
-            logger.info(f"Processing file: {filename} ({len(file_data)} bytes)")
-            players_data = None
-            permalink = ""
-            
-            # Strategy 1: Try dps.report if available
-            if dps_report_available:
-                try:
-                    upload_files = {"file": (filename, file_data)}
-                    response = await client.post(
-                        "https://dps.report/uploadContent",
-                        files=upload_files,
-                        data={"json": "1"}
-                    )
-                    
-                    if response.status_code == 200:
-                        result = response.json()
-                        permalink = result.get('permalink', '')
-                        
-                        if permalink:
-                            json_url = f"https://dps.report/getJson?permalink={permalink}"
-                            json_response = await client.get(json_url)
-                            
-                            if json_response.status_code == 200:
-                                log_data = json_response.json()
-                                logger.info(f"Got JSON for {filename}, error={log_data.get('error', 'none')}")
-                                if 'error' not in log_data:
-                                    # Filter: Only accept WvW logs
-                                    is_wvw = is_wvw_log(log_data)
-                                    logger.info(f"is_wvw_log({filename}): {is_wvw}, fightName={log_data.get('fightName', 'Unknown')}")
-                                    if not is_wvw:
-                                        fight_name = log_data.get('fightName', 'Unknown')
-                                        logger.warning(f"Skipped non-WvW log in batch: {fight_name}")
-                                        skipped_non_wvw += 1
-                                        continue
-                                    players_data = extract_players_from_ei_json(log_data)
-                                    logger.info(f"Extracted {len(players_data.get('allies', []))} allies, {len(players_data.get('enemies', []))} enemies")
-                                    parse_mode = "online"
-                            else:
-                                logger.warning(f"JSON fetch failed for {filename}: status={json_response.status_code}")
-                except Exception as e:
-                    logger.warning(f"dps.report failed for {filename}: {e}")
-                    dps_report_available = False  # Switch to offline for remaining files
-            
-            # Strategy 2: OFFLINE FALLBACK - Use local parser
-            if players_data is None:
-                try:
-                    parsed_log = real_parser.parse_evtc_bytes(file_data, filename)
-                    players_data = convert_parsed_log_to_players_data(parsed_log)
-                    parse_mode = "offline"
-                    logger.info(f"Offline parsed {filename}")
-                except Exception as e:
-                    logger.error(f"Failed to parse {filename}: {e}")
-                    continue
-            
-            if not players_data:
-                continue
-            
-            # Aggregate composition data
-            if players_data.get('composition'):
-                comp = players_data['composition']
-                for spec, count in comp.get('spec_counts', {}).items():
-                    aggregated_composition['spec_counts'][spec] = aggregated_composition['spec_counts'].get(spec, 0) + count
-                for role, count in comp.get('role_counts', {}).items():
-                    aggregated_composition['role_counts'][role] = aggregated_composition['role_counts'].get(role, 0) + count
-                for role, specs in comp.get('specs_by_role', {}).items():
-                    if role not in aggregated_composition['specs_by_role']:
-                        aggregated_composition['specs_by_role'][role] = {}
-                    for spec, count in specs.items():
-                        aggregated_composition['specs_by_role'][role][spec] = aggregated_composition['specs_by_role'][role].get(spec, 0) + count
-                aggregated_composition['total_players'] += comp.get('total', 0)
-            
-            # Aggregate enemy composition
-            if players_data.get('enemy_composition'):
-                enemy_comp = players_data['enemy_composition']
-                for spec, count in enemy_comp.get('spec_counts', {}).items():
-                    enemy_composition['spec_counts'][spec] = enemy_composition['spec_counts'].get(spec, 0) + count
-                for role, count in enemy_comp.get('role_counts', {}).items():
-                    enemy_composition['role_counts'][role] = enemy_composition['role_counts'].get(role, 0) + count
-                enemy_composition['total'] += enemy_comp.get('total', 0)
-            
-            # Track player stats for top 10 - USE ACCOUNT NAME for deduplication
-            # Deduplicate allies by account within this fight to avoid counting same player multiple times
-            seen_accounts_this_fight = set()
-            for ally in players_data.get('allies', []):
-                # Use account name for deduplication, fallback to character name
-                account = ally.get('account', ally.get('name', 'Unknown'))
-                char_name = ally.get('name', 'Unknown')
-                
-                # Skip if we already counted this account in this fight
-                if account in seen_accounts_this_fight:
-                    continue
-                seen_accounts_this_fight.add(account)
-                
-                if account not in player_stats:
-                    player_stats[account] = {
-                        'account': account,
-                        'name': char_name,  # Keep one character name for display
-                        'spec': ally.get('elite_spec', ally.get('profession', 'Unknown')),
-                        'specs_played': {},
-                        'damage': 0,
-                        'kills': 0,
-                        'deaths': 0,
-                        'appearances': 0
-                    }
-                
-                # Track specs played by this account
-                spec = ally.get('elite_spec', ally.get('profession', 'Unknown'))
-                player_stats[account]['specs_played'][spec] = player_stats[account]['specs_played'].get(spec, 0) + 1
-                
-                # Update most played spec
-                most_played = max(player_stats[account]['specs_played'].items(), key=lambda x: x[1])
-                player_stats[account]['spec'] = most_played[0]
-                
-                # Use damage_out directly (already total damage), not dps * duration
-                damage_value = ally.get('damage_out', ally.get('damage', ally.get('dps', 0)))
-                # Debug: log if damage seems abnormally high (> 100M per fight is suspicious)
-                if damage_value > 100_000_000:
-                    logger.warning(f"SUSPICIOUS DAMAGE: {account} has {damage_value} damage in one fight - checking data: damage_out={ally.get('damage_out')}, damage={ally.get('damage')}, dps={ally.get('dps')}")
-                player_stats[account]['damage'] += damage_value
-                player_stats[account]['kills'] += ally.get('kills', 0)
-                player_stats[account]['deaths'] += ally.get('deaths', 0)
-                player_stats[account]['appearances'] += 1
-            
-            # Track map/zone
-            fight_name = players_data.get('fight_name', 'Unknown')
-            map_counts[fight_name] = map_counts.get(fight_name, 0) + 1
-            
-            total_duration += players_data.get('duration_sec', 0)
-            
-            # Track wins/losses/draws
-            outcome = players_data.get('fight_outcome', 'unknown')
-            if outcome == 'victory':
-                victories += 1
-            elif outcome == 'defeat':
-                defeats += 1
-            elif outcome == 'draw':
-                draws += 1
-            
-            fight_results.append({
-                'filename': filename,
-                'permalink': permalink,
-                'fight_name': players_data.get('fight_name', 'Unknown'),
-                'duration_sec': players_data.get('duration_sec', 0),
-                'fight_outcome': outcome,
-                'fight_stats': players_data.get('fight_stats', {}),
-                'allies_count': len(players_data.get('allies', [])),
-                'enemies_count': len(players_data.get('enemies', [])),
-                'parse_mode': parse_mode
-            })
-            
-            logger.info(f"Processed {filename}: {players_data.get('fight_name')} ({parse_mode})")
-    
-    # Calculate averages
-    num_fights = len(fight_results)
-    if num_fights > 0:
-        avg_players = aggregated_composition['total_players'] // num_fights
-        avg_duration = total_duration / num_fights
-    else:
-        avg_players = 0
-        avg_duration = 0
-    
-    # Calculate top 10 players by damage (using account name for deduplication)
-    top_players = sorted(
-        [{'name': stats.get('account', name), 'display_name': stats.get('name', name), **stats} for name, stats in player_stats.items()],
-        key=lambda x: x['damage'],
-        reverse=True
-    )[:10]
-    
-    # Count unique players (by account)
-    unique_players_count = len(player_stats)
-    
-    # Calculate most played build per class (use centralized SPEC_TO_CLASS)
-    class_to_specs = {}
-    for spec, count in aggregated_composition['spec_counts'].items():
-        base_class = get_base_class(spec)
-        if base_class not in class_to_specs:
-            class_to_specs[base_class] = {}
-        class_to_specs[base_class][spec] = count
-    
-    # Get most played spec per class
-    builds_by_class = {}
-    for base_class, specs in class_to_specs.items():
-        if specs:
-            top_spec = max(specs.items(), key=lambda x: x[1])
-            builds_by_class[base_class] = {'spec': top_spec[0], 'count': top_spec[1]}
-    
-    # Sort maps by frequency
-    sorted_maps = sorted(map_counts.items(), key=lambda x: x[1], reverse=True)
-    
-    # Generate counter recommendation for next session
-    counter_recommendation = None
-    if enemy_composition['spec_counts']:
-        # Find dominant enemy spec
-        dominant_enemy = max(enemy_composition['spec_counts'].items(), key=lambda x: x[1])
-        counter_recommendation = {
-            'target': dominant_enemy[0],
-            'count': dominant_enemy[1],
-            'suggestion': f"Ramenez plus de Spellbreaker/Scourge pour strip leurs {dominant_enemy[0]}"
-        }
-    
-    # Build stats dict - Simplified summary
-    stats = {
-        "total_fights": num_fights,
-        "total_duration_min": round(total_duration / 60, 1),
-        "avg_duration_sec": round(avg_duration, 1),
-        "avg_players": avg_players,
-        "unique_players": unique_players_count,
-        "victories": victories,
-        "defeats": defeats,
-        "draws": draws,
-        "skipped_non_wvw": skipped_non_wvw,
-        "parse_mode": parse_mode
-    }
-    
-    # Store session in TinyDB for persistence
-    session_data = {
-        "session_id": session_id,
-        "fights": fight_results,
-        "composition": aggregated_composition,
-        "enemy_composition": enemy_composition,
-        "stats": stats,
-        "top_players": top_players,
-        "builds_by_class": builds_by_class,
-        "map_counts": sorted_maps,
-        "counter_recommendation": counter_recommendation,
-        "created_at": datetime.now().isoformat()
-    }
-    sessions_table.insert(session_data)
-    
-    return templates.TemplateResponse("partials/evening_result_v2.html", {
-        "request": request,
-        "fights": fight_results,
-        "composition": aggregated_composition,
-        "enemy_composition": enemy_composition,
-        "stats": stats,
-        "session_id": session_id,
-        "file_count": len(files),
-        "top_players": top_players,
-        "builds_by_class": builds_by_class,
-        "map_counts": sorted_maps,
-        "counter_recommendation": counter_recommendation,
-        "parse_mode": parse_mode
-    })
-
-
-@app.get("/api/report/{session_id}/pdf")
-async def download_pdf_report(session_id: str):
-    """Download Night Intelligence Report as PDF"""
-    Session = Query()
-    result = sessions_table.search(Session.session_id == session_id)
-    
-    if not result:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = result[0]
-    
-    # PDF generation would need the session data
-    # For now, return a simple error as PDF gen needs refactoring
-    raise HTTPException(status_code=501, detail="PDF export coming soon in v2.2")
-
-
-@app.get("/api/share/{session_id}")
-async def get_shared_report(request: Request, session_id: str):
-    """View a shared evening report"""
-    Session = Query()
-    result = sessions_table.search(Session.session_id == session_id)
-    
-    if not result:
-        raise HTTPException(status_code=404, detail="Report not found")
-    
-    session = result[0]
-    
-    return templates.TemplateResponse("shared_report.html", {
-        "request": request,
-        "session": session,
-        "session_id": session_id
-    })
+    """Batch evening analysis and PDF/heatmap reports have been removed."""
+    raise HTTPException(status_code=410, detail="Batch evening analysis has been removed")
 
 
 @app.get("/health")
