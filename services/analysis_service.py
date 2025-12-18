@@ -287,9 +287,46 @@ async def analyze_multiple_files(validated_files: List[Tuple[str, bytes]], lang:
         except Exception as e:
             errors.append({"filename": filename, "detail": str(e)})
     
+    # Compute aggregate statistics
+    total_fights = len(results)
+    victories = 0
+    defeats = 0
+    draws = 0
+    total_duration_sec = 0
+    unique_players = set()
+    
+    for item in results:
+        players_data = item["data"]["players"]
+        outcome = players_data.get("fight_outcome", "unknown")
+        
+        if outcome == "victory":
+            victories += 1
+        elif outcome == "defeat":
+            defeats += 1
+        elif outcome == "draw":
+            draws += 1
+        
+        total_duration_sec += players_data.get("duration_sec", 0)
+        
+        # Collect unique player accounts
+        for ally in players_data.get("allies", []):
+            account = ally.get("account", "")
+            if account:
+                unique_players.add(account)
+    
+    summary = {
+        "total_fights": total_fights,
+        "victories": victories,
+        "defeats": defeats,
+        "draws": draws,
+        "total_duration_sec": total_duration_sec,
+        "unique_players_count": len(unique_players)
+    }
+    
     return {
         "results": results,
         "errors": errors,
+        "summary": summary,
         "lang": lang,
         "t": get_all_translations(lang)
     }

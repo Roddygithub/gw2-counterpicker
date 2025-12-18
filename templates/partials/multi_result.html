@@ -1,10 +1,59 @@
 <div class="space-y-6">
-    <!-- Summary -->
+    <!-- Comprehensive Summary Statistics -->
     <div class="glow-card rounded-2xl p-6 border border-gw2-purple/30">
-        <h3 class="font-display text-xl font-bold text-white mb-2">
-            {% if lang == 'en' %}Batch analysis{% else %}Analyse multi-fichiers{% endif %}
+        <h3 class="font-display text-2xl font-bold text-white mb-4">
+            {% if lang == 'en' %}📊 Batch Analysis Summary{% else %}📊 Résumé d'Analyse Multi-Fichiers{% endif %}
         </h3>
-        <p class="text-gray-400">
+        
+        <!-- Statistics Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+            <!-- Total Fights -->
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-2xl font-display font-bold text-white">{{ summary.total_fights }}</div>
+                <div class="text-xs text-gray-400">{% if lang == 'en' %}Total Fights{% else %}Combats{% endif %}</div>
+            </div>
+            
+            <!-- Victories -->
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-2xl font-display font-bold text-green-400">🏆 {{ summary.victories }}</div>
+                <div class="text-xs text-gray-400">{% if lang == 'en' %}Victories{% else %}Victoires{% endif %}</div>
+            </div>
+            
+            <!-- Defeats -->
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-2xl font-display font-bold text-red-400">💀 {{ summary.defeats }}</div>
+                <div class="text-xs text-gray-400">{% if lang == 'en' %}Defeats{% else %}Défaites{% endif %}</div>
+            </div>
+            
+            <!-- Draws -->
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-2xl font-display font-bold text-yellow-400">⚔️ {{ summary.draws }}</div>
+                <div class="text-xs text-gray-400">{% if lang == 'en' %}Draws{% else %}Matchs nuls{% endif %}</div>
+            </div>
+            
+            <!-- Total Time -->
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-2xl font-display font-bold text-cyan-400">
+                    {% if summary.total_duration_sec >= 3600 %}
+                        {{ (summary.total_duration_sec // 3600)|int }}h {{ ((summary.total_duration_sec % 3600) // 60)|int }}m
+                    {% elif summary.total_duration_sec >= 60 %}
+                        {{ (summary.total_duration_sec // 60)|int }}m {{ (summary.total_duration_sec % 60)|int }}s
+                    {% else %}
+                        {{ summary.total_duration_sec|int }}s
+                    {% endif %}
+                </div>
+                <div class="text-xs text-gray-400">{% if lang == 'en' %}Total Time{% else %}Temps Total{% endif %}</div>
+            </div>
+            
+            <!-- Unique Players -->
+            <div class="bg-gw2-darker rounded-xl p-3 text-center">
+                <div class="text-2xl font-display font-bold text-gw2-purple">{{ summary.unique_players_count }}</div>
+                <div class="text-xs text-gray-400">{% if lang == 'en' %}Unique Players{% else %}Joueurs Uniques{% endif %}</div>
+            </div>
+        </div>
+        
+        <!-- Files Status -->
+        <p class="text-gray-400 text-sm">
             {% set success_count = results|length %}
             {% set error_count = errors|length %}
             {% if lang == 'en' %}
