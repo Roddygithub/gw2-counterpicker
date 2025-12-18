@@ -715,6 +715,7 @@ async def analyze_evtc_files(
                     detail=f"File '{file.filename}': {e.detail}"
                 )
         
+        lang = get_lang(request)
         result = await analyze_multiple_files(validated_files, lang)
         result["request"] = request
         return templates.TemplateResponse("partials/multi_result.html", result)
