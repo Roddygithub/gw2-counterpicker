@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GW2 CounterPicker - The Ultimate WvW Intelligence Tool</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'gw2-gold': '#FFD700',
+                        'gw2-purple': '#8B5CF6',
+                        'gw2-blue': '#3B82F6',
+                        'gw2-dark': '#0F0A1F',
+                        'gw2-darker': '#080510',
+                        'nebula-purple': '#4C1D95',
+                        'nebula-blue': '#1E3A8A',
+                        'cyber-pink': '#EC4899',
+                        'cyber-cyan': '#22D3EE',
+                    },
+                    fontFamily: {
+                        'display': ['Orbitron', 'sans-serif'],
+                        'body': ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)' },
+                            '100%': { boxShadow: '0 0 40px rgba(139, 92, 246, 0.6)' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #080510 0%, #0F0A1F 25%, #1a0a2e 50%, #0F0A1F 75%, #080510 100%);
+            min-height: 100vh;
+        }
+        
+        .font-display {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .nebula-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .nebula-bg::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 40%, rgba(236, 72, 153, 0.08) 0%, transparent 40%),
+                radial-gradient(ellipse at 60% 60%, rgba(34, 211, 238, 0.08) 0%, transparent 40%);
+            animation: nebula-rotate 60s linear infinite;
+        }
+        
+        @keyframes nebula-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .glow-card {
+            background: rgba(15, 10, 31, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .glow-card:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="text-gray-100 antialiased">
+    <!-- Background effects -->
+    <div class="nebula-bg"></div>
+    
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-gw2-darker/80 backdrop-blur-lg border-b border-gw2-purple/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <a href="index.html" class="flex items-center space-x-3 group">
+                    <div class="relative w-10 h-10 rounded-lg bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-display font-bold text-xl bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                        CounterPicker
+                    </span>
+                </a>
+                
+                <!-- Navigation Links -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="text-white font-medium hover:text-gw2-purple transition-colors">Accueil</a>
+                    <a href="meta.html" class="text-gray-400 hover:text-white transition-colors">Méta</a>
+                    <a href="analyze.html" class="text-gray-400 hover:text-white transition-colors">Analyser</a>
+                    <a href="dashboard.html" class="text-gray-400 hover:text-white transition-colors">Dashboard</a>
+                    <a href="history.html" class="text-gray-400 hover:text-white transition-colors">Historique</a>
+                </div>
+                
+                <!-- Language Toggle -->
+                <div class="flex items-center gap-1">
+                    <a href="#" class="px-2 py-1 rounded text-sm font-medium bg-gw2-purple/30 text-white">🇫🇷</a>
+                    <a href="#" class="px-2 py-1 rounded text-sm font-medium text-gray-400 hover:text-white">🇬🇧</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- v4.0 Core Engine Banner -->
+    <div class="bg-gradient-to-r from-emerald-900/20 via-cyan-900/10 to-emerald-900/20 border-b border-emerald-500/30 mt-16">
+        <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-3 text-sm text-emerald-200">
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                v4.0
+            </span>
+            <span class="font-bold text-emerald-300">⚡ Moteur Stats Temps Réel</span>
+            <span class="text-gray-500">•</span>
+            <span class="text-gray-200">Recommandations basées sur vos combats analysés</span>
+            <span class="text-gray-500">•</span>
+            <span class="text-cyan-300 font-medium">100% sans IA / offline</span>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <main class="pt-8 pb-12 min-h-screen">
+        <div class="relative">
+            <!-- Hero Section -->
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
+                <div class="text-center">
+                    <!-- Animated Badge -->
+                    <div class="inline-flex items-center px-4 py-2 rounded-full bg-gw2-purple/20 border border-gw2-purple/30 mb-8 animate-fade-in">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse mr-2"></span>
+                        <span class="text-sm font-medium text-gw2-purple">Live Intelligence System</span>
+                    </div>
+                    
+                    <!-- Main Title -->
+                    <h1 class="font-display text-5xl md:text-7xl lg:text-8xl font-black mb-6 animate-slide-up">
+                        <span class="bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                            GW2 CounterPicker
+                        </span>
+                    </h1>
+                    
+                    <!-- Tagline -->
+                    <p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-4 animate-slide-up" style="animation-delay: 0.1s;">
+                        Le seul outil capable de lire dans l'âme de ton adversaire.
+                    </p>
+                    <p class="text-lg md:text-xl text-gw2-purple font-medium mb-12 animate-slide-up" style="animation-delay: 0.15s;">
+                        Et dans celle de tout son serveur.
+                    </p>
+                    
+                    <!-- CTA Button -->
+                    <div class="flex flex-col sm:flex-row justify-center gap-4 animate-slide-up" style="animation-delay: 0.2s;">
+                        <a href="analyze.html" 
+                           class="group relative px-8 py-4 rounded-xl font-display font-bold text-lg overflow-hidden transition-all hover:scale-105">
+                            <div class="absolute inset-0 bg-gradient-to-r from-gw2-purple to-cyber-pink"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-cyber-pink to-gw2-purple opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span class="relative flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Analyser mes Logs
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Features Section -->
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Feature 1 -->
+                    <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.3s;">
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center mb-4">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-xl font-bold text-white mb-2">⚡ 3 Secondes</h3>
+                        <p class="text-gray-400">
+                            Colle un lien dps.report → Composition ennemie + Counter parfait instantanément.
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 2 -->
+                    <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.4s;">
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyber-cyan to-gw2-blue flex items-center justify-center mb-4">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-xl font-bold text-white mb-2">📈 Meta Live</h3>
+                        <p class="text-gray-400">
+                            Suis l'évolution du méta WvW avec des données de combats réels.
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 3 -->
+                    <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.45s;">
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mb-4">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0a3 3 0 01-6 0m6 0H9"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-xl font-bold text-white mb-2">📊 Squad stats</h3>
+                        <p class="text-gray-400">
+                            Visualise la compo, les boons et les performances de ton squad.
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 4 -->
+                    <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.5s;">
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center mb-4">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-xl font-bold text-white mb-2">🎯 Top Threats</h3>
+                        <p class="text-gray-400">
+                            Identifie les 10 joueurs les plus dangereux et leurs builds exacts.
+                        </p>
+                    </div>
+                    
+                    <!-- Feature 5 -->
+                    <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.55s;">
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mb-4">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-xl font-bold text-white mb-2">📈 Meta 2025</h3>
+                        <p class="text-gray-400">
+                            Suis l'évolution du meta WvW en temps réel. Tier lists actualisées.
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Stats Engine Section -->
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                <div class="glow-card rounded-3xl p-8 md:p-12 border border-gw2-purple/30">
+                    <div class="text-center mb-8">
+                        <div class="inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 border border-green-500/30 mb-4">
+                            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse mr-2"></span>
+                            <span class="text-sm font-medium text-green-400">📊 Le moteur stats s'améliore avec vos combats</span>
+                        </div>
+                        <h3 class="font-display text-2xl font-bold text-white mb-2">Le moteur stats s'améliore à chaque combat analysé</h3>
+                        <p class="text-gray-400">Plus vous analysez de logs, plus les recommandations deviennent précises</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8 text-center max-w-md mx-auto">
+                        <div>
+                            <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-gw2-purple to-cyber-pink bg-clip-text text-transparent">
+                                1,247
+                            </div>
+                            <div class="text-gray-400 mt-2">🎯 Combats analysés</div>
+                        </div>
+                        <div>
+                            <div class="font-display text-4xl md:text-5xl font-black bg-gradient-to-r from-cyber-cyan to-gw2-blue bg-clip-text text-transparent">
+                                ~3s
+                            </div>
+                            <div class="text-gray-400 mt-2">⚡ Temps d'analyse</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Final CTA -->
+            <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                <h2 class="font-display text-3xl md:text-4xl font-bold mb-6">
+                    <span class="bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                        Prêt à changer la guerre ?
+                    </span>
+                </h2>
+                <p class="text-xl text-gray-400 mb-8">
+                    Demain matin, les commandants EU découvriront que tout a changé.
+                </p>
+                <a href="analyze.html" 
+                   class="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-display font-bold text-lg bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple transition-all hover:scale-105 animate-glow">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Commencer Maintenant
+                </a>
+            </section>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="border-t border-gw2-purple/20 bg-gw2-darker/50 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="text-center md:text-left">
+                    <p class="text-gray-400 text-sm">
+                        Made with <span class="text-cyber-pink">rage</span>, <span class="text-gw2-purple">love</span> and <span class="text-cyber-cyan">15 years of WvW pain</span>
+                    </p>
+                    <p class="text-gray-500 text-xs mt-1">
+                        © 2025 GW2 CounterPicker. Not affiliated with ArenaNet or NCSOFT.
+                    </p>
+                </div>
+                <div class="flex flex-col items-center md:items-end space-y-2">
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-500">Created by</span>
+                        <span class="text-cyber-cyan font-medium">krill le faucheur.1679</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

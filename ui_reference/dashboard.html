@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Dashboard WvW - GW2 CounterPicker</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'gw2-purple': '#8B5CF6',
+                        'gw2-dark': '#0F0A1F',
+                        'gw2-darker': '#080510',
+                        'cyber-pink': '#EC4899',
+                        'cyber-cyan': '#22D3EE',
+                    },
+                    fontFamily: {
+                        'display': ['Orbitron', 'sans-serif'],
+                        'body': ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom, #080510, #0F0A1F, #080510);
+            min-height: 100vh;
+        }
+        
+        .font-display {
+            font-family: 'Orbitron', sans-serif;
+        }
+    </style>
+</head>
+<body class="text-gray-100 antialiased">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-gw2-darker/80 backdrop-blur-lg border-b border-gw2-purple/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="index.html" class="flex items-center space-x-3 group">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-display font-bold text-xl bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                        CounterPicker
+                    </span>
+                </a>
+                
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="text-gray-400 hover:text-white transition-colors">Accueil</a>
+                    <a href="meta.html" class="text-gray-400 hover:text-white transition-colors">Méta</a>
+                    <a href="analyze.html" class="text-gray-400 hover:text-white transition-colors">Analyser</a>
+                    <a href="dashboard.html" class="text-white font-medium hover:text-gw2-purple transition-colors">Dashboard</a>
+                    <a href="history.html" class="text-gray-400 hover:text-white transition-colors">Historique</a>
+                </div>
+                
+                <div class="flex items-center gap-1">
+                    <a href="#" class="px-2 py-1 rounded text-sm font-medium bg-gw2-purple/30 text-white">🇫🇷</a>
+                    <a href="#" class="px-2 py-1 rounded text-sm font-medium text-gray-400 hover:text-white">🇬🇧</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="pt-20 pb-12 min-h-screen">
+        <div class="max-w-6xl mx-auto px-4 py-8">
+            
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 mb-2">
+                    Mon Dashboard WvW
+                </h1>
+                <p class="text-gray-400">
+                    Suivez votre progression et obtenez des recommandations personnalisées
+                </p>
+            </div>
+
+            <!-- Connected State -->
+            <div class="space-y-6">
+                
+                <!-- Account Card -->
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-green-500/30 p-6">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-3xl">
+                                ⚔️
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-display font-bold text-white">MonCompte.1234</h2>
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-gray-400">
+                                    <span title="Monde d'origine (les équipes WvW changent chaque semaine)">🌍 Gandara [FR]</span>
+                                    <span>⭐ Rang WvW: 2,847</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors text-sm">
+                            Déconnecter
+                        </button>
+                    </div>
+                    
+                    <!-- Expansions -->
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs font-medium">
+                            Heart of Thorns
+                        </span>
+                        <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs font-medium">
+                            Path of Fire
+                        </span>
+                        <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs font-medium">
+                            End of Dragons
+                        </span>
+                        <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs font-medium">
+                            Secrets of the Obscure
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Guilds Section -->
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-cyan-500/20 p-6">
+                    <h3 class="text-xl font-display font-bold text-cyan-400 mb-4 flex items-center gap-2">
+                        <span>🏰</span>
+                        Mes Guildes
+                    </h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <!-- Guild 1 -->
+                        <a href="guild_analytics.html" 
+                           class="bg-gw2-darker/50 rounded-lg p-4 border border-cyan-500/10 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group block">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:scale-105 transition-transform">
+                                    [TAG]
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-white truncate">Ma Guilde WvW</div>
+                                    <div class="text-xs text-cyan-400 group-hover:text-cyan-300">
+                                        Voir Analytics →
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- Guild 2 -->
+                        <a href="guild_analytics.html" 
+                           class="bg-gw2-darker/50 rounded-lg p-4 border border-cyan-500/10 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group block">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:scale-105 transition-transform">
+                                    [PVE]
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-white truncate">Guilde PvE</div>
+                                    <div class="text-xs text-cyan-400 group-hover:text-cyan-300">
+                                        Voir Analytics →
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- Guild 3 -->
+                        <a href="guild_analytics.html" 
+                           class="bg-gw2-darker/50 rounded-lg p-4 border border-cyan-500/10 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group block">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:scale-105 transition-transform">
+                                    [FUN]
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-white truncate">Guilde Sociale</div>
+                                    <div class="text-xs text-cyan-400 group-hover:text-cyan-300">
+                                        Voir Analytics →
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Stats Import -->
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-blue-500/20 p-6">
+                    <h3 class="text-xl font-display font-bold text-blue-400 mb-4 flex items-center gap-2">
+                        <span>📈</span>
+                        Vos Stats WvW
+                    </h3>
+                    <div class="text-center py-6">
+                        <div class="text-4xl mb-4">📊</div>
+                        <p class="text-gray-300 mb-4">
+                            Importez votre historique de combats depuis les logs déjà analysés
+                        </p>
+                        <button class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all">
+                            Importer Mon Historique
+                        </button>
+                        <p class="text-xs text-gray-500 mt-4">
+                            Cela va scanner tous les logs déjà analysés et importer les combats où vous avez participé
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
+                    <h3 class="text-xl font-display font-bold text-purple-400 mb-4 flex items-center gap-2">
+                        <span>⚡</span>
+                        Actions Rapides
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <a href="analyze.html" class="bg-gw2-darker/50 rounded-lg p-4 border border-purple-500/10 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all group">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center text-white">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-white">Analyser un Combat</div>
+                                    <div class="text-xs text-gray-400">Upload .evtc ou lien dps.report</div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <a href="history.html" class="bg-gw2-darker/50 rounded-lg p-4 border border-purple-500/10 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all group">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center text-white">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-white">Mon Historique</div>
+                                    <div class="text-xs text-gray-400">Voir toutes mes stats</div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <a href="meta.html" class="bg-gw2-darker/50 rounded-lg p-4 border border-purple-500/10 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all group">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center text-white">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-white">Meta 2025</div>
+                                    <div class="text-xs text-gray-400">Tier lists actualisées</div>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <a href="index.html" class="bg-gw2-darker/50 rounded-lg p-4 border border-purple-500/10 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all group">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center text-white">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-white">Accueil</div>
+                                    <div class="text-xs text-gray-400">Retour à la page principale</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="border-t border-gw2-purple/20 bg-gw2-darker/50 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="text-center md:text-left">
+                    <p class="text-gray-400 text-sm">
+                        Made with <span class="text-cyber-pink">rage</span>, <span class="text-gw2-purple">love</span> and <span class="text-cyber-cyan">15 years of WvW pain</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

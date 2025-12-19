@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyse - GW2 CounterPicker</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'gw2-gold': '#FFD700',
+                        'gw2-purple': '#8B5CF6',
+                        'gw2-blue': '#3B82F6',
+                        'gw2-dark': '#0F0A1F',
+                        'gw2-darker': '#080510',
+                        'cyber-pink': '#EC4899',
+                        'cyber-cyan': '#22D3EE',
+                    },
+                    fontFamily: {
+                        'display': ['Orbitron', 'sans-serif'],
+                        'body': ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #080510 0%, #0F0A1F 25%, #1a0a2e 50%, #0F0A1F 75%, #080510 100%);
+            min-height: 100vh;
+        }
+        
+        .font-display {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .glow-card {
+            background: rgba(15, 10, 31, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .glow-card:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="text-gray-100 antialiased">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-gw2-darker/80 backdrop-blur-lg border-b border-gw2-purple/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="index.html" class="flex items-center space-x-3 group">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-display font-bold text-xl bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                        CounterPicker
+                    </span>
+                </a>
+                
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="text-gray-400 hover:text-white transition-colors">Accueil</a>
+                    <a href="meta.html" class="text-gray-400 hover:text-white transition-colors">Méta</a>
+                    <a href="analyze.html" class="text-white font-medium hover:text-gw2-purple transition-colors">Analyser</a>
+                    <a href="dashboard.html" class="text-gray-400 hover:text-white transition-colors">Dashboard</a>
+                    <a href="history.html" class="text-gray-400 hover:text-white transition-colors">Historique</a>
+                </div>
+                
+                <div class="flex items-center gap-1">
+                    <a href="#" class="px-2 py-1 rounded text-sm font-medium bg-gw2-purple/30 text-white">🇫🇷</a>
+                    <a href="#" class="px-2 py-1 rounded text-sm font-medium text-gray-400 hover:text-white">🇬🇧</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="pt-20 pb-12 min-h-screen">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="{ mode: 'files', selectedFiles: [], isDragging: false, fightContext: 'auto' }">
+            <!-- Header -->
+            <div class="text-center mb-12">
+                <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
+                    <span class="bg-gradient-to-r from-gw2-purple to-cyber-pink bg-clip-text text-transparent">
+                        ⚡ Analyse
+                    </span>
+                </h1>
+                <p class="text-xl text-gray-400">
+                    Glisse un ou plusieurs fichiers .evtc/.zevtc ou colle un lien dps.report
+                </p>
+            </div>
+            
+            <!-- Tab Selector -->
+            <div class="flex justify-center mb-8">
+                <div class="inline-flex rounded-xl bg-gw2-darker p-1 border border-gw2-purple/30">
+                    <button @click="mode = 'files'" 
+                            :class="mode === 'files' ? 'bg-gw2-purple text-white' : 'text-gray-400 hover:text-white'"
+                            class="px-6 py-3 rounded-lg font-display font-bold transition-all flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        Fichier .evtc
+                    </button>
+                    <button @click="mode = 'url'" 
+                            :class="mode === 'url' ? 'bg-gw2-purple text-white' : 'text-gray-400 hover:text-white'"
+                            class="px-6 py-3 rounded-lg font-display font-bold transition-all flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        Lien dps.report
+                    </button>
+                </div>
+            </div>
+            
+            <!-- File Upload Mode -->
+            <div x-show="mode === 'files'" x-transition class="glow-card rounded-2xl p-6 md:p-8 mb-8">
+                <form>
+                    <!-- Fight Context Selector -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-300 mb-3">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                                Type de combat
+                            </span>
+                        </label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <!-- Auto -->
+                            <button type="button" @click="fightContext = 'auto'"
+                                    :class="fightContext === 'auto' ? 'border-gw2-purple bg-gw2-purple/20 text-white ring-2 ring-gw2-purple/50' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
+                                    class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all">
+                                <span class="text-xl">🔄</span>
+                                <span class="text-sm font-medium">Auto</span>
+                            </button>
+                            <!-- Zerg -->
+                            <button type="button" @click="fightContext = 'zerg'"
+                                    :class="fightContext === 'zerg' ? 'border-red-500 bg-red-500/20 text-white ring-2 ring-red-500/50' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
+                                    class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all">
+                                <span class="text-xl">⚔️</span>
+                                <span class="text-sm font-medium">Zerg</span>
+                            </button>
+                            <!-- Guild Raid -->
+                            <button type="button" @click="fightContext = 'guild_raid'"
+                                    :class="fightContext === 'guild_raid' ? 'border-blue-500 bg-blue-500/20 text-white ring-2 ring-blue-500/50' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
+                                    class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all">
+                                <span class="text-xl">🛡️</span>
+                                <span class="text-sm font-medium">Guilde</span>
+                            </button>
+                            <!-- Roam -->
+                            <button type="button" @click="fightContext = 'roam'"
+                                    :class="fightContext === 'roam' ? 'border-green-500 bg-green-500/20 text-white ring-2 ring-green-500/50' : 'border-gray-600 text-gray-400 hover:border-gray-500'"
+                                    class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all">
+                                <span class="text-xl">🗡️</span>
+                                <span class="text-sm font-medium">Roam</span>
+                            </button>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">Détection automatique basée sur la taille du squad</p>
+                    </div>
+                    
+                    <!-- Drag & Drop Zone -->
+                    <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all border-gray-600">
+                        <div class="w-16 h-16 rounded-full bg-gw2-purple/20 flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                        </div>
+                        <p class="text-lg font-display font-bold text-white mb-2">
+                            Glisse tes fichiers ici
+                        </p>
+                        <p class="text-gray-400 text-sm">
+                            ou clique pour sélectionner un ou plusieurs fichiers .evtc, .zevtc ou .zip
+                        </p>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full mt-6 py-4 rounded-xl font-display font-bold text-lg transition-all flex items-center justify-center gap-3 bg-gray-700 cursor-not-allowed">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        Analyser le fichier
+                    </button>
+                </form>
+                
+                <p class="mt-4 text-center text-sm text-gray-500">
+                    📁 Formats supportés: .evtc, .zevtc, .zip
+                </p>
+            </div>
+            
+            <!-- URL Mode -->
+            <div x-show="mode === 'url'" x-transition class="glow-card rounded-2xl p-6 md:p-8 mb-8">
+                <form class="space-y-6">
+                    <div>
+                        <label for="url" class="block text-sm font-medium text-gray-300 mb-2">
+                            Lien dps.report
+                        </label>
+                        <div class="relative">
+                            <input type="url" 
+                                   id="url" 
+                                   name="url" 
+                                   placeholder="https://dps.report/xxxx-xxxxxxxxx"
+                                   class="w-full px-4 py-4 rounded-xl bg-gw2-darker border border-gw2-purple/30 text-white placeholder-gray-500 focus:outline-none focus:border-gw2-purple focus:ring-2 focus:ring-gw2-purple/20 transition-all text-lg">
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2">
+                                <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            Supporte tous les liens dps.report de combats WvW
+                        </p>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full py-4 rounded-xl font-display font-bold text-lg bg-gradient-to-r from-gw2-purple to-cyber-pink hover:from-cyber-pink hover:to-gw2-purple transition-all hover:scale-[1.02] flex items-center justify-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        Analyser
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Result Container (Placeholder) -->
+            <div class="glow-card rounded-2xl p-8 text-center">
+                <div class="w-20 h-20 rounded-full bg-gw2-purple/20 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-10 h-10 text-gw2-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                    </svg>
+                </div>
+                <h3 class="font-display text-xl font-bold text-white mb-2">En attente d'analyse</h3>
+                <p class="text-gray-400">
+                    Colle un lien dps.report ci-dessus pour commencer l'analyse
+                </p>
+            </div>
+            
+            <!-- Tips Section -->
+            <div class="mt-12 grid md:grid-cols-2 gap-6">
+                <div class="glow-card rounded-xl p-6">
+                    <h4 class="font-display font-bold text-gw2-purple mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Comment obtenir un lien dps.report ?
+                    </h4>
+                    <ol class="text-sm text-gray-400 space-y-2 list-decimal list-inside">
+                        <li>Active ArcDPS dans Guild Wars 2</li>
+                        <li>Après un combat, le fichier .evtc est généré</li>
+                        <li>Upload sur <a href="https://dps.report" target="_blank" class="text-gw2-purple hover:underline">dps.report</a></li>
+                        <li>Copie le lien et colle-le ici</li>
+                    </ol>
+                </div>
+                
+                <div class="glow-card rounded-xl p-6">
+                    <h4 class="font-display font-bold text-cyber-cyan mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        Pro Tips
+                    </h4>
+                    <ul class="text-sm text-gray-400 space-y-2">
+                        <li class="flex items-start gap-2">
+                            <span class="text-cyber-cyan">→</span>
+                            Analyse plusieurs combats pour voir les patterns
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-cyber-cyan">→</span>
+                            Utilise "Soirée Complète" pour une vue d'ensemble
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-cyber-cyan">→</span>
+                            Les counters sont basés sur le meta EU 2025
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="border-t border-gw2-purple/20 bg-gw2-darker/50 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="text-center md:text-left">
+                    <p class="text-gray-400 text-sm">
+                        Made with <span class="text-cyber-pink">rage</span>, <span class="text-gw2-purple">love</span> and <span class="text-cyber-cyan">15 years of WvW pain</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

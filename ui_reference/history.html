@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Carrière WvW - GW2 CounterPicker</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'gw2-purple': '#8B5CF6',
+                        'gw2-dark': '#0F0A1F',
+                        'gw2-darker': '#080510',
+                        'cyber-pink': '#EC4899',
+                        'cyber-cyan': '#22D3EE',
+                    },
+                    fontFamily: {
+                        'display': ['Orbitron', 'sans-serif'],
+                        'body': ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom, #080510, #0F0A1F, #080510);
+            min-height: 100vh;
+        }
+        
+        .font-display {
+            font-family: 'Orbitron', sans-serif;
+        }
+    </style>
+</head>
+<body class="text-gray-100 antialiased">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-gw2-darker/80 backdrop-blur-lg border-b border-gw2-purple/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="index.html" class="flex items-center space-x-3 group">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gw2-purple to-cyber-pink flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-display font-bold text-xl bg-gradient-to-r from-gw2-purple via-cyber-pink to-cyber-cyan bg-clip-text text-transparent">
+                        CounterPicker
+                    </span>
+                </a>
+                
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="text-gray-400 hover:text-white transition-colors">Accueil</a>
+                    <a href="meta.html" class="text-gray-400 hover:text-white transition-colors">Méta</a>
+                    <a href="analyze.html" class="text-gray-400 hover:text-white transition-colors">Analyser</a>
+                    <a href="dashboard.html" class="text-gray-400 hover:text-white transition-colors">Dashboard</a>
+                    <a href="history.html" class="text-white font-medium hover:text-gw2-purple transition-colors">Historique</a>
+                </div>
+                
+                <div class="flex items-center gap-1">
+                    <a href="#" class="px-2 py-1 rounded text-sm font-medium bg-gw2-purple/30 text-white">🇫🇷</a>
+                    <a href="#" class="px-2 py-1 rounded text-sm font-medium text-gray-400 hover:text-white">🇬🇧</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="pt-20 pb-12 min-h-screen">
+        <div class="max-w-6xl mx-auto px-4 py-8">
+            
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-500 mb-2">
+                    Ma Carrière WvW
+                </h1>
+                <p class="text-gray-400">
+                    Suivez votre progression à travers tous vos combats
+                </p>
+            </div>
+
+            <!-- Career Stats -->
+            <div class="space-y-6">
+                
+                <!-- Overview Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-blue-500/20 p-4 text-center">
+                        <div class="text-3xl font-bold text-blue-400">127</div>
+                        <div class="text-sm text-gray-400">Combats Total</div>
+                    </div>
+                    <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-green-500/20 p-4 text-center">
+                        <div class="text-3xl font-bold text-green-400">78</div>
+                        <div class="text-sm text-gray-400">Victoires</div>
+                    </div>
+                    <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-red-500/20 p-4 text-center">
+                        <div class="text-3xl font-bold text-red-400">49</div>
+                        <div class="text-sm text-gray-400">Défaites</div>
+                    </div>
+                    <div class="bg-gw2-dark/80 backdrop-blur rounded-xl border border-amber-500/20 p-4 text-center">
+                        <div class="text-3xl font-bold text-amber-400">61.4%</div>
+                        <div class="text-sm text-gray-400">Taux de Victoire</div>
+                    </div>
+                </div>
+
+                <!-- Detailed Stats -->
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Combat Stats -->
+                    <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
+                        <h3 class="text-xl font-display font-bold text-purple-400 mb-4 flex items-center gap-2">
+                            <span>⚔️</span> Stats de Combat
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Kills Total</span>
+                                <span class="font-bold text-white">1,247</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Morts Total</span>
+                                <span class="font-bold text-white">892</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Ratio K/D</span>
+                                <span class="font-bold text-green-400">1.40</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Kills Moy/Combat</span>
+                                <span class="font-bold text-white">9.8</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">DPS Moyen</span>
+                                <span class="font-bold text-cyan-400">12,450</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Dégâts Total</span>
+                                <span class="font-bold text-orange-400">45,892,340</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Favorites -->
+                    <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-6">
+                        <h3 class="text-xl font-display font-bold text-amber-400 mb-4 flex items-center gap-2">
+                            <span>⭐</span> Favoris
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="bg-gw2-darker/50 rounded-lg p-3">
+                                <div class="text-sm text-gray-400 mb-1">Spé Favorite</div>
+                                <div class="text-xl font-bold text-white">Spellbreaker</div>
+                                <div class="text-xs text-gray-500">45 combats</div>
+                            </div>
+                            <div class="bg-gw2-darker/50 rounded-lg p-3">
+                                <div class="text-sm text-gray-400 mb-1">Rôle Favori</div>
+                                <div class="text-xl font-bold text-white capitalize">Strip</div>
+                                <div class="text-xs text-gray-500">67 combats</div>
+                            </div>
+                            <div class="bg-gw2-darker/50 rounded-lg p-3">
+                                <div class="text-sm text-gray-400 mb-1">Temps Joué</div>
+                                <div class="text-xl font-bold text-white">42.5h</div>
+                                <div class="text-xs text-gray-500">en combats WvW</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Comparison -->
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
+                    <h3 class="text-xl font-display font-bold text-purple-400 mb-4 flex items-center gap-2">
+                        <span>📈</span> Comparaison de Performance
+                    </h3>
+                    <p class="text-sm text-gray-400 mb-4">
+                        Votre performance moyenne comparée à tous les joueurs (basé sur 1,247 échantillons)
+                    </p>
+                    
+                    <div class="grid md:grid-cols-5 gap-4">
+                        <!-- DPS -->
+                        <div class="bg-gw2-darker/50 rounded-xl p-4 border border-green-500/30">
+                            <div class="text-center mb-3">
+                                <div class="text-sm font-bold uppercase text-orange-400">
+                                    ⚔️ DPS
+                                </div>
+                            </div>
+                            
+                            <div class="relative h-4 bg-gray-700 rounded-full overflow-hidden mb-2">
+                                <div class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-green-500 to-emerald-400" style="width: 68%;"></div>
+                                <div class="absolute inset-y-0 left-1/2 w-0.5 bg-white/50"></div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-green-400">68%</div>
+                                <div class="text-xs text-gray-400">Au-dessus</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Strip -->
+                        <div class="bg-gw2-darker/50 rounded-xl p-4 border border-yellow-500/50">
+                            <div class="text-center mb-3">
+                                <div class="text-sm font-bold uppercase text-purple-400">
+                                    💀 Strip
+                                </div>
+                            </div>
+                            
+                            <div class="relative h-4 bg-gray-700 rounded-full overflow-hidden mb-2">
+                                <div class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-yellow-500 to-amber-400" style="width: 87%;"></div>
+                                <div class="absolute inset-y-0 left-1/2 w-0.5 bg-white/50"></div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-yellow-400">87%</div>
+                                <div class="text-xs text-gray-400">Exceptionnel</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Boon -->
+                        <div class="bg-gw2-darker/50 rounded-xl p-4 border border-green-500/30">
+                            <div class="text-center mb-3">
+                                <div class="text-sm font-bold uppercase text-cyan-400">
+                                    ✨ Boon
+                                </div>
+                            </div>
+                            
+                            <div class="relative h-4 bg-gray-700 rounded-full overflow-hidden mb-2">
+                                <div class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-green-500 to-emerald-400" style="width: 72%;"></div>
+                                <div class="absolute inset-y-0 left-1/2 w-0.5 bg-white/50"></div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-green-400">72%</div>
+                                <div class="text-xs text-gray-400">Au-dessus</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stab -->
+                        <div class="bg-gw2-darker/50 rounded-xl p-4 border border-gray-500/30">
+                            <div class="text-center mb-3">
+                                <div class="text-sm font-bold uppercase text-yellow-400">
+                                    🛡️ Stab
+                                </div>
+                            </div>
+                            
+                            <div class="relative h-4 bg-gray-700 rounded-full overflow-hidden mb-2">
+                                <div class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" style="width: 45%;"></div>
+                                <div class="absolute inset-y-0 left-1/2 w-0.5 bg-white/50"></div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-gray-300">45%</div>
+                                <div class="text-xs text-gray-400">Moyenne</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Heal -->
+                        <div class="bg-gw2-darker/50 rounded-xl p-4 border border-green-500/30">
+                            <div class="text-center mb-3">
+                                <div class="text-sm font-bold uppercase text-green-400">
+                                    💚 Heal
+                                </div>
+                            </div>
+                            
+                            <div class="relative h-4 bg-gray-700 rounded-full overflow-hidden mb-2">
+                                <div class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-green-500 to-emerald-400" style="width: 61%;"></div>
+                                <div class="absolute inset-y-0 left-1/2 w-0.5 bg-white/50"></div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-green-400">61%</div>
+                                <div class="text-xs text-gray-400">Au-dessus</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="mt-4 flex flex-wrap justify-center gap-4 text-xs text-gray-500">
+                        <span>🟡 >84% = Exceptionnel</span>
+                        <span>🟢 50-84% = Au-dessus</span>
+                        <span>🔵 16-50% = Moyenne</span>
+                        <span>🟠 <16% = En-dessous</span>
+                    </div>
+                </div>
+
+                <!-- Specs Breakdown -->
+                <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-cyan-500/20 p-6">
+                    <h3 class="text-xl font-display font-bold text-cyan-400 mb-4 flex items-center gap-2">
+                        <span>📊</span> Stats par Spécialisation
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-gray-400 border-b border-gray-700">
+                                    <th class="text-left py-2 px-3">Spé</th>
+                                    <th class="text-center py-2 px-3">Combats</th>
+                                    <th class="text-center py-2 px-3">% Victoire</th>
+                                    <th class="text-center py-2 px-3">DPS Moy</th>
+                                    <th class="text-center py-2 px-3">K/D Moy</th>
+                                    <th class="text-center py-2 px-3">Heures</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-800 hover:bg-gw2-darker/30">
+                                    <td class="py-2 px-3 font-medium text-white">Spellbreaker</td>
+                                    <td class="py-2 px-3 text-center">45</td>
+                                    <td class="py-2 px-3 text-center">
+                                        <span class="text-green-400">64%</span>
+                                    </td>
+                                    <td class="py-2 px-3 text-center text-cyan-400">11,250</td>
+                                    <td class="py-2 px-3 text-center">
+                                        <span class="text-green-400">1.52</span>
+                                    </td>
+                                    <td class="py-2 px-3 text-center text-gray-400">18.5h</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gw2-darker/30">
+                                    <td class="py-2 px-3 font-medium text-white">Harbinger</td>
+                                    <td class="py-2 px-3 text-center">32</td>
+                                    <td class="py-2 px-3 text-center">
+                                        <span class="text-green-400">59%</span>
+                                    </td>
+                                    <td class="py-2 px-3 text-center text-cyan-400">15,890</td>
+                                    <td class="py-2 px-3 text-center">
+                                        <span class="text-green-400">1.38</span>
+                                    </td>
+                                    <td class="py-2 px-3 text-center text-gray-400">12.2h</td>
+                                </tr>
+                                <tr class="border-b border-gray-800 hover:bg-gw2-darker/30">
+                                    <td class="py-2 px-3 font-medium text-white">Scrapper</td>
+                                    <td class="py-2 px-3 text-center">28</td>
+                                    <td class="py-2 px-3 text-center">
+                                        <span class="text-green-400">71%</span>
+                                    </td>
+                                    <td class="py-2 px-3 text-center text-cyan-400">8,450</td>
+                                    <td class="py-2 px-3 text-center">
+                                        <span class="text-green-400">1.15</span>
+                                    </td>
+                                    <td class="py-2 px-3 text-center text-gray-400">9.8h</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="border-t border-gw2-purple/20 bg-gw2-darker/50 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="text-center md:text-left">
+                    <p class="text-gray-400 text-sm">
+                        Made with <span class="text-cyber-pink">rage</span>, <span class="text-gw2-purple">love</span> and <span class="text-cyber-cyan">15 years of WvW pain</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
