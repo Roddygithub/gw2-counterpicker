@@ -913,16 +913,20 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
         }
         all_ally_data.append(player_data)
     
+    # Filter to only include squad members (subgroup > 0)
+    # Out-of-squad players are shown separately in the template
+    squad_members = [p for p in all_ally_data if p['in_squad']]
+    
     # Separate AFK from active - but if all would be AFK, include them anyway
-    active_allies = [p for p in all_ally_data if not p['is_afk']]
-    afk_allies = [p for p in all_ally_data if p['is_afk']]
+    active_allies = [p for p in squad_members if not p['is_afk']]
+    afk_allies = [p for p in squad_members if p['is_afk']]
     
     if active_allies:
         allies = active_allies
         allies_afk = afk_allies
     else:
-        # No active allies found - include all players to avoid empty results
-        allies = all_ally_data
+        # No active allies found - include all squad members to avoid empty results
+        allies = squad_members
         allies_afk = []
     
     for enemy in parsed_log.enemies:

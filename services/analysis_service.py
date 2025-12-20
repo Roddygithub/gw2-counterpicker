@@ -83,10 +83,13 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
             'in_squad': player.subgroup > 0,
         }
         
-        if player_data['is_afk']:
-            allies_afk.append(player_data)
-        else:
-            allies.append(player_data)
+        # Only include squad members (subgroup > 0) in allies list
+        # Out-of-squad players are shown separately in the template
+        if player_data['in_squad']:
+            if player_data['is_afk']:
+                allies_afk.append(player_data)
+            else:
+                allies.append(player_data)
     
     for enemy in parsed_log.enemies:
         role = estimate_role_from_profession(enemy.elite_spec or enemy.profession)
