@@ -40,7 +40,20 @@ fi
 print_status "Pulling latest changes from git..."
 git fetch origin
 git checkout main
+
+# Stash local changes (especially data files) before pulling
+if ! git diff-index --quiet HEAD --; then
+    print_warning "Local changes detected, stashing..."
+    git stash push -m "Auto-stash before deployment $(date)"
+fi
+
 git pull origin main
+
+# Restore stashed changes if any
+if git stash list | grep -q "Auto-stash before deployment"; then
+    print_status "Restoring local data changes..."
+    git stash pop || print_warning "Could not restore stash (conflicts possible)"
+fi
 
 print_status "Activating virtual environment..."
 if [ ! -d "$VENV_DIR" ]; then
