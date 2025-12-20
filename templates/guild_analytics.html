@@ -55,7 +55,7 @@
             </div>
         </div>
 
-        {% set total_participations = stats.role_distribution.values()|sum %}
+        {% set total_participations = stats.role_distribution.values()|list|sum %}
         <div class="grid md:grid-cols-2 gap-6 mb-6">
             <!-- Role Distribution -->
             <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-purple-500/20 p-6">
