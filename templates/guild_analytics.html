@@ -87,7 +87,7 @@
             </div>
 
             <!-- Spec Distribution -->
-            {% set total_spec_participations = stats.spec_distribution|sum(attribute='1') if stats.spec_distribution else 0 %}
+            {% set total_spec_participations = stats.spec_distribution|map('last')|list|sum if stats.spec_distribution else 0 %}
             <div class="bg-gw2-dark/80 backdrop-blur rounded-2xl border border-amber-500/20 p-6">
                 <h3 class="text-xl font-display font-bold text-amber-400 mb-4">
                     {% if lang == 'en' %}Top Specializations{% else %}Top Spécialisations{% endif %}
