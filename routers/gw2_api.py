@@ -732,7 +732,9 @@ async def guild_analytics_page(request: Request, guild_id: str):
             }
         )
     except Exception as e:
+        import traceback
         logger.error(f"Guild analytics error: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         error_context["error"] = f"Erreur lors du chargement: {str(e)[:100]}"
         error_context["guild"] = {"id": guild_id, "name": "Unknown", "tag": ""}
         return templates.TemplateResponse("guild_analytics.html", error_context)
