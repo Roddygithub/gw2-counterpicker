@@ -479,7 +479,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
-                    {% for p in players.allies|sort(attribute='damage_out', reverse=true) %}
+                    {% for p in players.allies|sort(attribute='damage_out', reverse=true)|list %}
                     <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
@@ -525,7 +525,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
-                    {% for p in players.allies|sort(attribute='down_contrib', reverse=true) %}
+                    {% for p in players.allies|sort(attribute='down_contrib', reverse=true)|list %}
                     <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
@@ -573,7 +573,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
-                    {% for p in players.allies|sort(attribute='healing', reverse=true) %}
+                    {% for p in players.allies|sort(attribute='healing', reverse=true)|list %}
                     <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
@@ -622,7 +622,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
-                    {% for p in players.allies|sort(attribute='damage_in', reverse=true) %}
+                    {% for p in players.allies|sort(attribute='damage_in', reverse=true)|list %}
                     <tr class="hover:bg-gw2-darker/50" data-profession="{{ p.profession|lower }}" data-group="{{ p.group }}" data-role="{{ p.role }}">
                         <td class="py-2 font-medium text-white">{{ p.name }}</td>
                         <td class="py-2"><span class="px-2 py-1 rounded text-xs prof-{{ p.profession|lower|replace(' ', '') }}">{{ p.profession }}</span></td>
