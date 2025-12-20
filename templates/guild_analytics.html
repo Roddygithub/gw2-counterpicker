@@ -206,7 +206,13 @@
             {% set max_monthly = stats.monthly_activity.values()|max if stats.monthly_activity else 1 %}
             
             {# Get current year and create all 12 months #}
-            {% set current_year = stats.monthly_activity.keys()|list|last|slice(0, 4) if stats.monthly_activity else '2025' %}
+            {% set current_year = '2025' %}
+            {% if stats.monthly_activity %}
+                {% set last_month_key = stats.monthly_activity.keys()|list|last %}
+                {% if last_month_key %}
+                    {% set current_year = last_month_key|slice(0, 4) %}
+                {% endif %}
+            {% endif %}
             {% set all_months = [] %}
             {% for i in range(12) %}
                 {% set month_num = i + 1 %}
