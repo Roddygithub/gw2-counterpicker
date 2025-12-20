@@ -204,6 +204,19 @@
             </h3>
             {% set sorted_months = stats.monthly_activity|dictsort %}
             {% set max_monthly = stats.monthly_activity.values()|max if stats.monthly_activity else 1 %}
+            
+            {# Get current year and create all 12 months #}
+            {% set current_year = stats.monthly_activity.keys()|list|last|slice(0, 4) if stats.monthly_activity else '2025' %}
+            {% set all_months = [] %}
+            {% for i in range(12) %}
+                {% set month_num = i + 1 %}
+                {% set month_str = month_num|string if month_num > 9 else '0' + month_num|string %}
+                {% set month_key = current_year + '-' + month_str %}
+                {% set month_count = stats.monthly_activity.get(month_key, 0) %}
+                {% set _ = all_months.append((month_key, month_count)) %}
+            {% endfor %}
+            
+            {% set max_monthly = max_monthly if max_monthly > 0 else 1 %}
             <div class="relative">
                 <!-- Y-axis labels -->
                 <div class="absolute left-0 top-0 h-48 flex flex-col justify-between text-xs text-gray-500 pr-2">
@@ -213,20 +226,21 @@
                 </div>
                 <!-- Chart -->
                 <div class="ml-10 h-48 flex items-end gap-1 border-l border-b border-gray-700">
-                    {% for month, count in sorted_months[-12:] %}
+                    {% for month, count in all_months %}
                     {% set height = (count / max_monthly * 100)|round if max_monthly > 0 else 0 %}
                     <div class="flex-1 flex flex-col items-center" style="min-width: 30px;">
                         <span class="text-xs text-cyan-400 mb-1">{{ count }}</span>
-                        <div class="w-full bg-gradient-to-t from-blue-600 to-cyan-400 rounded-t transition-all hover:from-blue-500 hover:to-cyan-300 cursor-pointer" 
+                        <div class="w-full {% if count > 0 %}bg-gradient-to-t from-blue-600 to-cyan-400 hover:from-blue-500 hover:to-cyan-300{% else %}bg-gray-700{% endif %} rounded-t transition-all cursor-pointer" 
                              style="height: {{ height }}%" title="{{ month }}: {{ count }} combats"></div>
                     </div>
                     {% endfor %}
                 </div>
                 <!-- X-axis labels -->
                 <div class="ml-10 flex gap-1 mt-2">
-                    {% for month, count in sorted_months[-12:] %}
+                    {% set month_names = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'] %}
+                    {% for i in range(12) %}
                     <div class="flex-1 text-center" style="min-width: 30px;">
-                        <span class="text-xs text-gray-500">{{ month[5:7] }}/{{ month[2:4] }}</span>
+                        <span class="text-xs text-gray-500">{{ month_names[i] }}</span>
                     </div>
                     {% endfor %}
                 </div>
