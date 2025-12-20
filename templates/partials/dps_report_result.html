@@ -167,17 +167,17 @@
                 notificationText: '',
                 enemyComp: {}
             }" data-enemy-comp="{{ players.enemy_composition.spec_counts|tojson|safe if players.enemy_composition else '{}' }}">
-                <button @click="if(context !== 'zerg') { context = 'zerg'; loading = true; const comp = JSON.parse($el.parentElement.dataset.enemyComp || '{}'); htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: JSON.stringify(comp), new_context: 'zerg'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}Context changed to Zerg - stats updated!{% else %}Contexte changé en Zerg - stats mises à jour !{% endif %}'; setTimeout(() => showNotification = false, 3000); }); }" 
+                <button @click="if(context !== 'zerg') { const oldContext = context; context = 'zerg'; loading = true; const comp = JSON.parse($el.parentElement.dataset.enemyComp || '{}'); fetch('/api/analyze/confirm-result',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({worked:false, enemy_comp: comp, context: oldContext})}); htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: JSON.stringify(comp), new_context: 'zerg'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}✓ Context changed to Zerg - Thank you for your feedback!{% else %}✓ Contexte changé en Zerg - Merci pour ton retour !{% endif %}'; setTimeout(() => showNotification = false, 4000); }); }" 
                         :class="context === 'zerg' ? 'bg-purple-500/30 border-purple-500 ring-2 ring-purple-500/50' : 'bg-gw2-darker border-gray-700 hover:border-purple-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     🏰 Zerg
                 </button>
-                <button @click="if(context !== 'guild_raid') { context = 'guild_raid'; loading = true; const comp = JSON.parse($el.parentElement.dataset.enemyComp || '{}'); htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: JSON.stringify(comp), new_context: 'guild_raid'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}Context changed to Guild - stats updated!{% else %}Contexte changé en Guilde - stats mises à jour !{% endif %}'; setTimeout(() => showNotification = false, 3000); }); }" 
+                <button @click="if(context !== 'guild_raid') { const oldContext = context; context = 'guild_raid'; loading = true; const comp = JSON.parse($el.parentElement.dataset.enemyComp || '{}'); fetch('/api/analyze/confirm-result',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({worked:false, enemy_comp: comp, context: oldContext})}); htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: JSON.stringify(comp), new_context: 'guild_raid'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}✓ Context changed to Guild - Thank you for your feedback!{% else %}✓ Contexte changé en Guilde - Merci pour ton retour !{% endif %}'; setTimeout(() => showNotification = false, 4000); }); }" 
                         :class="context === 'guild_raid' ? 'bg-cyan-500/30 border-cyan-500 ring-2 ring-cyan-500/50' : 'bg-gw2-darker border-gray-700 hover:border-cyan-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     ⚔️ {% if lang == 'en' %}Guild{% else %}Guilde{% endif %}
                 </button>
-                <button @click="if(context !== 'roam') { context = 'roam'; loading = true; const comp = JSON.parse($el.parentElement.dataset.enemyComp || '{}'); htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: JSON.stringify(comp), new_context: 'roam'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}Context changed to Roam - stats updated!{% else %}Contexte changé en Roam - stats mises à jour !{% endif %}'; setTimeout(() => showNotification = false, 3000); }); }" 
+                <button @click="if(context !== 'roam') { const oldContext = context; context = 'roam'; loading = true; const comp = JSON.parse($el.parentElement.dataset.enemyComp || '{}'); fetch('/api/analyze/confirm-result',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({worked:false, enemy_comp: comp, context: oldContext})}); htmx.ajax('POST', '/api/recalculate-counter', {target:'#ai-counter-section', swap:'innerHTML', values:{enemy_composition: JSON.stringify(comp), new_context: 'roam'}}).then(() => { loading = false; showNotification = true; notificationText = '{% if lang == 'en' %}✓ Context changed to Roam - Thank you for your feedback!{% else %}✓ Contexte changé en Roam - Merci pour ton retour !{% endif %}'; setTimeout(() => showNotification = false, 4000); }); }" 
                         :class="context === 'roam' ? 'bg-orange-500/30 border-orange-500 ring-2 ring-orange-500/50' : 'bg-gw2-darker border-gray-700 hover:border-orange-500/50'"
                         class="px-3 py-1 rounded-lg text-xs font-medium border transition-all">
                     🗡️ Roam
@@ -192,24 +192,6 @@
                 <!-- Notification toast -->
                 <div x-show="showNotification" x-transition class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
                     <span x-text="notificationText"></span>
-                </div>
-            </div>
-            <div x-data="{ submitted: false, toast: false, msg: '' }" class="mt-3">
-                <p class="text-xs text-gray-500 mb-2">
-                    {% if lang == 'en' %}These buttons tell the stats engine if the recommendation actually helped you. Each click refines future suggestions.{% else %}Ces boutons indiquent au moteur stats si la recommandation t'a vraiment aidé. Chaque clic affine les prochaines suggestions.{% endif %}
-                </p>
-                <div class="flex items-center gap-2" x-show="!submitted">
-                    <button @click="submitted = true; const root = $el.closest('[data-enemy-comp]'); const comp = JSON.parse((root?.dataset.enemyComp) || '{}'); fetch('/api/analyze/confirm-result',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({worked:true, enemy_comp: comp, context: '{{ players.context_detected|default('zerg') }}'})}).then(()=>{ toast = true; msg = '{% if lang == 'en' %}Thanks! Marked as effective.{% else %}Merci ! Marqué comme efficace.{% endif %}'; setTimeout(()=>toast=false,3000); });"
-                            class="px-3 py-1 rounded-lg text-xs font-medium border transition-all bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30">
-                        ✅ {% if lang == 'en' %}Worked{% else %}Efficace{% endif %}
-                    </button>
-                    <button @click="submitted = true; const root = $el.closest('[data-enemy-comp]'); const comp = JSON.parse((root?.dataset.enemyComp) || '{}'); fetch('/api/analyze/confirm-result',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({worked:false, enemy_comp: comp, context: '{{ players.context_detected|default('zerg') }}'})}).then(()=>{ toast = true; msg = '{% if lang == 'en' %}Feedback saved. We\'ll improve it.{% else %}Feedback enregistré. On améliorera cela.{% endif %}'; setTimeout(()=>toast=false,3000); });"
-                            class="px-3 py-1 rounded-lg text-xs font-medium border transition-all bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30">
-                        ❌ {% if lang == 'en' %}Didn\'t work{% else %}Pas efficace{% endif %}
-                    </button>
-                </div>
-                <div x-show="toast" x-transition class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-                    <span x-text="msg"></span>
                 </div>
             </div>
         </div>

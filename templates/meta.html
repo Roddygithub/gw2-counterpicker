@@ -237,8 +237,10 @@
     </div>
     
     <!-- Meta Shifts -->
+    {% if meta_data.rising or meta_data.falling %}
     <div class="grid md:grid-cols-2 gap-6 mt-8">
         <!-- Rising -->
+        {% if meta_data.rising %}
         <div class="glow-card rounded-2xl p-6">
             <h3 class="font-display text-xl font-bold text-green-400 mb-6 flex items-center gap-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,8 +264,10 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
         
         <!-- Falling -->
+        {% if meta_data.falling %}
         <div class="glow-card rounded-2xl p-6">
             <h3 class="font-display text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,7 +291,9 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
     </div>
+    {% endif %}
     
     <!-- Disclaimer -->
     <div class="mt-8 text-center">
