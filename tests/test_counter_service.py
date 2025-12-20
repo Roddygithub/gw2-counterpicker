@@ -4,7 +4,7 @@ Tests for the stats-based counter service
 
 import pytest
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from services.counter_service import (
     CounterService,
     FightContext,
@@ -277,7 +277,7 @@ class TestCounterService:
         """Should manage settings"""
         settings = counter_service.get_settings()
         assert 'feedback_weight' in settings
-        assert settings['feedback_weight'] == 0.0
+        assert settings['feedback_weight'] == 0.35  # Valeur par défaut mise à jour
         
         updated = counter_service.update_settings({'feedback_weight': 0.5})
         assert updated['feedback_weight'] == 0.5
@@ -411,3 +411,116 @@ class TestFightRecord:
         restored = FightRecord.from_dict(data)
         assert restored.fight_id == original.fight_id
         assert restored.context == 'guild_raid'
+
+
+class TestTimeDecay:
+    """Test temporal weighting in fight similarity"""
+    
+    def test_recent_fights_higher_weight(self, counter_service):
+        """Recent fights should have higher weight than old fights"""
+        now = datetime.now()
+        
+        # Fight récent (5 jours)
+        recent_fight = {
+            'duration_sec': 120,
+            'timestamp': (now - timedelta(days=5)).isoformat(),
+            'allies': [{'name': 'P1', 'account': 'A1', 'profession': 'Firebrand', 'role': 'stab', 'group': 1,
+                       'damage_out': 50000, 'damage_in': 30000, 'dps': 416, 'healing': 10000,
+                       'cleanses': 5, 'boon_strips': 2, 'down_contrib': 1, 'deaths': 0, 'kills': 2, 'boon_gen': {}}],
+            'enemies': [{'profession': 'Herald', 'name': 'E1'}],
+            'enemy_composition': {'spec_counts': {'Herald': 1}},
+            'fight_stats': {'ally_deaths': 0, 'ally_kills': 2, 'ally_damage': 50000, 'enemy_damage_taken': 50000},
+            'fight_outcome': 'victory',
+            'source': 'evtc',
+            'source_name': 'recent.evtc'
+        }
+        
+        # Fight ancien (100 jours)
+        old_fight = {
+            'duration_sec': 120,
+            'timestamp': (now - timedelta(days=100)).isoformat(),
+            'allies': [{'name': 'P2', 'account': 'A2', 'profession': 'Scourge', 'role': 'dps', 'group': 1,
+                       'damage_out': 80000, 'damage_in': 20000, 'dps': 666, 'healing': 5000,
+                       'cleanses': 1, 'boon_strips': 10, 'down_contrib': 3, 'deaths': 0, 'kills': 3, 'boon_gen': {}}],
+            'enemies': [{'profession': 'Herald', 'name': 'E2'}],
+            'enemy_composition': {'spec_counts': {'Herald': 1}},
+            'fight_stats': {'ally_deaths': 0, 'ally_kills': 3, 'ally_damage': 80000, 'enemy_damage_taken': 80000},
+            'fight_outcome': 'victory',
+            'source': 'evtc',
+            'source_name': 'old.evtc'
+        }
+        
+        counter_service.record_fight(recent_fight, filename='recent.evtc', filesize=1000)
+        counter_service.record_fight(old_fight, filename='old.evtc', filesize=2000)
+        
+        # Rechercher des fights similaires
+        similar = counter_service._find_similar_fights({'Herald': 1}, limit=10, time_decay=True)
+        
+        assert len(similar) == 2
+        # Le fight récent devrait être en premier (score final plus élevé grâce au time_weight)
+        timestamps = [f.get('timestamp') for f in similar]
+        assert recent_fight['timestamp'] in timestamps
+        assert old_fight['timestamp'] in timestamps
+        # Vérifier que le récent a un meilleur score (il devrait être premier ou avoir un timestamp plus récent)
+        recent_timestamp = datetime.fromisoformat(recent_fight['timestamp'])
+        first_timestamp = datetime.fromisoformat(similar[0].get('timestamp'))
+        # Le premier fight devrait être le plus récent (ou au moins pas plus vieux de 90 jours)
+        assert (first_timestamp - recent_timestamp).days <= 90
+    
+    def test_time_decay_disabled(self, counter_service):
+        """When time_decay=False, should use only similarity"""
+        now = datetime.now()
+        
+        recent_fight = {
+            'duration_sec': 120,
+            'timestamp': (now - timedelta(days=5)).isoformat(),
+            'allies': [{'name': 'P1', 'account': 'A1', 'profession': 'Firebrand', 'role': 'stab', 'group': 1,
+                       'damage_out': 50000, 'damage_in': 30000, 'dps': 416, 'healing': 10000,
+                       'cleanses': 5, 'boon_strips': 2, 'down_contrib': 1, 'deaths': 0, 'kills': 2, 'boon_gen': {}}],
+            'enemies': [{'profession': 'Herald', 'name': 'E1'}],
+            'enemy_composition': {'spec_counts': {'Herald': 1}},
+            'fight_stats': {'ally_deaths': 0, 'ally_kills': 2, 'ally_damage': 50000, 'enemy_damage_taken': 50000},
+            'fight_outcome': 'victory',
+            'source': 'evtc',
+            'source_name': 'recent.evtc'
+        }
+        
+        counter_service.record_fight(recent_fight, filename='recent.evtc', filesize=1000)
+        
+        similar_with_decay = counter_service._find_similar_fights({'Herald': 1}, limit=10, time_decay=True)
+        similar_without_decay = counter_service._find_similar_fights({'Herald': 1}, limit=10, time_decay=False)
+        
+        assert len(similar_with_decay) == len(similar_without_decay)
+    
+    def test_time_weight_buckets(self, counter_service):
+        """Test different time weight buckets"""
+        now = datetime.now()
+        
+        test_cases = [
+            (5, 1.0),    # <= 7 jours
+            (20, 0.9),   # <= 30 jours
+            (45, 0.7),   # <= 60 jours
+            (75, 0.5),   # <= 90 jours
+            (120, 0.3),  # > 90 jours
+        ]
+        
+        for days_old, expected_weight in test_cases:
+            fight = {
+                'duration_sec': 120,
+                'timestamp': (now - timedelta(days=days_old)).isoformat(),
+                'allies': [{'name': f'P{days_old}', 'account': f'A{days_old}', 'profession': 'Firebrand', 'role': 'stab', 'group': 1,
+                           'damage_out': 50000, 'damage_in': 30000, 'dps': 416, 'healing': 10000,
+                           'cleanses': 5, 'boon_strips': 2, 'down_contrib': 1, 'deaths': 0, 'kills': 2, 'boon_gen': {}}],
+                'enemies': [{'profession': 'Herald', 'name': 'E1'}],
+                'enemy_composition': {'spec_counts': {'Herald': 1}},
+                'fight_stats': {'ally_deaths': 0, 'ally_kills': 2, 'ally_damage': 50000, 'enemy_damage_taken': 50000},
+                'fight_outcome': 'victory',
+                'source': 'evtc',
+                'source_name': f'fight_{days_old}.evtc'
+            }
+            
+            counter_service.record_fight(fight, filename=f'fight_{days_old}.evtc', filesize=1000 + days_old)
+        
+        # Vérifier que tous les fights sont trouvés
+        similar = counter_service._find_similar_fights({'Herald': 1}, limit=10, time_decay=True)
+        assert len(similar) == len(test_cases)

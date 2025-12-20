@@ -351,7 +351,7 @@ class CounterService:
         
         record = FightRecord(
             fight_id=fight_id,
-            timestamp=datetime.now().isoformat(),
+            timestamp=fight_data.get('timestamp', datetime.now().isoformat()),
             source=fight_data.get('source', 'evtc'),
             source_name=fight_data.get('source_name', 'unknown'),
             enemy_composition=enemy_comp,
@@ -457,17 +457,97 @@ class CounterService:
             'last_updated': None
         }
     
+    def _calculate_composition_similarity(
+        self, 
+        comp1: Dict[str, int], 
+        comp2: Dict[str, int],
+        weight_by_role: bool = True
+    ) -> float:
+        """
+        Calcule la similarité entre deux compositions avec pondération optionnelle par rôle.
+        Utilise une distance de Manhattan pondérée, plus robuste que cosinus pour vecteurs creux.
+        
+        Args:
+            comp1: Première composition {spec: count}
+            comp2: Deuxième composition {spec: count}
+            weight_by_role: Appliquer les poids par importance stratégique
+        
+        Returns:
+            Score de similarité entre 0.0 (totalement différent) et 1.0 (identique)
+        """
+        from role_detector import STAB_SPECS, HEALER_SPECS, BOON_SPECS, STRIP_DPS_SPECS
+        
+        # Poids par importance stratégique (stab/heal > boon > strip > dps)
+        ROLE_WEIGHTS = {
+            'stab': 2.0,      # Stab providers sont critiques
+            'healer': 1.8,    # Healers aussi
+            'boon': 1.5,      # Boon providers importants
+            'strip': 1.3,     # Strip utile
+            'dps': 1.0        # DPS baseline
+        }
+        
+        def get_spec_weight(spec: str) -> float:
+            """Retourne le poids stratégique d'une spec"""
+            if not weight_by_role:
+                return 1.0
+            if spec in STAB_SPECS:
+                return ROLE_WEIGHTS['stab']
+            if spec in HEALER_SPECS:
+                return ROLE_WEIGHTS['healer']
+            if spec in BOON_SPECS:
+                return ROLE_WEIGHTS['boon']
+            if spec in STRIP_DPS_SPECS:
+                return ROLE_WEIGHTS['strip']
+            return ROLE_WEIGHTS['dps']
+        
+        # Toutes les specs présentes dans au moins une compo
+        all_specs = set(comp1.keys()) | set(comp2.keys())
+        
+        if not all_specs:
+            return 0.0
+        
+        # Distance Manhattan pondérée
+        total_distance = 0.0
+        total_weight = 0.0
+        
+        for spec in all_specs:
+            count1 = comp1.get(spec, 0)
+            count2 = comp2.get(spec, 0)
+            weight = get_spec_weight(spec)
+            
+            total_distance += abs(count1 - count2) * weight
+            total_weight += max(count1, count2) * weight
+        
+        # Normaliser : 1.0 = identique, 0.0 = totalement différent
+        if total_weight == 0:
+            return 0.0
+        
+        similarity = 1.0 - (total_distance / (2 * total_weight))
+        return max(0.0, min(1.0, similarity))
+    
     def _find_similar_fights(
         self,
         enemy_comp: Dict[str, int],
         limit: int = 30,
-        context: str = None
+        context: str = None,
+        time_decay: bool = True
     ) -> List[dict]:
-        """Find fights with similar enemy compositions"""
+        """
+        Find fights with similar enemy compositions, avec pondération temporelle.
+        
+        Args:
+            enemy_comp: Enemy composition to match against
+            limit: Maximum number of fights to return
+            context: Fight context filter (zerg/guild_raid/roam)
+            time_decay: Apply time-based weighting (recent fights = more weight)
+        
+        Returns:
+            List of similar fights, sorted by relevance
+        """
         all_fights = self.fights_table.all()
         
         scored_fights = []
-        enemy_specs = set(enemy_comp.keys())
+        now = datetime.now()
         
         for fight in all_fights:
             if context:
@@ -475,20 +555,365 @@ class CounterService:
                 if fight_context != context:
                     continue
             
-            fight_enemy_specs = set(fight.get('enemy_composition', {}).keys())
+            fight_enemy_comp = fight.get('enemy_composition', {})
             
-            intersection = len(enemy_specs & fight_enemy_specs)
-            union = len(enemy_specs | fight_enemy_specs)
-            similarity = intersection / union if union > 0 else 0
+            # Utiliser la nouvelle méthode de similarité pondérée par rôle
+            similarity = self._calculate_composition_similarity(enemy_comp, fight_enemy_comp, weight_by_role=True)
             
-            if similarity > 0.3:
-                scored_fights.append({
-                    'fight': fight,
-                    'similarity': similarity
-                })
+            if similarity < 0.3:
+                continue
+            
+            # Facteur temporel : fights récents = plus de poids
+            time_weight = 1.0
+            if time_decay:
+                try:
+                    fight_time = datetime.fromisoformat(fight.get('timestamp', now.isoformat()))
+                    days_old = (now - fight_time).days
+                    
+                    # Décroissance exponentielle douce
+                    if days_old <= 7:
+                        time_weight = 1.0
+                    elif days_old <= 30:
+                        time_weight = 0.9
+                    elif days_old <= 60:
+                        time_weight = 0.7
+                    elif days_old <= 90:
+                        time_weight = 0.5
+                    else:
+                        time_weight = 0.3
+                except:
+                    time_weight = 0.8  # Fallback si pas de timestamp
+            
+            # Score final combiné
+            final_score = similarity * time_weight
+            
+            scored_fights.append({
+                'fight': fight,
+                'similarity': similarity,
+                'time_weight': time_weight,
+                'final_score': final_score
+            })
         
-        scored_fights.sort(key=lambda x: x['similarity'], reverse=True)
+        # Trier par score final (similarité × temps)
+        scored_fights.sort(key=lambda x: x['final_score'], reverse=True)
         return [sf['fight'] for sf in scored_fights[:limit]]
+    
+    def _analyze_enemy_needs(self, enemy_comp: Dict[str, int]) -> Dict[str, float]:
+        """
+        Analyse la compo ennemie pour déterminer nos besoins défensifs/offensifs.
+        
+        Args:
+            enemy_comp: Composition ennemie {spec: count}
+        
+        Returns:
+            Dict avec scores de besoin (0.0 à 1.0) pour chaque rôle tactique
+        """
+        from role_detector import STAB_SPECS, HEALER_SPECS, BOON_SPECS
+        
+        total_enemies = sum(enemy_comp.values())
+        if total_enemies == 0:
+            return {'strip': 0.5, 'stab': 0.5, 'heal': 0.5, 'boon': 0.5, 'burst': 0.5}
+        
+        # Compter les specs par rôle ennemi
+        enemy_stab_count = sum(count for spec, count in enemy_comp.items() if spec in STAB_SPECS)
+        enemy_healer_count = sum(count for spec, count in enemy_comp.items() if spec in HEALER_SPECS)
+        enemy_boon_count = sum(count for spec, count in enemy_comp.items() if spec in BOON_SPECS)
+        enemy_scourge_count = enemy_comp.get('Scourge', 0) + enemy_comp.get('Harbinger', 0)
+        
+        # Ratios
+        stab_ratio = enemy_stab_count / total_enemies
+        healer_ratio = enemy_healer_count / total_enemies
+        boon_ratio = enemy_boon_count / total_enemies
+        condi_ratio = enemy_scourge_count / total_enemies
+        
+        needs = {
+            # Beaucoup de boons ennemis → besoin élevé de strip
+            'strip': min(1.0, (stab_ratio + boon_ratio) * 1.5),
+            
+            # Beaucoup de condi ennemis → besoin de cleanse/heal
+            'heal': min(1.0, 0.3 + condi_ratio * 1.2 + healer_ratio * 0.5),
+            
+            # Baseline stab toujours utile, augmenté si ils ont du CC
+            'stab': min(1.0, 0.4 + enemy_scourge_count / total_enemies),
+            
+            # Besoin de boons proportionnel à leur sustain
+            'boon': min(1.0, 0.4 + (healer_ratio + stab_ratio) * 0.8),
+            
+            # Burst damage si ils ont beaucoup de sustain
+            'burst': min(1.0, 0.5 + (healer_ratio + stab_ratio) * 1.0),
+        }
+        
+        return needs
+    
+    def _get_meta_tags(self, enemy_comp: Dict[str, int], needs: Dict[str, float]) -> List[str]:
+        """
+        Génère des tags lisibles en français pour la compo ennemie.
+        
+        Args:
+            enemy_comp: Composition ennemie
+            needs: Besoins tactiques calculés
+        
+        Returns:
+            Liste de tags descriptifs
+        """
+        tags = []
+        
+        # Tags basés sur les besoins tactiques
+        if needs['strip'] > 0.7:
+            tags.append("🛡️ Beaucoup de boons")
+        if needs['heal'] > 0.7:
+            tags.append("☠️ Beaucoup d'altérations")
+        if needs['burst'] > 0.7:
+            tags.append("🏰 Beaucoup de supports")
+        
+        # Tags basés sur la taille
+        total = sum(enemy_comp.values())
+        if total <= 10:
+            tags.append("👥 Petit groupe")
+        elif total >= 30:
+            tags.append("🌊 Gros blob")
+        
+        return tags
+    
+    def _calculate_confidence(
+        self,
+        similar_fights: List[dict],
+        best_builds: Dict[str, dict],
+        enemy_comp: Dict[str, int]
+    ) -> Dict[str, Any]:
+        """
+        Calcule un niveau de confiance détaillé pour la recommandation.
+        
+        Args:
+            similar_fights: Liste des fights similaires trouvés
+            best_builds: Meilleurs builds recommandés par rôle
+            enemy_comp: Composition ennemie analysée
+        
+        Returns:
+            Dict avec score de confiance, niveau, couleur et explications
+        """
+        confidence_factors = {
+            'data_quantity': 0.0,
+            'data_quality': 0.0,
+            'consistency': 0.0,
+            'recency': 0.0
+        }
+        
+        # 1. Quantité de données (plus de fights = plus de confiance)
+        fight_count = len(similar_fights)
+        if fight_count >= 20:
+            confidence_factors['data_quantity'] = 1.0
+        elif fight_count >= 10:
+            confidence_factors['data_quantity'] = 0.8
+        elif fight_count >= 5:
+            confidence_factors['data_quantity'] = 0.6
+        elif fight_count >= 2:
+            confidence_factors['data_quantity'] = 0.4
+        else:
+            confidence_factors['data_quantity'] = 0.2
+        
+        # 2. Qualité des données (variance des winrates = cohérence)
+        if best_builds:
+            winrates = [b['win_rate'] for b in best_builds.values()]
+            if winrates:
+                avg_wr = sum(winrates) / len(winrates)
+                variance = sum((wr - avg_wr) ** 2 for wr in winrates) / len(winrates)
+                
+                # Faible variance = haute confiance (résultats cohérents)
+                if variance < 100:  # Winrates très cohérents
+                    confidence_factors['data_quality'] = 1.0
+                elif variance < 300:
+                    confidence_factors['data_quality'] = 0.7
+                else:
+                    confidence_factors['data_quality'] = 0.5
+            else:
+                confidence_factors['data_quality'] = 0.5
+        else:
+            confidence_factors['data_quality'] = 0.3
+        
+        # 3. Consistance (tous les builds ont assez de samples)
+        if best_builds:
+            min_fights = min(b['fights_played'] for b in best_builds.values())
+            if min_fights >= 5:
+                confidence_factors['consistency'] = 1.0
+            elif min_fights >= 3:
+                confidence_factors['consistency'] = 0.7
+            else:
+                confidence_factors['consistency'] = 0.4
+        else:
+            confidence_factors['consistency'] = 0.3
+        
+        # 4. Récence (fights récents = meilleure confiance pour la meta actuelle)
+        if similar_fights:
+            now = datetime.now()
+            recent_fights = 0
+            for fight in similar_fights:
+                try:
+                    fight_time = datetime.fromisoformat(fight.get('timestamp', now.isoformat()))
+                    if (now - fight_time).days <= 30:
+                        recent_fights += 1
+                except:
+                    pass
+            
+            recency_ratio = recent_fights / len(similar_fights)
+            confidence_factors['recency'] = recency_ratio
+        else:
+            confidence_factors['recency'] = 0.0
+        
+        # Score global (moyenne pondérée)
+        weights = {
+            'data_quantity': 0.35,  # Quantité est le plus important
+            'data_quality': 0.25,   # Qualité des données
+            'consistency': 0.25,    # Consistance des résultats
+            'recency': 0.15         # Récence (meta actuelle)
+        }
+        
+        overall_confidence = sum(
+            confidence_factors[k] * weights[k] 
+            for k in confidence_factors
+        )
+        
+        # Convertir en pourcentage et catégorie
+        confidence_pct = round(overall_confidence * 100, 1)
+        
+        if confidence_pct >= 80:
+            level = "Élevée"
+            color = "success"
+        elif confidence_pct >= 60:
+            level = "Moyenne"
+            color = "warning"
+        else:
+            level = "Faible"
+            color = "danger"
+        
+        return {
+            'score': confidence_pct,
+            'level': level,
+            'color': color,
+            'factors': confidence_factors,
+            'fights_analyzed': fight_count,
+            'explanation': f"{fight_count} fights similaires analysés, confiance {level.lower()}"
+        }
+    
+    def _spec_covers_need(self, spec: str, need: str) -> bool:
+        """
+        Helper pour vérifier si une spec couvre un besoin tactique.
+        
+        Args:
+            spec: Nom de la spécialisation
+            need: Type de besoin (strip/stab/heal/boon/burst)
+        
+        Returns:
+            True si la spec couvre ce besoin
+        """
+        from role_detector import STAB_SPECS, HEALER_SPECS, BOON_SPECS, STRIP_DPS_SPECS
+        
+        if need == 'stab':
+            return spec in STAB_SPECS
+        elif need == 'heal':
+            return spec in HEALER_SPECS
+        elif need == 'boon':
+            return spec in BOON_SPECS
+        elif need == 'strip':
+            return spec in STRIP_DPS_SPECS
+        elif need == 'burst':
+            return spec in ['Willbender', 'Vindicator', 'Bladesworn', 'Reaper']
+        return False
+    
+    def get_best_builds_with_role_coverage(
+        self, 
+        enemy_comp: Dict[str, int], 
+        context: str = None,
+        squad_size: int = 20
+    ) -> List[Dict[str, Any]]:
+        """
+        Recommande une composition complète qui couvre tous les besoins tactiques.
+        
+        Args:
+            enemy_comp: Composition ennemie
+            context: Contexte du fight
+            squad_size: Taille du squad à recommander
+        
+        Returns:
+            Liste de builds recommandés avec quantités optimales
+        """
+        from role_detector import STAB_SPECS, HEALER_SPECS, BOON_SPECS, STRIP_DPS_SPECS
+        
+        # 1. Analyser les besoins tactiques
+        needs = self._analyze_enemy_needs(enemy_comp)
+        
+        # 2. Récupérer les meilleurs builds par rôle
+        best_by_role = self.get_best_builds_against(enemy_comp, context)
+        
+        if not best_by_role:
+            return []
+        
+        # 3. Scorer chaque spec selon sa couverture des besoins
+        spec_scores = {}
+        for role, build_info in best_by_role.items():
+            spec = build_info['spec']
+            
+            # Score de base : winrate normalisé
+            base_score = build_info['win_rate'] / 100.0
+            
+            # Bonus selon la couverture des besoins
+            coverage_score = 0.0
+            
+            if spec in STAB_SPECS:
+                coverage_score += needs['stab'] * 0.3
+            if spec in HEALER_SPECS:
+                coverage_score += needs['heal'] * 0.3
+            if spec in BOON_SPECS:
+                coverage_score += needs['boon'] * 0.25
+            if spec in STRIP_DPS_SPECS:
+                coverage_score += needs['strip'] * 0.25
+            
+            # Bonus burst pour certaines specs
+            if spec in ['Willbender', 'Vindicator', 'Bladesworn']:
+                coverage_score += needs['burst'] * 0.2
+            
+            # Score final : 60% winrate + 40% couverture des besoins
+            final_score = base_score * 0.6 + coverage_score * 0.4
+            
+            spec_scores[spec] = {
+                **build_info,
+                'coverage_score': round(coverage_score, 3),
+                'final_score': round(final_score, 3),
+                'needs_covered': [k for k, v in needs.items() if v > 0.5 and self._spec_covers_need(spec, k)]
+            }
+        
+        # 4. Trier par score final
+        sorted_builds = sorted(spec_scores.values(), key=lambda x: x['final_score'], reverse=True)
+        
+        # 5. Distribuer les slots (heuristique simple mais efficace)
+        recommended_comp = []
+        remaining_slots = squad_size
+        
+        for build in sorted_builds[:6]:  # Top 6 specs
+            if remaining_slots <= 0:
+                break
+            
+            # Allouer des slots selon le rôle et le score
+            if build['role'] in ['stab', 'healer']:
+                # Supports : 2-3 slots
+                slots = min(3, max(2, remaining_slots // 5))
+            elif build['role'] == 'boon':
+                # Boon providers : 2 slots
+                slots = min(2, remaining_slots // 6)
+            else:
+                # DPS : peut être plus nombreux
+                slots = min(4, remaining_slots // 4)
+            
+            slots = max(1, min(slots, remaining_slots))
+            
+            if slots > 0:
+                recommended_comp.append({
+                    **build,
+                    'recommended_count': slots
+                })
+                remaining_slots -= slots
+        
+        return recommended_comp
     
     def get_best_builds_against(self, enemy_comp: Dict[str, int], context: str = None) -> Dict[str, dict]:
         """
@@ -630,6 +1055,16 @@ class CounterService:
         
         best_builds = self.get_best_builds_against(enemy_comp, context=context)
         
+        # Phase 2: Calculer le niveau de confiance
+        confidence = self._calculate_confidence(similar_fights, best_builds, enemy_comp)
+        
+        # Phase 3: Analyser les besoins tactiques et générer les meta-tags
+        enemy_needs = self._analyze_enemy_needs(enemy_comp)
+        meta_tags = self._get_meta_tags(enemy_comp, enemy_needs)
+        
+        # Phase 4: Générer une composition complète optimisée
+        recommended_composition = self.get_best_builds_with_role_coverage(enemy_comp, context, squad_size=20)
+        
         conter_specs = []
         for role, build in list(best_builds.items())[:5]:
             count = build.get('recommended_count', 1)
@@ -715,6 +1150,10 @@ class CounterService:
             'enemy_composition': enemy_str,
             'enemy_comp_dict': enemy_comp,
             'best_builds': best_builds,
+            'recommended_composition': recommended_composition,
+            'confidence': confidence,
+            'enemy_needs': enemy_needs,
+            'meta_tags': meta_tags,
             'generated_at': datetime.now().isoformat(),
             'context': context
         }
@@ -785,8 +1224,9 @@ class CounterService:
         rows = self.settings_table.all()
         if rows:
             return rows[0]
-        self.settings_table.insert({'feedback_weight': 0.0})
-        return {'feedback_weight': 0.0}
+        # Phase 2-4: Feedback weight par défaut à 0.35 (recommandation GPT-5.1)
+        self.settings_table.insert({'feedback_weight': 0.35})
+        return {'feedback_weight': 0.35}
     
     def update_settings(self, values: dict) -> dict:
         """Update service settings"""
