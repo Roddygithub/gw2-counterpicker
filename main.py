@@ -1305,6 +1305,7 @@ def extract_players_from_ei_json(data: dict) -> dict:
             'account': player.get('account', ''),
             'profession': profession,
             'group': group,
+            'in_squad': True if (group and group > 0) else False,
             'is_commander': player.get('hasCommanderTag', False),
             'role': role,
             # Damage
