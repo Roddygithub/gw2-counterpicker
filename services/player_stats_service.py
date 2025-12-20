@@ -9,6 +9,7 @@ from typing import Optional, Dict, List, Any
 from pathlib import Path
 from tinydb import TinyDB, Query
 from logger import get_logger
+from services.counter_service import get_counter_service
 
 logger = get_logger('player_stats')
 
@@ -529,7 +530,7 @@ def import_fights_from_ai_database(account_id: str, account_name: str) -> Dict[s
     Matches fights where the account name appears in ally_builds.
     """
     try:
-        from counter_ai import fights_table as ai_fights_table
+        ai_fights_table = get_counter_service().fights_table
         
         # Get all fights from AI database
         all_fights = ai_fights_table.all()
@@ -643,7 +644,7 @@ def import_guild_fights_from_ai_database(guild_id: str, guild_name: str, guild_t
         guild_members: List of account names that are members of this guild (required for filtering)
     """
     try:
-        from counter_ai import fights_table as ai_fights_table
+        ai_fights_table = get_counter_service().fights_table
         
         all_fights = ai_fights_table.all()
         

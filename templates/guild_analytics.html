@@ -210,13 +210,13 @@
             {% if stats.monthly_activity %}
                 {% set last_month_key = stats.monthly_activity.keys()|list|last %}
                 {% if last_month_key %}
-                    {% set current_year = last_month_key|slice(0, 4) %}
+                    {% set current_year = last_month_key[:4] %}
                 {% endif %}
             {% endif %}
             {% set all_months = [] %}
             {% for i in range(12) %}
                 {% set month_num = i + 1 %}
-                {% set month_str = month_num|string if month_num > 9 else '0' + month_num|string %}
+                {% set month_str = '%02d' % month_num %}
                 {% set month_key = current_year + '-' + month_str %}
                 {% set month_count = stats.monthly_activity.get(month_key, 0) %}
                 {% set _ = all_months.append((month_key, month_count)) %}
