@@ -4,9 +4,13 @@ from fastapi.templating import Jinja2Templates
 
 from services.counter_service import get_counter_service
 from translations import get_all_translations
+from features import is_feature_enabled, get_enabled_features
 
 router = APIRouter(prefix="/admin")
 templates = Jinja2Templates(directory="templates")
+# Expose feature flags to templates
+templates.env.globals["is_feature_enabled"] = is_feature_enabled
+templates.env.globals["features"] = get_enabled_features()
 
 
 def get_lang(request: Request) -> str:

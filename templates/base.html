@@ -437,10 +437,14 @@
                     <a href="/" class="nav-link" x-text="t('nav.home')"></a>
                     <a href="/meta" class="nav-link" x-text="t('nav.meta')"></a>
                     <a href="/analyze" class="nav-link" x-text="t('nav.analyze')"></a>
+                    {% if is_feature_enabled("GW2_API") and is_feature_enabled("PLAYER_CAREER") %}
                     <a href="/api/gw2/dashboard" class="nav-link" x-text="t('nav.dashboard')"></a>
                     <a href="/api/gw2/history" class="nav-link" x-text="t('nav.history')"></a>
+                    {% endif %}
                     <a href="/about" class="nav-link" x-text="t('nav.about')"></a>
+                    {% if is_feature_enabled("COUNTER_FEEDBACK") %}
                     <a href="mailto:feedback@gw2counterpicker.com?subject=Feedback%20GW2%20CounterPicker" class="nav-link" x-text="t('nav.feedback')"></a>
+                    {% endif %}
                 </div>
                 
                 <!-- Language Toggle -->

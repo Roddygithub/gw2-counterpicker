@@ -100,6 +100,7 @@
                 </p>
             </div>
             
+            {% if is_feature_enabled("GUILD_ANALYTICS") %}
             <!-- Feature 6: Guild Stats -->
             <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.55s;">
                 <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mb-4">
@@ -112,7 +113,9 @@
                     {% if lang == 'en' %}Track your guild's performance, composition trends, and combat effectiveness over time.{% else %}Suis les performances de ta guilde, les tendances de composition et l'efficacité en combat.{% endif %}
                 </p>
             </div>
+            {% endif %}
             
+            {% if is_feature_enabled("PLAYER_CAREER") or is_feature_enabled("PERFORMANCE_ANALYTICS") %}
             <!-- Feature 7: Personal Stats -->
             <div class="glow-card rounded-2xl p-6 animate-slide-up" style="animation-delay: 0.6s;">
                 <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mb-4">
@@ -125,6 +128,7 @@
                     {% if lang == 'en' %}Analyze your individual performance, build effectiveness, and improvement over time.{% else %}Analyse tes performances individuelles, l'efficacité de tes builds et ta progression.{% endif %}
                 </p>
             </div>
+            {% endif %}
         </div>
     </section>
     

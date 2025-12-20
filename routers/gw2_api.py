@@ -26,6 +26,7 @@ from services.performance_stats_service import (
 )
 from services.player_stats_service import guild_stats_table
 from logger import get_logger
+from features import is_feature_enabled, get_enabled_features
 
 logger = get_logger('gw2_api_routes')
 
@@ -34,6 +35,9 @@ router = APIRouter(prefix="/api/gw2", tags=["GW2 API"])
 # Templates
 templates_path = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(templates_path))
+# Expose feature flags to templates
+templates.env.globals["is_feature_enabled"] = is_feature_enabled
+templates.env.globals["features"] = get_enabled_features()
 
 
 @router.post("/connect")

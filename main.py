@@ -43,6 +43,7 @@ from translations import get_all_translations
 from scheduler import setup_scheduled_tasks
 from rate_limiter import check_upload_rate_limit
 from logger import get_logger
+from features import is_feature_enabled, get_enabled_features
 from routers.gw2_api import router as gw2_api_router
 from routers.admin import router as admin_router
 from services.gw2_api_service import get_api_key_by_session, get_account_by_session, gw2_api
@@ -79,6 +80,9 @@ templates = Jinja2Templates(directory="templates")
 templates.env.globals["app_version"] = app.version
 templates.env.globals["offline_mode"] = True
 templates.env.globals["ai_mode"] = False  # v4.0 Stats-based
+# Expose feature flags to templates
+templates.env.globals["is_feature_enabled"] = is_feature_enabled
+templates.env.globals["features"] = get_enabled_features()
 
 
 @app.get("/health")
@@ -96,9 +100,16 @@ real_parser = RealEVTCParser()
 # Initialize scheduled tasks (fingerprint cleanup on Fridays at 18h55)
 setup_scheduled_tasks()
 
-# Include GW2 API router
-app.include_router(gw2_api_router)
-app.include_router(admin_router)
+# Conditionally include routers based on feature flags
+# GW2 API router (dashboard, history, account features)
+if is_feature_enabled("GW2_API"):
+    app.include_router(gw2_api_router)
+    logger.info("GW2 API router enabled")
+
+# Admin panel router (feedback, settings)
+if is_feature_enabled("ADMIN_PANEL"):
+    app.include_router(admin_router)
+    logger.info("Admin panel router enabled")
 
 # Auto-deployment system active - Changes sync to GitHub and server automatically
 
