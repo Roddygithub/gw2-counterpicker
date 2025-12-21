@@ -70,6 +70,10 @@ jobs:
             pip install -r requirements.txt --upgrade
             sudo systemctl restart gw2-counterpicker
             echo "Deployment completed at $(date)"
+            echo "Checking service status..."
+            sudo systemctl status gw2-counterpicker --no-pager || true
+            echo "Checking if port 8001 is listening..."
+            sudo netstat -tlnp | grep 8001 || echo "Port 8001 not listening yet"
       
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.0.0
