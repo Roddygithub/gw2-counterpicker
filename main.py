@@ -130,8 +130,8 @@ def import_deployed_data():
             counter_service.fights_table.insert_multiple(fights_data)
             logger.info(f"Imported {len(fights_data)} fights to database")
 
-# Import data on startup
-import_deployed_data()
+# Import data on startup - DISABLED temporarily to fix corrupted DB issue
+# import_deployed_data()
 
 def get_lang(request: Request) -> str:
     """Get language from cookie or default to French"""
