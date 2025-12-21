@@ -79,6 +79,15 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            sleep 5
-            curl -f http://localhost:8001/health || exit 1
-            echo "Health check passed"
+            echo "Waiting for application to start..."
+            sleep 15
+            for i in {1..6}; do
+              if curl -f http://localhost:8001/health; then
+                echo "Health check passed"
+                exit 0
+              fi
+              echo "Attempt $i failed, retrying in 5 seconds..."
+              sleep 5
+            done
+            echo "Health check failed after 6 attempts"
+            exit 1
