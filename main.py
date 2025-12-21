@@ -883,7 +883,7 @@ def convert_parsed_log_to_players_data(parsed_log) -> dict:
             logger.info(f"DEBUG LOCAL PARSER - First player {player.character_name}: damage_dealt={damage}, type={type(player.damage_dealt)}")
         
         player_data = {
-            'name': player.character_name,
+            'name': player.character_name or player.elite_spec or player.profession,
             'account': player.account_name,
             'profession': player.elite_spec or player.profession,
             'elite_spec': player.elite_spec,

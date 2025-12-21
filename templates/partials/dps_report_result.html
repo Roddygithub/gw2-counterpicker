@@ -283,14 +283,18 @@
     </div>
     {% endif %}
     
-    <!-- Allied Players -->
-    {% if players.allies %}
+    <!-- Allied Players - Squad Members Only -->
+    {% set squad_members = [] %}
+    {% for p in players.allies if p.in_squad %}
+        {% set _ = squad_members.append(p) %}
+    {% endfor %}
+    {% if squad_members|length > 0 %}
     <div class="glow-card rounded-2xl p-6">
         <h3 class="font-display text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
             </svg>
-            🛡️ {% if lang == 'en' %}Your Squad{% else %}Ton Escouade{% endif %} ({{ players.allies|length }} {% if lang == 'en' %}players{% else %}joueurs{% endif %})
+            🛡️ {% if lang == 'en' %}Your Squad{% else %}Ton Escouade{% endif %} ({{ squad_members|length }} {% if lang == 'en' %}players{% else %}joueurs{% endif %})
         </h3>
         
         <div class="overflow-x-auto">
@@ -304,7 +308,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
-                    {% for player in players.allies %}
+                    {% for player in squad_members %}
                     <tr class="hover:bg-gw2-darker/50 group-{{ player.group }}"
                         data-profession="{{ player.profession|lower }}"
                         data-group="{{ player.group }}"
